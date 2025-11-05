@@ -1,0 +1,865 @@
+{
+  "database": "OnSpace Cloud - SyncUp",
+  "generated_at": "2025-11-05",
+  "tables": [
+    {
+      "name": "user_profiles",
+      "description": "Extended user profile information for authenticated users",
+      "rls_enabled": true,
+      "primary_key": "id",
+      "unique_constraints": [],
+      "foreign_keys": [
+        {
+          "name": "user_profiles_id_fkey",
+          "column": "id",
+          "references": "auth.users.id",
+          "on_delete": "CASCADE"
+        }
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false,
+          "default": null,
+          "is_primary_key": true
+        },
+        {
+          "name": "username",
+          "type": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "full_name",
+          "type": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "major",
+          "type": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "year",
+          "type": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "bio",
+          "type": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "study_habits",
+          "type": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "skills",
+          "type": "text[]",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "profile_image_url",
+          "type": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "university",
+          "type": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        }
+      ],
+      "rls_policies": [
+        {
+          "name": "Users can view own profile",
+          "command": "SELECT",
+          "permissive": true,
+          "using": "(auth.uid() = id)"
+        },
+        {
+          "name": "Users can update own profile",
+          "command": "UPDATE",
+          "permissive": true,
+          "using": "(auth.uid() = id)"
+        },
+        {
+          "name": "Users can delete own profile",
+          "command": "DELETE",
+          "permissive": true,
+          "using": "(auth.uid() = id)"
+        }
+      ]
+    },
+    {
+      "name": "interests",
+      "description": "Available interests that users can select",
+      "rls_enabled": true,
+      "primary_key": "id",
+      "unique_constraints": ["name"],
+      "foreign_keys": [],
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "is_primary_key": true
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        }
+      ],
+      "rls_policies": [
+        {
+          "name": "anon_select_interests",
+          "command": "SELECT",
+          "permissive": true,
+          "roles": ["anon"],
+          "using": "true"
+        },
+        {
+          "name": "authenticated_select_interests",
+          "command": "SELECT",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "using": "true"
+        }
+      ]
+    },
+    {
+      "name": "user_interests",
+      "description": "Junction table linking users to their interests",
+      "rls_enabled": true,
+      "primary_key": "id",
+      "unique_constraints": ["user_id, interest_id"],
+      "foreign_keys": [
+        {
+          "name": "user_interests_user_id_fkey",
+          "column": "user_id",
+          "references": "user_profiles.id",
+          "on_delete": "CASCADE"
+        },
+        {
+          "name": "user_interests_interest_id_fkey",
+          "column": "interest_id",
+          "references": "interests.id",
+          "on_delete": "CASCADE"
+        }
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "is_primary_key": true
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "interest_id",
+          "type": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        }
+      ],
+      "rls_policies": [
+        {
+          "name": "authenticated_select_user_interests",
+          "command": "SELECT",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "using": "true"
+        },
+        {
+          "name": "authenticated_insert_own_interests",
+          "command": "INSERT",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "with_check": "(user_id = auth.uid())"
+        },
+        {
+          "name": "authenticated_delete_own_interests",
+          "command": "DELETE",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "using": "(user_id = auth.uid())"
+        }
+      ]
+    },
+    {
+      "name": "courses",
+      "description": "Available university courses",
+      "rls_enabled": true,
+      "primary_key": "id",
+      "unique_constraints": ["code"],
+      "foreign_keys": [],
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "is_primary_key": true
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "code",
+          "type": "text",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        }
+      ],
+      "rls_policies": [
+        {
+          "name": "anon_select_courses",
+          "command": "SELECT",
+          "permissive": true,
+          "roles": ["anon"],
+          "using": "true"
+        },
+        {
+          "name": "authenticated_select_courses",
+          "command": "SELECT",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "using": "true"
+        }
+      ]
+    },
+    {
+      "name": "user_courses",
+      "description": "Junction table linking users to their enrolled courses",
+      "rls_enabled": true,
+      "primary_key": "id",
+      "unique_constraints": ["user_id, course_id"],
+      "foreign_keys": [
+        {
+          "name": "user_courses_user_id_fkey",
+          "column": "user_id",
+          "references": "user_profiles.id",
+          "on_delete": "CASCADE"
+        },
+        {
+          "name": "user_courses_course_id_fkey",
+          "column": "course_id",
+          "references": "courses.id",
+          "on_delete": "CASCADE"
+        }
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "is_primary_key": true
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "course_id",
+          "type": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "semester",
+          "type": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        }
+      ],
+      "rls_policies": [
+        {
+          "name": "authenticated_select_user_courses",
+          "command": "SELECT",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "using": "true"
+        },
+        {
+          "name": "authenticated_insert_own_courses",
+          "command": "INSERT",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "with_check": "(user_id = auth.uid())"
+        },
+        {
+          "name": "authenticated_delete_own_courses",
+          "command": "DELETE",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "using": "(user_id = auth.uid())"
+        }
+      ]
+    },
+    {
+      "name": "connections",
+      "description": "User-to-user connection requests and relationships",
+      "rls_enabled": true,
+      "primary_key": "id",
+      "unique_constraints": ["user_id, connected_user_id"],
+      "foreign_keys": [
+        {
+          "name": "connections_user_id_fkey",
+          "column": "user_id",
+          "references": "user_profiles.id",
+          "on_delete": "CASCADE"
+        },
+        {
+          "name": "connections_connected_user_id_fkey",
+          "column": "connected_user_id",
+          "references": "user_profiles.id",
+          "on_delete": "CASCADE"
+        }
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "is_primary_key": true
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "connected_user_id",
+          "type": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "check": "status IN ('pending', 'accepted', 'rejected')"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        }
+      ],
+      "rls_policies": [
+        {
+          "name": "authenticated_select_connections",
+          "command": "SELECT",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "using": "(user_id = auth.uid() OR connected_user_id = auth.uid())"
+        },
+        {
+          "name": "authenticated_insert_connections",
+          "command": "INSERT",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "with_check": "(user_id = auth.uid())"
+        },
+        {
+          "name": "authenticated_update_own_connections",
+          "command": "UPDATE",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "using": "(user_id = auth.uid() OR connected_user_id = auth.uid())"
+        },
+        {
+          "name": "authenticated_delete_own_connections",
+          "command": "DELETE",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "using": "(user_id = auth.uid())"
+        }
+      ]
+    },
+    {
+      "name": "groups",
+      "description": "Study groups and project teams",
+      "rls_enabled": true,
+      "primary_key": "id",
+      "unique_constraints": [],
+      "foreign_keys": [
+        {
+          "name": "groups_creator_id_fkey",
+          "column": "creator_id",
+          "references": "user_profiles.id",
+          "on_delete": "CASCADE"
+        }
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "is_primary_key": true
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "creator_id",
+          "type": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "image_url",
+          "type": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        }
+      ],
+      "rls_policies": [
+        {
+          "name": "authenticated_select_groups",
+          "command": "SELECT",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "using": "true"
+        },
+        {
+          "name": "authenticated_insert_groups",
+          "command": "INSERT",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "with_check": "(creator_id = auth.uid())"
+        },
+        {
+          "name": "authenticated_update_own_groups",
+          "command": "UPDATE",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "using": "(creator_id = auth.uid())"
+        },
+        {
+          "name": "authenticated_delete_own_groups",
+          "command": "DELETE",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "using": "(creator_id = auth.uid())"
+        }
+      ]
+    },
+    {
+      "name": "group_members",
+      "description": "Junction table for group membership",
+      "rls_enabled": true,
+      "primary_key": "id",
+      "unique_constraints": ["group_id, user_id"],
+      "foreign_keys": [
+        {
+          "name": "group_members_group_id_fkey",
+          "column": "group_id",
+          "references": "groups.id",
+          "on_delete": "CASCADE"
+        },
+        {
+          "name": "group_members_user_id_fkey",
+          "column": "user_id",
+          "references": "user_profiles.id",
+          "on_delete": "CASCADE"
+        }
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "is_primary_key": true
+        },
+        {
+          "name": "group_id",
+          "type": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "role",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "check": "role IN ('admin', 'member')"
+        },
+        {
+          "name": "joined_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        }
+      ],
+      "rls_policies": [
+        {
+          "name": "authenticated_select_group_members",
+          "command": "SELECT",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "using": "true"
+        },
+        {
+          "name": "authenticated_insert_group_members",
+          "command": "INSERT",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "with_check": "(EXISTS (SELECT 1 FROM groups WHERE id = group_id AND creator_id = auth.uid()) OR user_id = auth.uid())"
+        },
+        {
+          "name": "authenticated_delete_group_members",
+          "command": "DELETE",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "using": "(user_id = auth.uid() OR EXISTS (SELECT 1 FROM groups WHERE id = group_id AND creator_id = auth.uid()))"
+        }
+      ]
+    },
+    {
+      "name": "events",
+      "description": "Campus events, study sessions, and meetings",
+      "rls_enabled": true,
+      "primary_key": "id",
+      "unique_constraints": [],
+      "foreign_keys": [
+        {
+          "name": "events_creator_id_fkey",
+          "column": "creator_id",
+          "references": "user_profiles.id",
+          "on_delete": "CASCADE"
+        }
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "is_primary_key": true
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "location",
+          "type": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "start_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "end_time",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "creator_id",
+          "type": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "image_url",
+          "type": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        }
+      ],
+      "rls_policies": [
+        {
+          "name": "authenticated_select_events",
+          "command": "SELECT",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "using": "true"
+        },
+        {
+          "name": "authenticated_insert_events",
+          "command": "INSERT",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "with_check": "(creator_id = auth.uid())"
+        },
+        {
+          "name": "authenticated_update_own_events",
+          "command": "UPDATE",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "using": "(creator_id = auth.uid())"
+        },
+        {
+          "name": "authenticated_delete_own_events",
+          "command": "DELETE",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "using": "(creator_id = auth.uid())"
+        }
+      ]
+    },
+    {
+      "name": "event_attendees",
+      "description": "Junction table for event attendance and RSVP status",
+      "rls_enabled": true,
+      "primary_key": "id",
+      "unique_constraints": ["event_id, user_id"],
+      "foreign_keys": [
+        {
+          "name": "event_attendees_event_id_fkey",
+          "column": "event_id",
+          "references": "events.id",
+          "on_delete": "CASCADE"
+        },
+        {
+          "name": "event_attendees_user_id_fkey",
+          "column": "user_id",
+          "references": "user_profiles.id",
+          "on_delete": "CASCADE"
+        }
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "is_primary_key": true
+        },
+        {
+          "name": "event_id",
+          "type": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "check": "status IN ('going', 'interested', 'not_going')"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "now()"
+        }
+      ],
+      "rls_policies": [
+        {
+          "name": "authenticated_select_event_attendees",
+          "command": "SELECT",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "using": "true"
+        },
+        {
+          "name": "authenticated_insert_event_attendees",
+          "command": "INSERT",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "with_check": "(user_id = auth.uid())"
+        },
+        {
+          "name": "authenticated_update_own_attendance",
+          "command": "UPDATE",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "using": "(user_id = auth.uid())"
+        },
+        {
+          "name": "authenticated_delete_own_attendance",
+          "command": "DELETE",
+          "permissive": true,
+          "roles": ["authenticated"],
+          "using": "(user_id = auth.uid())"
+        }
+      ]
+    }
+  ],
+  "functions": [
+    {
+      "name": "handle_new_user",
+      "type": "FUNCTION",
+      "description": "Automatically creates user profile when new auth user is created",
+      "returns": "trigger",
+      "language": "plpgsql"
+    }
+  ],
+  "triggers": [
+    {
+      "name": "on_auth_user_created",
+      "table": "auth.users",
+      "event": "AFTER INSERT",
+      "function": "handle_new_user",
+      "description": "Trigger that fires when a new user is created in auth.users"
+    }
+  ],
+  "default_data": {
+    "interests": [
+      "Computer Science",
+      "Engineering",
+      "Business",
+      "Mathematics",
+      "Physics",
+      "Biology",
+      "Psychology",
+      "Art & Design",
+      "Music",
+      "Sports",
+      "Entrepreneurship",
+      "Research",
+      "Photography",
+      "Writing",
+      "Public Speaking"
+    ],
+    "courses": [
+      { "name": "Introduction to Computer Science", "code": "CS101" },
+      { "name": "Data Structures & Algorithms", "code": "CS201" },
+      { "name": "Calculus I", "code": "MATH101" },
+      { "name": "Physics I", "code": "PHYS101" },
+      { "name": "Business Management", "code": "BUS101" },
+      { "name": "Psychology 101", "code": "PSY101" },
+      { "name": "English Composition", "code": "ENG101" },
+      { "name": "Biology I", "code": "BIO101" }
+    ]
+  }
+}
