@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Image } from 'react-native';
 import { colors, spacing, borderRadius, shadows, typography } from '@/constants/theme';
 import { textStyles, commonStyles } from '@/constants/styles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,17 +7,24 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth, useAlert } from '@/template';
 import { getSupabaseClient } from '@/template';
 
-interface Group {
+interface GroupEvent {
   id: string;
   name: string;
-  description: string | null;
-  creator_id: string;
-  created_at: string;
-  member_count?: number;
+  date: string;
+  time: string;
+}
+
+interface UserGroup {
+  id: string;
+  name: string;
+  role: string;
+  nextEvent: string;
+  nextEventDate: string;
 }
 
 export default function GroupsScreen() {
-  const [groups, setGroups] = useState<Group[]>([]);
+  const [groupEvents, setGroupEvents] = useState<GroupEvent[]>([]);
+  const [userGroups, setUserGroups] = useState<UserGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -27,91 +34,100 @@ export default function GroupsScreen() {
   const supabase = getSupabaseClient();
 
   useEffect(() => {
-    fetchGroups();
+    fetchData();
   }, []);
 
-  const fetchGroups = async () => {
+  const fetchData = async () => {
+    await Promise.all([fetchGroupEvents(), fetchUserGroups()]);
+    setLoading(false);
+    setRefreshing(false);
+  };
+
+  const fetchGroupEvents = async () => {
     try {
+      // Fetch upcoming events
       const { data, error } = await supabase
-        .from('groups')
-        .select('id, name, description, creator_id, created_at')
-        .order('created_at', { ascending: false });
+        .from('events')
+        .select('id, title, start_time')
+        .gte('start_time', new Date().toISOString())
+        .order('start_time', { ascending: true })
+        .limit(10);
 
       if (error) throw error;
 
       if (data) {
-        setGroups(data);
+        const events: GroupEvent[] = data.map((event: any) => {
+          const date = new Date(event.start_time);
+          return {
+            id: event.id,
+            name: event.title,
+            date: date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }),
+            time: date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+          };
+        });
+        setGroupEvents(events);
       }
     } catch (error: any) {
-      showAlert('Error', error.message || 'Failed to fetch groups');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+      console.error('Error fetching group events:', error);
+    }
+  };
+
+  const fetchUserGroups = async () => {
+    if (!user) return;
+
+    try {
+      // Fetch user's groups with their roles
+      const { data: memberData, error: memberError } = await supabase
+        .from('group_members')
+        .select('group_id, role, groups(id, name)')
+        .eq('user_id', user.id);
+
+      if (memberError) throw memberError;
+
+      if (memberData && memberData.length > 0) {
+        // Get next upcoming event (generic, not group-specific)
+        const { data: nextEventData } = await supabase
+          .from('events')
+          .select('title, start_time')
+          .gte('start_time', new Date().toISOString())
+          .order('start_time', { ascending: true })
+          .limit(1)
+          .single();
+
+        const groupsWithEvents = memberData.map((member: any) => {
+          let nextEvent = 'Next Event';
+          let nextEventDate = '';
+
+          if (nextEventData) {
+            const date = new Date(nextEventData.start_time);
+            nextEvent = nextEventData.title;
+            nextEventDate = `${date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })} @ ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} PST`;
+          }
+
+          return {
+            id: member.groups.id,
+            name: member.groups.name,
+            role: member.role.charAt(0).toUpperCase() + member.role.slice(1),
+            nextEvent,
+            nextEventDate,
+          };
+        });
+
+        setUserGroups(groupsWithEvents);
+      }
+    } catch (error: any) {
+      console.error('Error fetching user groups:', error);
     }
   };
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchGroups();
+    fetchData();
   };
 
-  const handleJoinGroup = async (groupId: string) => {
-    if (!user) return;
-
-    try {
-      const { error } = await supabase
-        .from('group_members')
-        .insert({
-          group_id: groupId,
-          user_id: user.id,
-          role: 'member',
-        });
-
-      if (error) throw error;
-
-      showAlert('Success', 'Successfully joined the group!');
-    } catch (error: any) {
-      if (error.message?.includes('duplicate key')) {
-        showAlert('Info', 'You are already a member of this group');
-      } else {
-        showAlert('Error', error.message || 'Failed to join group');
-      }
-    }
+  const formatEventDateTime = (event: GroupEvent) => {
+    return `${event.date} @ ${event.time}`;
   };
-
-  const renderGroupItem = ({ item }: { item: Group }) => (
-    <TouchableOpacity style={styles.groupCard}>
-      <View style={styles.groupHeader}>
-        <View style={styles.groupIconContainer}>
-          <Ionicons name="people" size={28} color={colors.white} />
-        </View>
-        <View style={styles.groupInfo}>
-          <Text style={styles.groupName}>{item.name}</Text>
-          <Text style={styles.memberCount}>
-            <Ionicons name="person" size={12} color={colors.textSecondary} /> {item.member_count || 0} members
-          </Text>
-        </View>
-      </View>
-
-      {item.description && (
-        <Text style={styles.groupDescription} numberOfLines={2}>
-          {item.description}
-        </Text>
-      )}
-
-      <View style={styles.groupFooter}>
-        <Text style={styles.groupDate}>
-          {new Date(item.created_at).toLocaleDateString()}
-        </Text>
-        <TouchableOpacity
-          style={styles.joinButton}
-          onPress={() => handleJoinGroup(item.id)}
-        >
-          <Text style={styles.joinButtonText}>Join</Text>
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
-  );
 
   if (loading) {
     return (
@@ -122,36 +138,68 @@ export default function GroupsScreen() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Study Groups</Text>
-        <Text style={styles.subtitle}>Find and join collaborative groups</Text>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+      }
+    >
+      {/* Group Events Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Group Events</Text>
+        <View style={styles.sectionContent}>
+          {groupEvents.length === 0 ? (
+            <Text style={styles.emptyText}>No upcoming group events</Text>
+          ) : (
+            groupEvents.map((event) => (
+              <TouchableOpacity key={event.id} style={styles.listItem}>
+                <Ionicons name="book" size={24} color={colors.textPrimary} style={styles.listIcon} />
+                <Text style={styles.listItemText}>
+                  {event.name} - {formatEventDateTime(event)}
+                </Text>
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
       </View>
 
-      <FlatList
-        data={groups}
-        renderItem={renderGroupItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="people-outline" size={80} color={colors.gray400} />
-            <Text style={styles.emptyTitle}>No groups yet</Text>
-            <Text style={styles.emptySubtitle}>
-              Be the first to create a study group
-            </Text>
-          </View>
-        }
-      />
+      {/* Communities & Clubs Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Communities & Clubs</Text>
+        <View style={styles.sectionContent}>
+          {userGroups.length === 0 ? (
+            <Text style={styles.emptyText}>You haven't joined any groups yet</Text>
+          ) : (
+            userGroups.map((group) => (
+              <TouchableOpacity key={group.id} style={styles.listItem}>
+                <Ionicons name="book" size={24} color={colors.textPrimary} style={styles.listIcon} />
+                <View style={styles.groupTextContainer}>
+                  <Text style={styles.groupNameText}>
+                    {group.name} - {group.role}
+                  </Text>
+                  {group.nextEventDate && (
+                    <Text style={styles.nextEventText}>
+                      {group.nextEvent} - {group.nextEventDate}
+                    </Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
+      </View>
 
-      <TouchableOpacity style={styles.fab}>
-        <Ionicons name="add" size={28} color={colors.white} />
-      </TouchableOpacity>
-    </View>
+      {/* Logo at the bottom */}
+      <View style={styles.logoContainer}>
+        <Image
+          source={require('@/assets/images/SyncUp_Logo_Idea_2_Black_Text.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+      </View>
+    </ScrollView>
   );
 }
 
@@ -160,106 +208,70 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  header: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+  contentContainer: {
+    padding: spacing.lg,
+    paddingBottom: spacing.xxxl,
+  },
+  section: {
     backgroundColor: colors.surface,
+    borderRadius: borderRadius.xl,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
     ...shadows.small,
   },
-  title: {
-    ...textStyles.h3,
-  },
-  subtitle: {
-    ...textStyles.body2,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-  listContent: {
-    padding: spacing.md,
-    paddingBottom: spacing.xxl,
-  },
-  groupCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
+  sectionTitle: {
+    fontSize: typography.fontSize20,
+    fontWeight: typography.fontWeightBold,
+    color: colors.textPrimary,
     marginBottom: spacing.md,
-    ...shadows.small,
   },
-  groupHeader: {
+  sectionContent: {
+    gap: spacing.xs,
+  },
+  listItem: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.md,
+    alignItems: 'flex-start',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
   },
-  groupIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
+  listIcon: {
     marginRight: spacing.md,
+    marginTop: 2,
   },
-  groupInfo: {
+  listItemText: {
+    flex: 1,
+    fontSize: typography.fontSize14,
+    color: colors.textPrimary,
+    lineHeight: typography.lineHeight24,
+  },
+  groupTextContainer: {
     flex: 1,
   },
-  groupName: {
-    ...textStyles.body1,
+  groupNameText: {
+    fontSize: typography.fontSize14,
     fontWeight: typography.fontWeightSemiBold,
+    color: colors.textPrimary,
     marginBottom: spacing.xs,
   },
-  memberCount: {
-    ...textStyles.caption,
+  nextEventText: {
+    fontSize: typography.fontSize12,
     color: colors.textSecondary,
+    lineHeight: typography.lineHeight20,
   },
-  groupDescription: {
-    ...textStyles.body2,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-  },
-  groupFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  groupDate: {
-    ...textStyles.caption,
-    color: colors.textSecondary,
-  },
-  joinButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.sm,
-  },
-  joinButtonText: {
-    ...textStyles.body2,
-    color: colors.white,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: spacing.xl,
-    right: spacing.lg,
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...shadows.large,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: spacing.xxxl,
-  },
-  emptyTitle: {
-    ...textStyles.h3,
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-  emptySubtitle: {
-    ...textStyles.body2,
+  emptyText: {
+    fontSize: typography.fontSize14,
     color: colors.textSecondary,
     textAlign: 'center',
+    paddingVertical: spacing.lg,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+    marginTop: spacing.lg,
+  },
+  logo: {
+    width: 200,
+    height: 100,
   },
 });
