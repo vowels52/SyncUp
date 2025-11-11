@@ -86,8 +86,6 @@ export default function CommunityScreen() {
         throw postsError;
       }
 
-      console.log('Fetched posts:', postsData); // Debug log
-
       if (postsData && postsData.length > 0) {
         // Fetch author information separately
         const authorIds = [...new Set(postsData.map(p => p.author_id))];
@@ -173,11 +171,9 @@ export default function CommunityScreen() {
           comments: commentsMap[post.id] || 0,
         }));
 
-        console.log('Transformed posts:', transformedPosts); // Debug log
         setPosts(transformedPosts);
         setFilteredPosts(transformedPosts);
       } else {
-        console.log('No posts found in database');
         setPosts([]);
         setFilteredPosts([]);
       }
@@ -464,7 +460,6 @@ export default function CommunityScreen() {
       });
     }
 
-    console.log('Filtered posts:', filtered, 'Search query:', searchQuery); // Debug log
     setFilteredPosts(filtered);
   };
 
