@@ -86,8 +86,6 @@ export default function CommunityScreen() {
         throw postsError;
       }
 
-      console.log('Fetched posts:', postsData); // Debug log
-
       if (postsData && postsData.length > 0) {
         // Fetch author information separately
         const authorIds = [...new Set(postsData.map(p => p.author_id))];
@@ -173,11 +171,9 @@ export default function CommunityScreen() {
           comments: commentsMap[post.id] || 0,
         }));
 
-        console.log('Transformed posts:', transformedPosts); // Debug log
         setPosts(transformedPosts);
         setFilteredPosts(transformedPosts);
       } else {
-        console.log('No posts found in database');
         setPosts([]);
         setFilteredPosts([]);
       }
@@ -366,6 +362,45 @@ export default function CommunityScreen() {
     }
   };
 
+  const handleDeletePost = async () => {
+    if (!user || !selectedPost) return;
+
+    if (selectedPost.author.id !== user.id) {
+      showAlert('Error', 'You can only delete your own posts');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('forum_posts')
+        .delete()
+        .eq('id', selectedPost.id)
+        .eq('author_id', user.id);
+
+      if (error) throw error;
+
+      showAlert('Success', 'Post deleted successfully');
+      closeDetailModal();
+      fetchPosts();
+    } catch (error: any) {
+      console.error('Error deleting post:', error);
+      showAlert('Error', error.message || 'Failed to delete post');
+    }
+  };
+
+  const confirmDeletePost = () => {
+    if (!selectedPost) return;
+
+    showAlert(
+      'Delete Post',
+      'Are you sure you want to delete this post? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: handleDeletePost }
+      ]
+    );
+  };
+
   const closeDetailModal = () => {
     setShowDetailModal(false);
     setSelectedPost(null);
@@ -425,7 +460,6 @@ export default function CommunityScreen() {
       });
     }
 
-    console.log('Filtered posts:', filtered, 'Search query:', searchQuery); // Debug log
     setFilteredPosts(filtered);
   };
 
@@ -791,16 +825,27 @@ export default function CommunityScreen() {
         onRequestClose={closeDetailModal}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { maxHeight: '90%' }]}>
+          <View style={[styles.modalContent, { height: '90%' }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Post Details</Text>
-              <TouchableOpacity onPress={closeDetailModal}>
-                <Ionicons name="close" size={28} color={colors.textSecondary} />
-              </TouchableOpacity>
+              <View style={styles.modalHeaderActions}>
+                {selectedPost && user && selectedPost.author.id === user.id && (
+                  <TouchableOpacity onPress={confirmDeletePost} style={styles.deleteButton}>
+                    <Ionicons name="trash-outline" size={24} color={colors.error} />
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity onPress={closeDetailModal}>
+                  <Ionicons name="close" size={28} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {selectedPost && (
-              <ScrollView style={styles.detailContent} showsVerticalScrollIndicator={false}>
+              <ScrollView
+                style={styles.detailContent}
+                contentContainerStyle={styles.detailContentContainer}
+                showsVerticalScrollIndicator={false}
+              >
                 {/* Post Header */}
                 <View style={styles.detailPostHeader}>
                   <View style={styles.detailAuthorInfo}>
@@ -1121,6 +1166,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: borderRadius.lg,
     maxHeight: '85%',
     ...shadows.large,
+    flexDirection: 'column',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1132,6 +1178,14 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     ...textStyles.h2,
+  },
+  modalHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  deleteButton: {
+    padding: spacing.xs,
   },
   modalForm: {
     padding: spacing.lg,
@@ -1195,6 +1249,9 @@ const styles = StyleSheet.create({
   },
   detailContent: {
     flex: 1,
+  },
+  detailContentContainer: {
+    flexGrow: 1,
   },
   detailPostHeader: {
     padding: spacing.lg,
