@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, useAlert } from '@/template';
 import { getSupabaseClient } from '@/template';
-import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface Event {
   id: string;
@@ -35,7 +35,7 @@ export default function EventsScreen() {
     end_time: new Date(),
   });
 
-  // Date/time picker state
+  // Android picker state (iOS uses compact mode, doesn't need state)
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
@@ -159,6 +159,7 @@ export default function EventsScreen() {
       start_time: new Date(),
       end_time: new Date(),
     });
+    // Reset Android picker states
     setShowStartDatePicker(false);
     setShowStartTimePicker(false);
     setShowEndDatePicker(false);
@@ -204,7 +205,6 @@ export default function EventsScreen() {
   };
 
   const handleStartDateConfirm = (selectedDate: Date) => {
-    setShowStartDatePicker(false);
     // Preserve the time when changing date
     const newDate = new Date(selectedDate);
     newDate.setHours(newEvent.start_time.getHours());
@@ -213,12 +213,10 @@ export default function EventsScreen() {
   };
 
   const handleStartTimeConfirm = (selectedTime: Date) => {
-    setShowStartTimePicker(false);
     setNewEvent({ ...newEvent, start_time: selectedTime });
   };
 
   const handleEndDateConfirm = (selectedDate: Date) => {
-    setShowEndDatePicker(false);
     // Preserve the time when changing date
     const newDate = new Date(selectedDate);
     newDate.setHours(newEvent.end_time.getHours());
@@ -227,7 +225,6 @@ export default function EventsScreen() {
   };
 
   const handleEndTimeConfirm = (selectedTime: Date) => {
-    setShowEndTimePicker(false);
     setNewEvent({ ...newEvent, end_time: selectedTime });
   };
 
@@ -435,36 +432,6 @@ export default function EventsScreen() {
         <Ionicons name="add" size={28} color={colors.white} />
       </TouchableOpacity>
 
-      {/* Date/Time Pickers - Outside modal to avoid z-index issues */}
-      <DateTimePickerModal
-        isVisible={showStartDatePicker}
-        mode="date"
-        date={newEvent.start_time}
-        onConfirm={handleStartDateConfirm}
-        onCancel={() => setShowStartDatePicker(false)}
-      />
-      <DateTimePickerModal
-        isVisible={showStartTimePicker}
-        mode="time"
-        date={newEvent.start_time}
-        onConfirm={handleStartTimeConfirm}
-        onCancel={() => setShowStartTimePicker(false)}
-      />
-      <DateTimePickerModal
-        isVisible={showEndDatePicker}
-        mode="date"
-        date={newEvent.end_time}
-        onConfirm={handleEndDateConfirm}
-        onCancel={() => setShowEndDatePicker(false)}
-      />
-      <DateTimePickerModal
-        isVisible={showEndTimePicker}
-        mode="time"
-        date={newEvent.end_time}
-        onConfirm={handleEndTimeConfirm}
-        onCancel={() => setShowEndTimePicker(false)}
-      />
-
       {/* Add Event Modal */}
       <Modal
         visible={showAddModal}
@@ -525,24 +492,44 @@ export default function EventsScreen() {
                     width: '100%',
                   }}
                 />
+              ) : Platform.OS === 'ios' ? (
+                <View style={styles.compactPickerContainer}>
+                  <DateTimePicker
+                    value={newEvent.start_time}
+                    mode="date"
+                    display="compact"
+                    onChange={(event, selectedDate) => {
+                      if (selectedDate) {
+                        handleStartDateConfirm(selectedDate);
+                      }
+                    }}
+                    themeVariant="light"
+                  />
+                </View>
               ) : (
                 <>
                   <TouchableOpacity
                     style={styles.dateButton}
-                    onPress={() => {
-                      console.log('Start Date button pressed');
-                      setShowStartDatePicker(true);
-                      console.log('showStartDatePicker set to true');
-                    }}
+                    onPress={() => setShowStartDatePicker(true)}
                   >
                     <Ionicons name="calendar-outline" size={20} color={colors.primary} />
                     <Text style={styles.dateButtonText}>
                       {newEvent.start_time.toLocaleDateString()}
                     </Text>
                   </TouchableOpacity>
-                  <Text style={{color: colors.text, marginTop: 5}}>
-                    Picker visible: {showStartDatePicker ? 'YES' : 'NO'}
-                  </Text>
+                  {showStartDatePicker && (
+                    <DateTimePicker
+                      value={newEvent.start_time}
+                      mode="date"
+                      display="default"
+                      onChange={(event, selectedDate) => {
+                        setShowStartDatePicker(false);
+                        if (event.type === 'set' && selectedDate) {
+                          handleStartDateConfirm(selectedDate);
+                        }
+                      }}
+                    />
+                  )}
                 </>
               )}
 
@@ -563,6 +550,20 @@ export default function EventsScreen() {
                     width: '100%',
                   }}
                 />
+              ) : Platform.OS === 'ios' ? (
+                <View style={styles.compactPickerContainer}>
+                  <DateTimePicker
+                    value={newEvent.start_time}
+                    mode="time"
+                    display="compact"
+                    onChange={(event, selectedTime) => {
+                      if (selectedTime) {
+                        handleStartTimeConfirm(selectedTime);
+                      }
+                    }}
+                    themeVariant="light"
+                  />
+                </View>
               ) : (
                 <>
                   <TouchableOpacity
@@ -574,6 +575,19 @@ export default function EventsScreen() {
                       {newEvent.start_time.toLocaleTimeString()}
                     </Text>
                   </TouchableOpacity>
+                  {showStartTimePicker && (
+                    <DateTimePicker
+                      value={newEvent.start_time}
+                      mode="time"
+                      display="default"
+                      onChange={(event, selectedTime) => {
+                        setShowStartTimePicker(false);
+                        if (event.type === 'set' && selectedTime) {
+                          handleStartTimeConfirm(selectedTime);
+                        }
+                      }}
+                    />
+                  )}
                 </>
               )}
 
@@ -594,6 +608,20 @@ export default function EventsScreen() {
                     width: '100%',
                   }}
                 />
+              ) : Platform.OS === 'ios' ? (
+                <View style={styles.compactPickerContainer}>
+                  <DateTimePicker
+                    value={newEvent.end_time}
+                    mode="date"
+                    display="compact"
+                    onChange={(event, selectedDate) => {
+                      if (selectedDate) {
+                        handleEndDateConfirm(selectedDate);
+                      }
+                    }}
+                    themeVariant="light"
+                  />
+                </View>
               ) : (
                 <>
                   <TouchableOpacity
@@ -605,6 +633,19 @@ export default function EventsScreen() {
                       {newEvent.end_time.toLocaleDateString()}
                     </Text>
                   </TouchableOpacity>
+                  {showEndDatePicker && (
+                    <DateTimePicker
+                      value={newEvent.end_time}
+                      mode="date"
+                      display="default"
+                      onChange={(event, selectedDate) => {
+                        setShowEndDatePicker(false);
+                        if (event.type === 'set' && selectedDate) {
+                          handleEndDateConfirm(selectedDate);
+                        }
+                      }}
+                    />
+                  )}
                 </>
               )}
 
@@ -625,6 +666,20 @@ export default function EventsScreen() {
                     width: '100%',
                   }}
                 />
+              ) : Platform.OS === 'ios' ? (
+                <View style={styles.compactPickerContainer}>
+                  <DateTimePicker
+                    value={newEvent.end_time}
+                    mode="time"
+                    display="compact"
+                    onChange={(event, selectedTime) => {
+                      if (selectedTime) {
+                        handleEndTimeConfirm(selectedTime);
+                      }
+                    }}
+                    themeVariant="light"
+                  />
+                </View>
               ) : (
                 <>
                   <TouchableOpacity
@@ -636,6 +691,19 @@ export default function EventsScreen() {
                       {newEvent.end_time.toLocaleTimeString()}
                     </Text>
                   </TouchableOpacity>
+                  {showEndTimePicker && (
+                    <DateTimePicker
+                      value={newEvent.end_time}
+                      mode="time"
+                      display="default"
+                      onChange={(event, selectedTime) => {
+                        setShowEndTimePicker(false);
+                        if (event.type === 'set' && selectedTime) {
+                          handleEndTimeConfirm(selectedTime);
+                        }
+                      }}
+                    />
+                  )}
                 </>
               )}
 
@@ -947,5 +1015,32 @@ const styles = StyleSheet.create({
     ...textStyles.body1,
     color: colors.white,
     fontWeight: typography.fontWeightBold,
+  },
+  compactPickerContainer: {
+    backgroundColor: colors.white || '#FFFFFF',
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    borderRadius: borderRadius.sm,
+    overflow: 'hidden',
+    paddingVertical: spacing.xs,
+  },
+  inlinePickerContainer: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+  },
+  pickerWrapper: {
+    height: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+  },
+  picker: {
+    width: '100%',
+    height: 200,
   },
 });

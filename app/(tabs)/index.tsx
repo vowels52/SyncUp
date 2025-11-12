@@ -169,58 +169,28 @@ export default function HomeScreen() {
     setShowEndTimePicker(false);
   };
 
-  const handleStartDateChange = (event: any, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowStartDatePicker(false);
-    }
-
-    if (selectedDate && event.type !== 'dismissed') {
-      const newDate = new Date(selectedDate);
-      newDate.setHours(newEvent.start_time.getHours());
-      newDate.setMinutes(newEvent.start_time.getMinutes());
-      setNewEvent({ ...newEvent, start_time: newDate });
-    } else if (event.type === 'dismissed' && Platform.OS === 'android') {
-      setShowStartDatePicker(false);
-    }
+  const handleStartDateConfirm = (selectedDate: Date) => {
+    // Preserve the time when changing date
+    const newDate = new Date(selectedDate);
+    newDate.setHours(newEvent.start_time.getHours());
+    newDate.setMinutes(newEvent.start_time.getMinutes());
+    setNewEvent({ ...newEvent, start_time: newDate });
   };
 
-  const handleStartTimeChange = (event: any, selectedTime?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowStartTimePicker(false);
-    }
-
-    if (selectedTime && event.type !== 'dismissed') {
-      setNewEvent({ ...newEvent, start_time: selectedTime });
-    } else if (event.type === 'dismissed' && Platform.OS === 'android') {
-      setShowStartTimePicker(false);
-    }
+  const handleStartTimeConfirm = (selectedTime: Date) => {
+    setNewEvent({ ...newEvent, start_time: selectedTime });
   };
 
-  const handleEndDateChange = (event: any, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowEndDatePicker(false);
-    }
-
-    if (selectedDate && event.type !== 'dismissed') {
-      const newDate = new Date(selectedDate);
-      newDate.setHours(newEvent.end_time.getHours());
-      newDate.setMinutes(newEvent.end_time.getMinutes());
-      setNewEvent({ ...newEvent, end_time: newDate });
-    } else if (event.type === 'dismissed' && Platform.OS === 'android') {
-      setShowEndDatePicker(false);
-    }
+  const handleEndDateConfirm = (selectedDate: Date) => {
+    // Preserve the time when changing date
+    const newDate = new Date(selectedDate);
+    newDate.setHours(newEvent.end_time.getHours());
+    newDate.setMinutes(newEvent.end_time.getMinutes());
+    setNewEvent({ ...newEvent, end_time: newDate });
   };
 
-  const handleEndTimeChange = (event: any, selectedTime?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowEndTimePicker(false);
-    }
-
-    if (selectedTime && event.type !== 'dismissed') {
-      setNewEvent({ ...newEvent, end_time: selectedTime });
-    } else if (event.type === 'dismissed' && Platform.OS === 'android') {
-      setShowEndTimePicker(false);
-    }
+  const handleEndTimeConfirm = (selectedTime: Date) => {
+    setNewEvent({ ...newEvent, end_time: selectedTime });
   };
 
   const handleWebDateChange = (dateString: string, isStart: boolean) => {
@@ -466,6 +436,20 @@ export default function HomeScreen() {
                     width: '100%',
                   }}
                 />
+              ) : Platform.OS === 'ios' ? (
+                <View style={styles.compactPickerContainer}>
+                  <DateTimePicker
+                    value={newEvent.start_time}
+                    mode="date"
+                    display="compact"
+                    onChange={(event, selectedDate) => {
+                      if (selectedDate) {
+                        handleStartDateConfirm(selectedDate);
+                      }
+                    }}
+                    themeVariant="light"
+                  />
+                </View>
               ) : (
                 <>
                   <TouchableOpacity
@@ -478,23 +462,17 @@ export default function HomeScreen() {
                     </Text>
                   </TouchableOpacity>
                   {showStartDatePicker && (
-                    <View style={styles.pickerContainer}>
-                      <DateTimePicker
-                        value={newEvent.start_time}
-                        mode="date"
-                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                        onChange={handleStartDateChange}
-                        textColor={colors.text}
-                      />
-                      {Platform.OS === 'ios' && (
-                        <TouchableOpacity
-                          style={styles.doneButton}
-                          onPress={() => setShowStartDatePicker(false)}
-                        >
-                          <Text style={styles.doneButtonText}>Done</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
+                    <DateTimePicker
+                      value={newEvent.start_time}
+                      mode="date"
+                      display="default"
+                      onChange={(event, selectedDate) => {
+                        setShowStartDatePicker(false);
+                        if (event.type === 'set' && selectedDate) {
+                          handleStartDateConfirm(selectedDate);
+                        }
+                      }}
+                    />
                   )}
                 </>
               )}
@@ -516,6 +494,20 @@ export default function HomeScreen() {
                     width: '100%',
                   }}
                 />
+              ) : Platform.OS === 'ios' ? (
+                <View style={styles.compactPickerContainer}>
+                  <DateTimePicker
+                    value={newEvent.start_time}
+                    mode="time"
+                    display="compact"
+                    onChange={(event, selectedTime) => {
+                      if (selectedTime) {
+                        handleStartTimeConfirm(selectedTime);
+                      }
+                    }}
+                    themeVariant="light"
+                  />
+                </View>
               ) : (
                 <>
                   <TouchableOpacity
@@ -528,23 +520,17 @@ export default function HomeScreen() {
                     </Text>
                   </TouchableOpacity>
                   {showStartTimePicker && (
-                    <View style={styles.pickerContainer}>
-                      <DateTimePicker
-                        value={newEvent.start_time}
-                        mode="time"
-                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                        onChange={handleStartTimeChange}
-                        textColor={colors.text}
-                      />
-                      {Platform.OS === 'ios' && (
-                        <TouchableOpacity
-                          style={styles.doneButton}
-                          onPress={() => setShowStartTimePicker(false)}
-                        >
-                          <Text style={styles.doneButtonText}>Done</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
+                    <DateTimePicker
+                      value={newEvent.start_time}
+                      mode="time"
+                      display="default"
+                      onChange={(event, selectedTime) => {
+                        setShowStartTimePicker(false);
+                        if (event.type === 'set' && selectedTime) {
+                          handleStartTimeConfirm(selectedTime);
+                        }
+                      }}
+                    />
                   )}
                 </>
               )}
@@ -566,6 +552,20 @@ export default function HomeScreen() {
                     width: '100%',
                   }}
                 />
+              ) : Platform.OS === 'ios' ? (
+                <View style={styles.compactPickerContainer}>
+                  <DateTimePicker
+                    value={newEvent.end_time}
+                    mode="date"
+                    display="compact"
+                    onChange={(event, selectedDate) => {
+                      if (selectedDate) {
+                        handleEndDateConfirm(selectedDate);
+                      }
+                    }}
+                    themeVariant="light"
+                  />
+                </View>
               ) : (
                 <>
                   <TouchableOpacity
@@ -578,23 +578,17 @@ export default function HomeScreen() {
                     </Text>
                   </TouchableOpacity>
                   {showEndDatePicker && (
-                    <View style={styles.pickerContainer}>
-                      <DateTimePicker
-                        value={newEvent.end_time}
-                        mode="date"
-                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                        onChange={handleEndDateChange}
-                        textColor={colors.text}
-                      />
-                      {Platform.OS === 'ios' && (
-                        <TouchableOpacity
-                          style={styles.doneButton}
-                          onPress={() => setShowEndDatePicker(false)}
-                        >
-                          <Text style={styles.doneButtonText}>Done</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
+                    <DateTimePicker
+                      value={newEvent.end_time}
+                      mode="date"
+                      display="default"
+                      onChange={(event, selectedDate) => {
+                        setShowEndDatePicker(false);
+                        if (event.type === 'set' && selectedDate) {
+                          handleEndDateConfirm(selectedDate);
+                        }
+                      }}
+                    />
                   )}
                 </>
               )}
@@ -616,6 +610,20 @@ export default function HomeScreen() {
                     width: '100%',
                   }}
                 />
+              ) : Platform.OS === 'ios' ? (
+                <View style={styles.compactPickerContainer}>
+                  <DateTimePicker
+                    value={newEvent.end_time}
+                    mode="time"
+                    display="compact"
+                    onChange={(event, selectedTime) => {
+                      if (selectedTime) {
+                        handleEndTimeConfirm(selectedTime);
+                      }
+                    }}
+                    themeVariant="light"
+                  />
+                </View>
               ) : (
                 <>
                   <TouchableOpacity
@@ -628,23 +636,17 @@ export default function HomeScreen() {
                     </Text>
                   </TouchableOpacity>
                   {showEndTimePicker && (
-                    <View style={styles.pickerContainer}>
-                      <DateTimePicker
-                        value={newEvent.end_time}
-                        mode="time"
-                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                        onChange={handleEndTimeChange}
-                        textColor={colors.text}
-                      />
-                      {Platform.OS === 'ios' && (
-                        <TouchableOpacity
-                          style={styles.doneButton}
-                          onPress={() => setShowEndTimePicker(false)}
-                        >
-                          <Text style={styles.doneButtonText}>Done</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
+                    <DateTimePicker
+                      value={newEvent.end_time}
+                      mode="time"
+                      display="default"
+                      onChange={(event, selectedTime) => {
+                        setShowEndTimePicker(false);
+                        if (event.type === 'set' && selectedTime) {
+                          handleEndTimeConfirm(selectedTime);
+                        }
+                      }}
+                    />
                   )}
                 </>
               )}
@@ -913,5 +915,13 @@ const styles = StyleSheet.create({
     ...textStyles.body1,
     color: colors.white,
     fontWeight: typography.fontWeightBold,
+  },
+  compactPickerContainer: {
+    backgroundColor: colors.white || '#FFFFFF',
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    borderRadius: borderRadius.sm,
+    overflow: 'hidden',
+    paddingVertical: spacing.xs,
   },
 });
