@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { colors, spacing, borderRadius, shadows, typography } from '@/constants/theme';
 import { textStyles, commonStyles } from '@/constants/styles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,10 +15,25 @@ interface UserMatch {
   bio: string | null;
 }
 
+interface ConnectionRequest {
+  id: string;
+  user_id: string;
+  created_at: string;
+  user_profiles: {
+    id: string;
+    full_name: string | null;
+    major: string | null;
+    year: string | null;
+    bio: string | null;
+  };
+}
+
 export default function ConnectionsScreen() {
   const [matches, setMatches] = useState<UserMatch[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<ConnectionRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [viewMode, setViewMode] = useState<'matches' | 'requests'>('matches');
 
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -27,6 +42,7 @@ export default function ConnectionsScreen() {
 
   useEffect(() => {
     fetchMatches();
+    fetchPendingRequests();
   }, [user]);
 
   const fetchMatches = async () => {
@@ -35,18 +51,40 @@ export default function ConnectionsScreen() {
     try {
       setLoading(true);
 
-      // Fetch all users except current user
+      // First, get all existing connections (sent or received)
+      const { data: connections, error: connectionsError } = await supabase
+        .from('connections')
+        .select('user_id, connected_user_id')
+        .or(`user_id.eq.${user.id},connected_user_id.eq.${user.id}`);
+
+      if (connectionsError) throw connectionsError;
+
+      // Extract user IDs to exclude
+      const excludedUserIds = new Set<string>();
+      connections?.forEach((conn) => {
+        if (conn.user_id === user.id) {
+          excludedUserIds.add(conn.connected_user_id);
+        } else {
+          excludedUserIds.add(conn.user_id);
+        }
+      });
+
+      // Fetch all users except current user and those with existing connections
       const { data, error } = await supabase
         .from('user_profiles')
         .select('id, full_name, major, year, bio')
         .neq('id', user.id)
         .not('full_name', 'is', null)
-        .limit(10);
+        .limit(50);
 
       if (error) throw error;
 
       if (data) {
-        setMatches(data);
+        // Filter out users with existing connections
+        const filteredMatches = data.filter(
+          (match) => !excludedUserIds.has(match.id)
+        );
+        setMatches(filteredMatches.slice(0, 10));
       }
     } catch (error: any) {
       showAlert('Error', error.message || 'Failed to fetch matches');
@@ -70,7 +108,21 @@ export default function ConnectionsScreen() {
       if (error) throw error;
 
       showAlert('Success', 'Connection request sent!');
-      handleNext();
+
+      // Remove the current user from matches and move to next
+      const updatedMatches = matches.filter(m => m.id !== matchedUserId);
+      setMatches(updatedMatches);
+
+      // If we're at the end or no more matches, reset
+      if (currentIndex >= updatedMatches.length) {
+        if (updatedMatches.length > 0) {
+          setCurrentIndex(0);
+        } else {
+          // No more matches, fetch new ones
+          fetchMatches();
+          setCurrentIndex(0);
+        }
+      }
     } catch (error: any) {
       showAlert('Error', error.message || 'Failed to send connection request');
     }
@@ -90,6 +142,75 @@ export default function ConnectionsScreen() {
     }
   };
 
+  const fetchPendingRequests = async () => {
+    if (!user) return;
+
+    try {
+      // Fetch connection requests where the current user is the connected_user_id
+      const { data, error } = await supabase
+        .from('connections')
+        .select(`
+          id,
+          user_id,
+          created_at,
+          user_profiles:user_id (
+            id,
+            full_name,
+            major,
+            year,
+            bio
+          )
+        `)
+        .eq('connected_user_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data) {
+        setPendingRequests(data as ConnectionRequest[]);
+      }
+    } catch (error: any) {
+      console.error('Error fetching pending requests:', error);
+    }
+  };
+
+  const handleAcceptRequest = async (connectionId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('connections')
+        .update({ status: 'accepted' })
+        .eq('id', connectionId);
+
+      if (error) throw error;
+
+      showAlert('Success', 'Connection request accepted!');
+      fetchPendingRequests();
+    } catch (error: any) {
+      showAlert('Error', error.message || 'Failed to accept connection');
+    }
+  };
+
+  const handleDeclineRequest = async (connectionId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('connections')
+        .update({ status: 'rejected' })
+        .eq('id', connectionId);
+
+      if (error) throw error;
+
+      showAlert('Success', 'Connection request declined');
+      fetchPendingRequests();
+    } catch (error: any) {
+      showAlert('Error', error.message || 'Failed to decline connection');
+    }
+  };
+
   if (loading) {
     return (
       <View style={[commonStyles.container, commonStyles.centerContent]}>
@@ -105,11 +226,32 @@ export default function ConnectionsScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Find Your Match</Text>
         <Text style={styles.subtitle}>
-          Swipe to connect with peers
+          {viewMode === 'matches' ? 'Swipe to connect with peers' : 'Manage connection requests'}
         </Text>
+
+        {/* Toggle Buttons */}
+        <View style={styles.toggleContainer}>
+          <TouchableOpacity
+            style={[styles.toggleButton, viewMode === 'matches' && styles.toggleButtonActive]}
+            onPress={() => setViewMode('matches')}
+          >
+            <Text style={[styles.toggleText, viewMode === 'matches' && styles.toggleTextActive]}>
+              Discover
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.toggleButton, viewMode === 'requests' && styles.toggleButtonActive]}
+            onPress={() => setViewMode('requests')}
+          >
+            <Text style={[styles.toggleText, viewMode === 'requests' && styles.toggleTextActive]}>
+              Requests {pendingRequests.length > 0 && `(${pendingRequests.length})`}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {matches.length === 0 ? (
+      {viewMode === 'matches' ? (
+        matches.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="people-outline" size={80} color={colors.gray400} />
           <Text style={styles.emptyTitle}>No matches available</Text>
@@ -189,6 +331,64 @@ export default function ConnectionsScreen() {
             </Text>
           </View>
         </View>
+      )
+      ) : (
+        /* Pending Requests View */
+        <ScrollView style={styles.requestsContainer} showsVerticalScrollIndicator={false}>
+          {pendingRequests.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="notifications-outline" size={80} color={colors.gray400} />
+              <Text style={styles.emptyTitle}>No pending requests</Text>
+              <Text style={styles.emptySubtitle}>
+                You'll see connection requests here when others want to connect with you
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.requestsList}>
+              {pendingRequests.map((request) => (
+                <View key={request.id} style={styles.requestCard}>
+                  <View style={styles.requestHeader}>
+                    <View style={styles.requestAvatar}>
+                      <Ionicons name="person" size={32} color={colors.white} />
+                    </View>
+                    <View style={styles.requestInfo}>
+                      <Text style={styles.requestName}>
+                        {request.user_profiles.full_name || 'Anonymous Student'}
+                      </Text>
+                      {request.user_profiles.major && request.user_profiles.year && (
+                        <Text style={styles.requestDetails}>
+                          {request.user_profiles.major} • {request.user_profiles.year}
+                        </Text>
+                      )}
+                      {request.user_profiles.bio && (
+                        <Text style={styles.requestBio} numberOfLines={2}>
+                          {request.user_profiles.bio}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+
+                  <View style={styles.requestActions}>
+                    <TouchableOpacity
+                      style={[styles.requestButton, styles.declineButton]}
+                      onPress={() => handleDeclineRequest(request.id)}
+                    >
+                      <Ionicons name="close" size={20} color={colors.error} />
+                      <Text style={styles.declineButtonText}>Decline</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.requestButton, styles.acceptButton]}
+                      onPress={() => handleAcceptRequest(request.id)}
+                    >
+                      <Ionicons name="checkmark" size={20} color={colors.white} />
+                      <Text style={styles.acceptButtonText}>Accept</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+        </ScrollView>
       )}
     </View>
   );
@@ -327,5 +527,106 @@ const styles = StyleSheet.create({
     ...textStyles.body2,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    marginTop: spacing.md,
+    backgroundColor: colors.gray100,
+    borderRadius: borderRadius.md,
+    padding: spacing.xs,
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.sm,
+    alignItems: 'center',
+  },
+  toggleButtonActive: {
+    backgroundColor: colors.primary,
+  },
+  toggleText: {
+    ...textStyles.body2,
+    fontWeight: typography.fontWeightSemiBold,
+    color: colors.textSecondary,
+  },
+  toggleTextActive: {
+    color: colors.white,
+  },
+  requestsContainer: {
+    flex: 1,
+    padding: spacing.md,
+  },
+  requestsList: {
+    paddingBottom: spacing.lg,
+  },
+  requestCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadows.small,
+  },
+  requestHeader: {
+    flexDirection: 'row',
+    marginBottom: spacing.md,
+  },
+  requestAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
+  },
+  requestInfo: {
+    flex: 1,
+  },
+  requestName: {
+    ...textStyles.body1,
+    fontWeight: typography.fontWeightSemiBold,
+    marginBottom: spacing.xs,
+  },
+  requestDetails: {
+    ...textStyles.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  requestBio: {
+    ...textStyles.caption,
+    color: colors.textSecondary,
+  },
+  requestActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  requestButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.sm,
+    gap: spacing.xs,
+  },
+  declineButton: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.error,
+  },
+  acceptButton: {
+    backgroundColor: colors.success,
+  },
+  declineButtonText: {
+    ...textStyles.body2,
+    fontWeight: typography.fontWeightSemiBold,
+    color: colors.error,
+  },
+  acceptButtonText: {
+    ...textStyles.body2,
+    fontWeight: typography.fontWeightSemiBold,
+    color: colors.white,
   },
 });

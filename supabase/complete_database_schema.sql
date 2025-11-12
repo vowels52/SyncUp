@@ -1,5 +1,6 @@
 -- OnSpace Cloud - SyncUp Database Schema
 -- Generated from OnSpace.AI schema on 2025-11-05
+-- Updated: 2025-11-11 - Added Find Your Match feature tables
 -- Supabase-compatible SQL
 
 -- =====================================================
@@ -471,6 +472,147 @@ CREATE POLICY "Post authors can manage tags" ON post_tags
     );
 
 -- =====================================================
+-- FIND YOUR MATCH FEATURE TABLES
+-- Description: Tables for user connections, match preferences, and match history
+-- =====================================================
+
+-- =====================================================
+-- TABLE: connections
+-- Description: Stores connection requests between users with status tracking
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS connections (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id uuid NOT NULL,
+    connected_user_id uuid NOT NULL,
+    status text NOT NULL CHECK (status IN ('pending', 'accepted', 'rejected')),
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    UNIQUE(user_id, connected_user_id),
+    CONSTRAINT connections_user_id_fkey FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON DELETE CASCADE,
+    CONSTRAINT connections_connected_user_id_fkey FOREIGN KEY (connected_user_id) REFERENCES user_profiles(id) ON DELETE CASCADE,
+    CONSTRAINT connections_no_self_connection CHECK (user_id != connected_user_id)
+);
+
+-- Indexes for better query performance
+CREATE INDEX IF NOT EXISTS idx_connections_user ON connections(user_id);
+CREATE INDEX IF NOT EXISTS idx_connections_connected_user ON connections(connected_user_id);
+CREATE INDEX IF NOT EXISTS idx_connections_status ON connections(status);
+CREATE INDEX IF NOT EXISTS idx_connections_created ON connections(created_at DESC);
+
+-- Enable RLS
+ALTER TABLE connections ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for connections
+CREATE POLICY "Users can view their own connections" ON connections
+    FOR SELECT
+    TO authenticated
+    USING (user_id = auth.uid() OR connected_user_id = auth.uid());
+
+CREATE POLICY "Users can create their own connections" ON connections
+    FOR INSERT
+    TO authenticated
+    WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Users can update their own connections" ON connections
+    FOR UPDATE
+    TO authenticated
+    USING (user_id = auth.uid() OR connected_user_id = auth.uid());
+
+CREATE POLICY "Users can delete their own connections" ON connections
+    FOR DELETE
+    TO authenticated
+    USING (user_id = auth.uid());
+
+-- =====================================================
+-- TABLE: match_history
+-- Description: Tracks user interactions to avoid showing same profiles repeatedly
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS match_history (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id uuid NOT NULL,
+    viewed_user_id uuid NOT NULL,
+    action text NOT NULL CHECK (action IN ('skip', 'connect')),
+    created_at timestamp with time zone DEFAULT now(),
+    UNIQUE(user_id, viewed_user_id),
+    CONSTRAINT match_history_user_id_fkey FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON DELETE CASCADE,
+    CONSTRAINT match_history_viewed_user_id_fkey FOREIGN KEY (viewed_user_id) REFERENCES user_profiles(id) ON DELETE CASCADE,
+    CONSTRAINT match_history_no_self_view CHECK (user_id != viewed_user_id)
+);
+
+-- Indexes for better query performance
+CREATE INDEX IF NOT EXISTS idx_match_history_user ON match_history(user_id);
+CREATE INDEX IF NOT EXISTS idx_match_history_viewed_user ON match_history(viewed_user_id);
+CREATE INDEX IF NOT EXISTS idx_match_history_action ON match_history(action);
+CREATE INDEX IF NOT EXISTS idx_match_history_created ON match_history(created_at DESC);
+
+-- Enable RLS
+ALTER TABLE match_history ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for match_history
+CREATE POLICY "Users can view their own match history" ON match_history
+    FOR SELECT
+    TO authenticated
+    USING (user_id = auth.uid());
+
+CREATE POLICY "Users can create their own match history" ON match_history
+    FOR INSERT
+    TO authenticated
+    WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Users can delete their own match history" ON match_history
+    FOR DELETE
+    TO authenticated
+    USING (user_id = auth.uid());
+
+-- =====================================================
+-- TABLE: user_match_preferences
+-- Description: User preferences for finding matches (optional filtering)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS user_match_preferences (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id uuid NOT NULL UNIQUE,
+    preferred_majors text[],
+    preferred_years text[],
+    preferred_study_habits text,
+    min_shared_interests integer DEFAULT 1,
+    min_shared_courses integer DEFAULT 0,
+    show_only_same_university boolean DEFAULT true,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT user_match_preferences_user_id_fkey FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON DELETE CASCADE
+);
+
+-- Index for user lookup
+CREATE INDEX IF NOT EXISTS idx_user_match_preferences_user ON user_match_preferences(user_id);
+
+-- Enable RLS
+ALTER TABLE user_match_preferences ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for user_match_preferences
+CREATE POLICY "Users can view their own match preferences" ON user_match_preferences
+    FOR SELECT
+    TO authenticated
+    USING (user_id = auth.uid());
+
+CREATE POLICY "Users can create their own match preferences" ON user_match_preferences
+    FOR INSERT
+    TO authenticated
+    WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Users can update their own match preferences" ON user_match_preferences
+    FOR UPDATE
+    TO authenticated
+    USING (user_id = auth.uid());
+
+CREATE POLICY "Users can delete their own match preferences" ON user_match_preferences
+    FOR DELETE
+    TO authenticated
+    USING (user_id = auth.uid());
+
+-- =====================================================
 -- FUNCTION: handle_new_user
 -- Description: Automatically creates user profile when new auth user is created
 -- =====================================================
@@ -503,6 +645,176 @@ END;
 $$;
 
 -- =====================================================
+-- FUNCTION: get_potential_matches
+-- Description: Returns potential matches for a user based on shared interests/courses
+-- =====================================================
+
+CREATE OR REPLACE FUNCTION get_potential_matches(
+    target_user_id uuid,
+    match_limit integer DEFAULT 10
+)
+RETURNS TABLE (
+    user_id uuid,
+    full_name text,
+    major text,
+    year text,
+    bio text,
+    shared_interests integer,
+    shared_courses integer,
+    match_score integer
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    RETURN QUERY
+    WITH user_interests AS (
+        SELECT interest_id
+        FROM user_interests
+        WHERE user_interests.user_id = target_user_id
+    ),
+    user_courses AS (
+        SELECT course_id
+        FROM user_courses
+        WHERE user_courses.user_id = target_user_id
+    ),
+    already_viewed AS (
+        SELECT viewed_user_id
+        FROM match_history
+        WHERE match_history.user_id = target_user_id
+    ),
+    existing_connections AS (
+        SELECT connected_user_id
+        FROM connections
+        WHERE connections.user_id = target_user_id
+        UNION
+        SELECT connections.user_id
+        FROM connections
+        WHERE connected_user_id = target_user_id
+    )
+    SELECT
+        up.id,
+        up.full_name,
+        up.major,
+        up.year,
+        up.bio,
+        COALESCE(
+            (SELECT COUNT(*)::integer
+             FROM user_interests ui
+             WHERE ui.user_id = up.id
+             AND ui.interest_id IN (SELECT interest_id FROM user_interests)),
+            0
+        ) as shared_interests,
+        COALESCE(
+            (SELECT COUNT(*)::integer
+             FROM user_courses uc
+             WHERE uc.user_id = up.id
+             AND uc.course_id IN (SELECT course_id FROM user_courses)),
+            0
+        ) as shared_courses,
+        (
+            COALESCE(
+                (SELECT COUNT(*)::integer
+                 FROM user_interests ui
+                 WHERE ui.user_id = up.id
+                 AND ui.interest_id IN (SELECT interest_id FROM user_interests)),
+                0
+            ) * 2 +
+            COALESCE(
+                (SELECT COUNT(*)::integer
+                 FROM user_courses uc
+                 WHERE uc.user_id = up.id
+                 AND uc.course_id IN (SELECT course_id FROM user_courses)),
+                0
+            ) * 3
+        ) as match_score
+    FROM user_profiles up
+    WHERE up.id != target_user_id
+    AND up.id NOT IN (SELECT viewed_user_id FROM already_viewed)
+    AND up.id NOT IN (SELECT connected_user_id FROM existing_connections)
+    AND up.full_name IS NOT NULL
+    ORDER BY match_score DESC, RANDOM()
+    LIMIT match_limit;
+END;
+$$;
+
+-- =====================================================
+-- FUNCTION: accept_connection
+-- Description: Accepts a pending connection request
+-- =====================================================
+
+CREATE OR REPLACE FUNCTION accept_connection(
+    connection_id uuid
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    current_user_id uuid;
+    connection_user_id uuid;
+BEGIN
+    current_user_id := auth.uid();
+
+    -- Get the user_id from the connection
+    SELECT connected_user_id INTO connection_user_id
+    FROM connections
+    WHERE id = connection_id
+    AND connected_user_id = current_user_id
+    AND status = 'pending';
+
+    IF connection_user_id IS NULL THEN
+        RETURN false;
+    END IF;
+
+    -- Update the connection status
+    UPDATE connections
+    SET status = 'accepted', updated_at = now()
+    WHERE id = connection_id;
+
+    RETURN true;
+END;
+$$;
+
+-- =====================================================
+-- FUNCTION: reject_connection
+-- Description: Rejects a pending connection request
+-- =====================================================
+
+CREATE OR REPLACE FUNCTION reject_connection(
+    connection_id uuid
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    current_user_id uuid;
+    connection_user_id uuid;
+BEGIN
+    current_user_id := auth.uid();
+
+    -- Get the user_id from the connection
+    SELECT connected_user_id INTO connection_user_id
+    FROM connections
+    WHERE id = connection_id
+    AND connected_user_id = current_user_id
+    AND status = 'pending';
+
+    IF connection_user_id IS NULL THEN
+        RETURN false;
+    END IF;
+
+    -- Update the connection status
+    UPDATE connections
+    SET status = 'rejected', updated_at = now()
+    WHERE id = connection_id;
+
+    RETURN true;
+END;
+$$;
+
+-- =====================================================
 -- TRIGGER: on_auth_user_created
 -- Description: Trigger that fires when a new user is created in auth.users
 -- =====================================================
@@ -523,6 +835,24 @@ CREATE TRIGGER update_forum_posts_updated_at
 
 CREATE TRIGGER update_forum_comments_updated_at
     BEFORE UPDATE ON forum_comments
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================
+-- TRIGGER: Auto-update updated_at for connections
+-- =====================================================
+
+CREATE TRIGGER update_connections_updated_at
+    BEFORE UPDATE ON connections
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================
+-- TRIGGER: Auto-update updated_at for user_match_preferences
+-- =====================================================
+
+CREATE TRIGGER update_user_match_preferences_updated_at
+    BEFORE UPDATE ON user_match_preferences
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
