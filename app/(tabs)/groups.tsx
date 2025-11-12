@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Image, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Image } from 'react-native';
+import { useRouter } from 'expo-router';
 import { colors, spacing, borderRadius, shadows, typography } from '@/constants/theme';
 import { textStyles, commonStyles } from '@/constants/styles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, useAlert } from '@/template';
 import { getSupabaseClient } from '@/template';
-import uwbClubsData from '@/data/uwb-clubs.json';
 
 interface GroupEvent {
   id: string;
@@ -26,11 +26,11 @@ interface UserGroup {
 interface UWBClub {
   id: string;
   name: string;
-  type: string;
+  club_type: string;
   category: string;
   description: string;
-  imageUrl: string;
-  clubUrl: string;
+  image_url: string;
+  is_official_club: boolean;
 }
 
 export default function GroupsScreen() {
@@ -42,23 +42,36 @@ export default function GroupsScreen() {
   const [showAllClubs, setShowAllClubs] = useState(false);
 
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { user } = useAuth();
   const { showAlert } = useAlert();
   const supabase = getSupabaseClient();
 
   useEffect(() => {
     fetchData();
-    loadUWBClubs();
   }, []);
 
-  const loadUWBClubs = () => {
-    setUwbClubs(uwbClubsData as UWBClub[]);
-  };
-
   const fetchData = async () => {
-    await Promise.all([fetchGroupEvents(), fetchUserGroups()]);
+    await Promise.all([fetchGroupEvents(), fetchUserGroups(), loadUWBClubs()]);
     setLoading(false);
     setRefreshing(false);
+  };
+
+  const loadUWBClubs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('groups')
+        .select('id, name, description, club_type, category, image_url, is_official_club')
+        .eq('is_official_club', true)
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      if (data) {
+        setUwbClubs(data);
+      }
+    } catch (error) {
+      console.error('Error loading UWB clubs:', error);
+    }
   };
 
   const fetchGroupEvents = async () => {
@@ -147,18 +160,8 @@ export default function GroupsScreen() {
     return `${event.date} @ ${event.time}`;
   };
 
-  const openClubUrl = async (url: string) => {
-    try {
-      const canOpen = await Linking.canOpenURL(url);
-      if (canOpen) {
-        await Linking.openURL(url);
-      } else {
-        showAlert('Error', 'Cannot open club page');
-      }
-    } catch (error) {
-      console.error('Error opening club URL:', error);
-      showAlert('Error', 'Failed to open club page');
-    }
+  const openClubDetail = (clubId: string) => {
+    router.push(`/club-detail?id=${clubId}`);
   };
 
   if (loading) {
@@ -197,32 +200,6 @@ export default function GroupsScreen() {
         </View>
       </View>
 
-      {/* Communities & Clubs Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Communities & Clubs</Text>
-        <View style={styles.sectionContent}>
-          {userGroups.length === 0 ? (
-            <Text style={styles.emptyText}>You haven't joined any groups yet</Text>
-          ) : (
-            userGroups.map((group) => (
-              <TouchableOpacity key={group.id} style={styles.listItem}>
-                <Ionicons name="book" size={24} color={colors.textPrimary} style={styles.listIcon} />
-                <View style={styles.groupTextContainer}>
-                  <Text style={styles.groupNameText}>
-                    {group.name} - {group.role}
-                  </Text>
-                  {group.nextEventDate && (
-                    <Text style={styles.nextEventText}>
-                      {group.nextEvent} - {group.nextEventDate}
-                    </Text>
-                  )}
-                </View>
-              </TouchableOpacity>
-            ))
-          )}
-        </View>
-      </View>
-
       {/* UWB Clubs Section */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -241,11 +218,11 @@ export default function GroupsScreen() {
               <TouchableOpacity
                 key={club.id}
                 style={styles.clubCard}
-                onPress={() => openClubUrl(club.clubUrl)}
+                onPress={() => openClubDetail(club.id)}
               >
                 <View style={styles.clubImageContainer}>
                   <Image
-                    source={{ uri: club.imageUrl }}
+                    source={{ uri: club.image_url }}
                     style={styles.clubImage}
                     resizeMode="cover"
                   />
@@ -255,7 +232,7 @@ export default function GroupsScreen() {
                     {club.name}
                   </Text>
                   <Text style={styles.clubType} numberOfLines={1}>
-                    {club.type}
+                    {club.club_type}
                     {club.category ? ` - ${club.category}` : ''}
                   </Text>
                   {club.description && (
