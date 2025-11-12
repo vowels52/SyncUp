@@ -35,6 +35,11 @@ export default function EventsScreen() {
     end_time: new Date(),
   });
 
+  // Android picker state (iOS uses compact mode, doesn't need state)
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
 
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -154,6 +159,11 @@ export default function EventsScreen() {
       start_time: new Date(),
       end_time: new Date(),
     });
+    // Reset Android picker states
+    setShowStartDatePicker(false);
+    setShowStartTimePicker(false);
+    setShowEndDatePicker(false);
+    setShowEndTimePicker(false);
   };
 
   const getDaysInMonth = (date: Date) => {
@@ -482,7 +492,7 @@ export default function EventsScreen() {
                     width: '100%',
                   }}
                 />
-              ) : (
+              ) : Platform.OS === 'ios' ? (
                 <View style={styles.compactPickerContainer}>
                   <DateTimePicker
                     value={newEvent.start_time}
@@ -496,6 +506,31 @@ export default function EventsScreen() {
                     themeVariant="light"
                   />
                 </View>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={styles.dateButton}
+                    onPress={() => setShowStartDatePicker(true)}
+                  >
+                    <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+                    <Text style={styles.dateButtonText}>
+                      {newEvent.start_time.toLocaleDateString()}
+                    </Text>
+                  </TouchableOpacity>
+                  {showStartDatePicker && (
+                    <DateTimePicker
+                      value={newEvent.start_time}
+                      mode="date"
+                      display="default"
+                      onChange={(event, selectedDate) => {
+                        setShowStartDatePicker(false);
+                        if (event.type === 'set' && selectedDate) {
+                          handleStartDateConfirm(selectedDate);
+                        }
+                      }}
+                    />
+                  )}
+                </>
               )}
 
               <Text style={styles.inputLabel}>Start Time</Text>
@@ -515,7 +550,7 @@ export default function EventsScreen() {
                     width: '100%',
                   }}
                 />
-              ) : (
+              ) : Platform.OS === 'ios' ? (
                 <View style={styles.compactPickerContainer}>
                   <DateTimePicker
                     value={newEvent.start_time}
@@ -529,6 +564,31 @@ export default function EventsScreen() {
                     themeVariant="light"
                   />
                 </View>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={styles.dateButton}
+                    onPress={() => setShowStartTimePicker(true)}
+                  >
+                    <Ionicons name="time-outline" size={20} color={colors.primary} />
+                    <Text style={styles.dateButtonText}>
+                      {newEvent.start_time.toLocaleTimeString()}
+                    </Text>
+                  </TouchableOpacity>
+                  {showStartTimePicker && (
+                    <DateTimePicker
+                      value={newEvent.start_time}
+                      mode="time"
+                      display="default"
+                      onChange={(event, selectedTime) => {
+                        setShowStartTimePicker(false);
+                        if (event.type === 'set' && selectedTime) {
+                          handleStartTimeConfirm(selectedTime);
+                        }
+                      }}
+                    />
+                  )}
+                </>
               )}
 
               <Text style={styles.inputLabel}>End Date</Text>
@@ -548,7 +608,7 @@ export default function EventsScreen() {
                     width: '100%',
                   }}
                 />
-              ) : (
+              ) : Platform.OS === 'ios' ? (
                 <View style={styles.compactPickerContainer}>
                   <DateTimePicker
                     value={newEvent.end_time}
@@ -562,6 +622,31 @@ export default function EventsScreen() {
                     themeVariant="light"
                   />
                 </View>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={styles.dateButton}
+                    onPress={() => setShowEndDatePicker(true)}
+                  >
+                    <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+                    <Text style={styles.dateButtonText}>
+                      {newEvent.end_time.toLocaleDateString()}
+                    </Text>
+                  </TouchableOpacity>
+                  {showEndDatePicker && (
+                    <DateTimePicker
+                      value={newEvent.end_time}
+                      mode="date"
+                      display="default"
+                      onChange={(event, selectedDate) => {
+                        setShowEndDatePicker(false);
+                        if (event.type === 'set' && selectedDate) {
+                          handleEndDateConfirm(selectedDate);
+                        }
+                      }}
+                    />
+                  )}
+                </>
               )}
 
               <Text style={styles.inputLabel}>End Time</Text>
@@ -581,7 +666,7 @@ export default function EventsScreen() {
                     width: '100%',
                   }}
                 />
-              ) : (
+              ) : Platform.OS === 'ios' ? (
                 <View style={styles.compactPickerContainer}>
                   <DateTimePicker
                     value={newEvent.end_time}
@@ -595,6 +680,31 @@ export default function EventsScreen() {
                     themeVariant="light"
                   />
                 </View>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={styles.dateButton}
+                    onPress={() => setShowEndTimePicker(true)}
+                  >
+                    <Ionicons name="time-outline" size={20} color={colors.primary} />
+                    <Text style={styles.dateButtonText}>
+                      {newEvent.end_time.toLocaleTimeString()}
+                    </Text>
+                  </TouchableOpacity>
+                  {showEndTimePicker && (
+                    <DateTimePicker
+                      value={newEvent.end_time}
+                      mode="time"
+                      display="default"
+                      onChange={(event, selectedTime) => {
+                        setShowEndTimePicker(false);
+                        if (event.type === 'set' && selectedTime) {
+                          handleEndTimeConfirm(selectedTime);
+                        }
+                      }}
+                    />
+                  )}
+                </>
               )}
 
               <TouchableOpacity style={styles.createButton} onPress={handleCreateEvent}>
@@ -913,5 +1023,24 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.sm,
     overflow: 'hidden',
     paddingVertical: spacing.xs,
+  },
+  inlinePickerContainer: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+  },
+  pickerWrapper: {
+    height: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+  },
+  picker: {
+    width: '100%',
+    height: 200,
   },
 });
