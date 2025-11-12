@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Image, Linking } from 'react-native';
 import { colors, spacing, borderRadius, shadows, typography } from '@/constants/theme';
 import { textStyles, commonStyles } from '@/constants/styles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, useAlert } from '@/template';
 import { getSupabaseClient } from '@/template';
+import uwbClubsData from '@/data/uwb-clubs.json';
 
 interface GroupEvent {
   id: string;
@@ -22,11 +23,23 @@ interface UserGroup {
   nextEventDate: string;
 }
 
+interface UWBClub {
+  id: string;
+  name: string;
+  type: string;
+  category: string;
+  description: string;
+  imageUrl: string;
+  clubUrl: string;
+}
+
 export default function GroupsScreen() {
   const [groupEvents, setGroupEvents] = useState<GroupEvent[]>([]);
   const [userGroups, setUserGroups] = useState<UserGroup[]>([]);
+  const [uwbClubs, setUwbClubs] = useState<UWBClub[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showAllClubs, setShowAllClubs] = useState(false);
 
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -35,7 +48,12 @@ export default function GroupsScreen() {
 
   useEffect(() => {
     fetchData();
+    loadUWBClubs();
   }, []);
+
+  const loadUWBClubs = () => {
+    setUwbClubs(uwbClubsData as UWBClub[]);
+  };
 
   const fetchData = async () => {
     await Promise.all([fetchGroupEvents(), fetchUserGroups()]);
@@ -129,6 +147,20 @@ export default function GroupsScreen() {
     return `${event.date} @ ${event.time}`;
   };
 
+  const openClubUrl = async (url: string) => {
+    try {
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        await Linking.openURL(url);
+      } else {
+        showAlert('Error', 'Cannot open club page');
+      }
+    } catch (error) {
+      console.error('Error opening club URL:', error);
+      showAlert('Error', 'Failed to open club page');
+    }
+  };
+
   if (loading) {
     return (
       <View style={[commonStyles.container, commonStyles.centerContent]}>
@@ -185,6 +217,54 @@ export default function GroupsScreen() {
                     </Text>
                   )}
                 </View>
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
+      </View>
+
+      {/* UWB Clubs Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Discover UWB Clubs</Text>
+          <TouchableOpacity onPress={() => setShowAllClubs(!showAllClubs)}>
+            <Text style={styles.toggleText}>
+              {showAllClubs ? 'Show Less' : `Show All (${uwbClubs.length})`}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.sectionContent}>
+          {uwbClubs.length === 0 ? (
+            <Text style={styles.emptyText}>No clubs available</Text>
+          ) : (
+            (showAllClubs ? uwbClubs : uwbClubs.slice(0, 5)).map((club) => (
+              <TouchableOpacity
+                key={club.id}
+                style={styles.clubCard}
+                onPress={() => openClubUrl(club.clubUrl)}
+              >
+                <View style={styles.clubImageContainer}>
+                  <Image
+                    source={{ uri: club.imageUrl }}
+                    style={styles.clubImage}
+                    resizeMode="cover"
+                  />
+                </View>
+                <View style={styles.clubInfo}>
+                  <Text style={styles.clubName} numberOfLines={1}>
+                    {club.name}
+                  </Text>
+                  <Text style={styles.clubType} numberOfLines={1}>
+                    {club.type}
+                    {club.category ? ` - ${club.category}` : ''}
+                  </Text>
+                  {club.description && (
+                    <Text style={styles.clubDescription} numberOfLines={2}>
+                      {club.description}
+                    </Text>
+                  )}
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
             ))
           )}
@@ -273,5 +353,54 @@ const styles = StyleSheet.create({
   logo: {
     width: 200,
     height: 100,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  toggleText: {
+    fontSize: typography.fontSize14,
+    color: colors.primary,
+    fontWeight: typography.fontWeightSemiBold,
+  },
+  clubCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
+    gap: spacing.md,
+  },
+  clubImageContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+    backgroundColor: colors.gray100,
+  },
+  clubImage: {
+    width: '100%',
+    height: '100%',
+  },
+  clubInfo: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  clubName: {
+    fontSize: typography.fontSize16,
+    fontWeight: typography.fontWeightSemiBold,
+    color: colors.textPrimary,
+  },
+  clubType: {
+    fontSize: typography.fontSize12,
+    color: colors.textSecondary,
+  },
+  clubDescription: {
+    fontSize: typography.fontSize12,
+    color: colors.textSecondary,
+    lineHeight: typography.lineHeight16,
   },
 });

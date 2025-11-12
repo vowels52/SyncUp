@@ -36,4 +36,7 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# scraper cache
+scripts/club-scraper/page.html
+
 app-example
