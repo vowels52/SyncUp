@@ -51,7 +51,7 @@ export default function ConnectionsScreen() {
     try {
       setLoading(true);
 
-      // First, get all existing connections (sent or received)
+      // Get all existing connections (sent or received)
       const { data: connections, error: connectionsError } = await supabase
         .from('connections')
         .select('user_id, connected_user_id')
@@ -59,8 +59,18 @@ export default function ConnectionsScreen() {
 
       if (connectionsError) throw connectionsError;
 
+      // Get all match history (skipped users)
+      const { data: matchHistory, error: historyError } = await supabase
+        .from('match_history')
+        .select('viewed_user_id')
+        .eq('user_id', user.id);
+
+      if (historyError) throw historyError;
+
       // Extract user IDs to exclude
       const excludedUserIds = new Set<string>();
+
+      // Add users from connections
       connections?.forEach((conn) => {
         if (conn.user_id === user.id) {
           excludedUserIds.add(conn.connected_user_id);
@@ -69,7 +79,12 @@ export default function ConnectionsScreen() {
         }
       });
 
-      // Fetch all users except current user and those with existing connections
+      // Add users from match history (skipped users)
+      matchHistory?.forEach((history) => {
+        excludedUserIds.add(history.viewed_user_id);
+      });
+
+      // Fetch all users except current user and those with existing connections/history
       const { data, error } = await supabase
         .from('user_profiles')
         .select('id, full_name, major, year, bio')
@@ -80,7 +95,7 @@ export default function ConnectionsScreen() {
       if (error) throw error;
 
       if (data) {
-        // Filter out users with existing connections
+        // Filter out users with existing connections or match history
         const filteredMatches = data.filter(
           (match) => !excludedUserIds.has(match.id)
         );
@@ -97,7 +112,8 @@ export default function ConnectionsScreen() {
     if (!user) return;
 
     try {
-      const { error } = await supabase
+      // Insert connection request
+      const { error: connectionError } = await supabase
         .from('connections')
         .insert({
           user_id: user.id,
@@ -105,7 +121,21 @@ export default function ConnectionsScreen() {
           status: 'pending',
         });
 
-      if (error) throw error;
+      if (connectionError) throw connectionError;
+
+      // Also record in match history
+      const { error: historyError } = await supabase
+        .from('match_history')
+        .insert({
+          user_id: user.id,
+          viewed_user_id: matchedUserId,
+          action: 'connect',
+        });
+
+      if (historyError) {
+        // Log but don't fail if history insert fails
+        console.error('Error recording match history:', historyError);
+      }
 
       showAlert('Success', 'Connection request sent!');
 
@@ -128,8 +158,42 @@ export default function ConnectionsScreen() {
     }
   };
 
-  const handleSkip = () => {
-    handleNext();
+  const handleSkip = async () => {
+    if (!user || !matches[currentIndex]) return;
+
+    const matchedUserId = matches[currentIndex].id;
+
+    try {
+      // Record the skip in match_history
+      const { error } = await supabase
+        .from('match_history')
+        .insert({
+          user_id: user.id,
+          viewed_user_id: matchedUserId,
+          action: 'skip',
+        });
+
+      if (error) throw error;
+
+      // Remove the current user from matches and move to next
+      const updatedMatches = matches.filter(m => m.id !== matchedUserId);
+      setMatches(updatedMatches);
+
+      // If we're at the end or no more matches, reset
+      if (currentIndex >= updatedMatches.length) {
+        if (updatedMatches.length > 0) {
+          setCurrentIndex(0);
+        } else {
+          // No more matches, fetch new ones
+          fetchMatches();
+          setCurrentIndex(0);
+        }
+      }
+    } catch (error: any) {
+      console.error('Error recording skip:', error);
+      // Still move to next even if recording fails
+      handleNext();
+    }
   };
 
   const handleNext = () => {
