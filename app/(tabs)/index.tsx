@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, useAlert } from '@/template';
 import { getSupabaseClient } from '@/template';
+import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -45,6 +46,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showGroupModal, setShowGroupModal] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -76,6 +78,7 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const { showAlert } = useAlert();
   const supabase = getSupabaseClient();
+  const router = useRouter();
 
   const fetchData = async () => {
     if (!user) return;
@@ -392,9 +395,9 @@ export default function HomeScreen() {
               {profile?.major ? `${profile.major} • ${profile.year}` : 'Complete your profile'}
             </Text>
           </View>
-          <View style={styles.avatar}>
+          <TouchableOpacity style={styles.avatar} onPress={() => router.push('/profile')}>
             <Ionicons name="person" size={32} color={colors.white} />
-          </View>
+          </TouchableOpacity>
         </View>
       </LinearGradient>
 
