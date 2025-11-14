@@ -85,10 +85,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     };
   }, []); // Empty dependency array ensures single execution
-  const contextValue: AuthContextType = {
+
+  const contextValue: AuthContextType = useMemo(() => ({
     ...state,
     setOperationLoading,
-  };
+  }), [state]);
 
   return (
     <AuthContext.Provider value={contextValue}>

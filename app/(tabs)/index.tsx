@@ -29,6 +29,15 @@ interface Group {
   description: string | null;
 }
 
+interface SearchResult {
+  id: string;
+  full_name: string | null;
+  major: string | null;
+  year: string | null;
+  bio: string | null;
+  email: string;
+}
+
 export default function HomeScreen() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
@@ -36,7 +45,10 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showGroupModal, setShowGroupModal] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
 
   // Form state
   const [newEvent, setNewEvent] = useState({
@@ -302,6 +314,62 @@ export default function HomeScreen() {
     return `${hours}:${minutes}`;
   };
 
+  const handleSearch = async (query: string) => {
+    if (!query.trim() || !user) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearching(true);
+
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('id, full_name, major, year, bio, email')
+        .or(`full_name.ilike.%${query}%,email.ilike.%${query}%,major.ilike.%${query}%`)
+        .neq('id', user.id)
+        .not('full_name', 'is', null)
+        .limit(20);
+
+      if (error) throw error;
+
+      setSearchResults(data || []);
+    } catch (error: any) {
+      showAlert('Error', error.message || 'Failed to search users');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleSendConnectionRequest = async (userId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('connections')
+        .insert({
+          user_id: user.id,
+          connected_user_id: userId,
+          status: 'pending',
+        });
+
+      if (error) throw error;
+
+      showAlert('Success', 'Connection request sent!');
+
+      // Remove from search results
+      setSearchResults(searchResults.filter(r => r.id !== userId));
+    } catch (error: any) {
+      showAlert('Error', error.message || 'Failed to send connection request');
+    }
+  };
+
+  const closeSearchModal = () => {
+    setShowSearchModal(false);
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
   if (loading) {
     return (
       <View style={[commonStyles.container, commonStyles.centerContent]}>
@@ -339,7 +407,7 @@ export default function HomeScreen() {
         }
       >
         <View style={styles.quickActions}>
-          <TouchableOpacity style={styles.actionCard}>
+          <TouchableOpacity style={styles.actionCard} onPress={() => setShowSearchModal(true)}>
             <View style={[styles.actionIcon, { backgroundColor: colors.primary }]}>
               <Ionicons name="search" size={24} color={colors.white} />
             </View>
@@ -710,60 +778,88 @@ export default function HomeScreen() {
         </View>
       </Modal>
 
-      {/* Create Group Modal */}
+      {/* Search Modal */}
       <Modal
-        visible={showGroupModal}
+        visible={showSearchModal}
         animationType="slide"
         transparent={true}
-        onRequestClose={closeGroupModal}
+        onRequestClose={closeSearchModal}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Create Group</Text>
-              <TouchableOpacity onPress={closeGroupModal}>
+              <Text style={styles.modalTitle}>Search People</Text>
+              <TouchableOpacity onPress={closeSearchModal}>
                 <Ionicons name="close" size={28} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalForm} showsVerticalScrollIndicator={false}>
-              <Text style={styles.inputLabel}>Group Name *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter group name"
-                value={newGroup.name}
-                onChangeText={(text) => setNewGroup({ ...newGroup, name: text })}
-              />
+            <View style={styles.searchContainer}>
+              <View style={styles.searchInputContainer}>
+                <Ionicons name="search" size={20} color={colors.textSecondary} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search by name, email, or major..."
+                  value={searchQuery}
+                  onChangeText={(text) => {
+                    setSearchQuery(text);
+                    handleSearch(text);
+                  }}
+                  autoFocus
+                />
+              </View>
+            </View>
 
-              <Text style={styles.inputLabel}>Type</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., Registered Student Club, Department, Academic"
-                value={newGroup.club_type}
-                onChangeText={(text) => setNewGroup({ ...newGroup, club_type: text })}
-              />
-
-              <Text style={styles.inputLabel}>Category</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., Academic, Social, Sports, Arts"
-                value={newGroup.category}
-                onChangeText={(text) => setNewGroup({ ...newGroup, category: text })}
-              />
-
-              <Text style={styles.inputLabel}>Description</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="Enter group description"
-                value={newGroup.description}
-                onChangeText={(text) => setNewGroup({ ...newGroup, description: text })}
-                multiline
-                numberOfLines={4}
-              />
-
-              <TouchableOpacity style={styles.createButton} onPress={handleCreateGroup}>
-                <Text style={styles.createButtonText}>Create Group</Text>
-              </TouchableOpacity>
+            <ScrollView style={styles.searchResults} showsVerticalScrollIndicator={false}>
+              {searching ? (
+                <View style={styles.searchLoadingContainer}>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                </View>
+              ) : searchQuery.trim() === '' ? (
+                <View style={styles.searchEmptyContainer}>
+                  <Ionicons name="search-outline" size={64} color={colors.gray400} />
+                  <Text style={styles.searchEmptyText}>Search for people you know</Text>
+                  <Text style={styles.searchEmptySubtext}>
+                    Enter a name, email, or major to find other students
+                  </Text>
+                </View>
+              ) : searchResults.length === 0 ? (
+                <View style={styles.searchEmptyContainer}>
+                  <Ionicons name="people-outline" size={64} color={colors.gray400} />
+                  <Text style={styles.searchEmptyText}>No results found</Text>
+                  <Text style={styles.searchEmptySubtext}>
+                    Try a different search term
+                  </Text>
+                </View>
+              ) : (
+                searchResults.map((result) => (
+                  <View key={result.id} style={styles.searchResultCard}>
+                    <View style={styles.searchResultHeader}>
+                      <View style={styles.searchResultAvatar}>
+                        <Ionicons name="person" size={24} color={colors.white} />
+                      </View>
+                      <View style={styles.searchResultInfo}>
+                        <Text style={styles.searchResultName}>
+                          {result.full_name || 'Anonymous Student'}
+                        </Text>
+                        {result.major && result.year && (
+                          <Text style={styles.searchResultDetails}>
+                            {result.major} • {result.year}
+                          </Text>
+                        )}
+                        <Text style={styles.searchResultEmail}>{result.email}</Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.connectButton}
+                      onPress={() => handleSendConnectionRequest(result.id)}
+                    >
+                      <Ionicons name="person-add" size={16} color={colors.white} />
+                      <Text style={styles.connectButtonText}>Connect</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
             </ScrollView>
           </View>
         </View>
@@ -1033,5 +1129,98 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.sm,
     overflow: 'hidden',
     paddingVertical: spacing.xs,
+  },
+  searchContainer: {
+    padding: spacing.lg,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    ...textStyles.body1,
+  },
+  searchResults: {
+    flex: 1,
+    paddingHorizontal: spacing.lg,
+  },
+  searchLoadingContainer: {
+    paddingVertical: spacing.xl * 2,
+    alignItems: 'center',
+  },
+  searchEmptyContainer: {
+    paddingVertical: spacing.xl * 2,
+    alignItems: 'center',
+  },
+  searchEmptyText: {
+    ...textStyles.h4,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  searchEmptySubtext: {
+    ...textStyles.body2,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  searchResultCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadows.small,
+  },
+  searchResultHeader: {
+    flexDirection: 'row',
+    marginBottom: spacing.md,
+  },
+  searchResultAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
+  },
+  searchResultInfo: {
+    flex: 1,
+  },
+  searchResultName: {
+    ...textStyles.body1,
+    fontWeight: typography.fontWeightSemiBold,
+    marginBottom: spacing.xs,
+  },
+  searchResultDetails: {
+    ...textStyles.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  searchResultEmail: {
+    ...textStyles.caption,
+    color: colors.textSecondary,
+  },
+  connectButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.sm,
+    gap: spacing.xs,
+  },
+  connectButtonText: {
+    ...textStyles.body2,
+    fontWeight: typography.fontWeightSemiBold,
+    color: colors.white,
   },
 });

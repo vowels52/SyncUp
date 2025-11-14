@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useMemo } from 'react';
 import { Platform, Alert } from 'react-native';
 import { AlertButton, AlertState } from './types';
 
@@ -62,11 +62,11 @@ export function AlertProvider({ children }: AlertProviderProps) {
 
   const handleButtonPress = (button: AlertButton) => {
     try {
-      
+
       if (typeof button.onPress === 'function') {
         button.onPress();
       }
-      
+
       hideAlert();
     } catch (error) {
       console.warn('[Template:AlertProvider] Button press error:', error);
@@ -74,9 +74,9 @@ export function AlertProvider({ children }: AlertProviderProps) {
     }
   };
 
-  const contextValue: AlertContextType = {
+  const contextValue: AlertContextType = useMemo(() => ({
     showAlert
-  };
+  }), []);
 
   return (
     <AlertContext.Provider value={contextValue}>
