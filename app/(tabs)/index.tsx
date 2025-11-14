@@ -59,6 +59,13 @@ export default function HomeScreen() {
     end_time: new Date(),
   });
 
+  const [newGroup, setNewGroup] = useState({
+    name: '',
+    description: '',
+    club_type: '',
+    category: '',
+  });
+
   // Date/time picker state
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
@@ -167,6 +174,39 @@ export default function HomeScreen() {
     }
   };
 
+  const handleCreateGroup = async () => {
+    if (!user) {
+      showAlert('Error', 'You must be logged in to create groups');
+      return;
+    }
+
+    if (!newGroup.name.trim()) {
+      showAlert('Error', 'Please enter a group name');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('groups')
+        .insert({
+          name: newGroup.name,
+          description: newGroup.description || null,
+          club_type: newGroup.club_type || null,
+          category: newGroup.category || null,
+          creator_id: user.id,
+          is_official_club: false,
+        });
+
+      if (error) throw error;
+
+      showAlert('Success', 'Group created successfully!');
+      closeGroupModal();
+      fetchData();
+    } catch (error: any) {
+      showAlert('Error', error.message || 'Failed to create group');
+    }
+  };
+
   const closeModal = () => {
     setShowAddModal(false);
     setNewEvent({
@@ -180,6 +220,16 @@ export default function HomeScreen() {
     setShowStartTimePicker(false);
     setShowEndDatePicker(false);
     setShowEndTimePicker(false);
+  };
+
+  const closeGroupModal = () => {
+    setShowGroupModal(false);
+    setNewGroup({
+      name: '',
+      description: '',
+      club_type: '',
+      category: '',
+    });
   };
 
   const handleStartDateConfirm = (selectedDate: Date) => {
@@ -364,7 +414,7 @@ export default function HomeScreen() {
             <Text style={styles.actionText}>Find Matches</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionCard}>
+          <TouchableOpacity style={styles.actionCard} onPress={() => setShowGroupModal(true)}>
             <View style={[styles.actionIcon, { backgroundColor: colors.accent }]}>
               <Ionicons name="add-circle" size={24} color={colors.white} />
             </View>
