@@ -867,6 +867,67 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Create Group Modal */}
+      <Modal
+        visible={showGroupModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={closeGroupModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Create Group</Text>
+              <TouchableOpacity onPress={closeGroupModal}>
+                <Ionicons name="close" size={28} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalForm} showsVerticalScrollIndicator={false}>
+              <Text style={styles.inputLabel}>Group Name *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter group name"
+                value={newGroup.name}
+                onChangeText={(text) => setNewGroup({ ...newGroup, name: text })}
+              />
+
+              <Text style={styles.inputLabel}>Description</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Enter group description"
+                value={newGroup.description}
+                onChangeText={(text) => setNewGroup({ ...newGroup, description: text })}
+                multiline
+                numberOfLines={4}
+              />
+
+              <Text style={styles.inputLabel}>Club Type</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g., Academic, Social, Sports"
+                value={newGroup.club_type}
+                onChangeText={(text) => setNewGroup({ ...newGroup, club_type: text })}
+              />
+
+              <Text style={styles.inputLabel}>Category</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g., Computer Science, Business"
+                value={newGroup.category}
+                onChangeText={(text) => setNewGroup({ ...newGroup, category: text })}
+              />
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity style={styles.createButton} onPress={handleCreateGroup}>
+                <Text style={styles.createButtonText}>Create Group</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
