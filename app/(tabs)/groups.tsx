@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Image } from 'react-native';
+import { useRouter } from 'expo-router';
 import { colors, spacing, borderRadius, shadows, typography } from '@/constants/theme';
 import { textStyles, commonStyles } from '@/constants/styles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,13 +23,26 @@ interface UserGroup {
   nextEventDate: string;
 }
 
+interface UWBClub {
+  id: string;
+  name: string;
+  club_type: string;
+  category: string;
+  description: string;
+  image_url: string;
+  is_official_club: boolean;
+}
+
 export default function GroupsScreen() {
   const [groupEvents, setGroupEvents] = useState<GroupEvent[]>([]);
   const [userGroups, setUserGroups] = useState<UserGroup[]>([]);
+  const [uwbClubs, setUwbClubs] = useState<UWBClub[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showAllClubs, setShowAllClubs] = useState(false);
 
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { user } = useAuth();
   const { showAlert } = useAlert();
   const supabase = getSupabaseClient();
@@ -38,9 +52,26 @@ export default function GroupsScreen() {
   }, []);
 
   const fetchData = async () => {
-    await Promise.all([fetchGroupEvents(), fetchUserGroups()]);
+    await Promise.all([fetchGroupEvents(), fetchUserGroups(), loadUWBClubs()]);
     setLoading(false);
     setRefreshing(false);
+  };
+
+  const loadUWBClubs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('groups')
+        .select('id, name, description, club_type, category, image_url, is_official_club')
+        .eq('is_official_club', true)
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      if (data) {
+        setUwbClubs(data);
+      }
+    } catch (error) {
+      console.error('Error loading UWB clubs:', error);
+    }
   };
 
   const fetchGroupEvents = async () => {
@@ -129,6 +160,10 @@ export default function GroupsScreen() {
     return `${event.date} @ ${event.time}`;
   };
 
+  const openClubDetail = (clubId: string) => {
+    router.push(`/club-detail?id=${clubId}`);
+  };
+
   if (loading) {
     return (
       <View style={[commonStyles.container, commonStyles.centerContent]}>
@@ -165,26 +200,48 @@ export default function GroupsScreen() {
         </View>
       </View>
 
-      {/* Communities & Clubs Section */}
+      {/* UWB Clubs Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Communities & Clubs</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Discover UWB Clubs</Text>
+          <TouchableOpacity onPress={() => setShowAllClubs(!showAllClubs)}>
+            <Text style={styles.toggleText}>
+              {showAllClubs ? 'Show Less' : `Show All (${uwbClubs.length})`}
+            </Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.sectionContent}>
-          {userGroups.length === 0 ? (
-            <Text style={styles.emptyText}>You haven't joined any groups yet</Text>
+          {uwbClubs.length === 0 ? (
+            <Text style={styles.emptyText}>No clubs available</Text>
           ) : (
-            userGroups.map((group) => (
-              <TouchableOpacity key={group.id} style={styles.listItem}>
-                <Ionicons name="book" size={24} color={colors.textPrimary} style={styles.listIcon} />
-                <View style={styles.groupTextContainer}>
-                  <Text style={styles.groupNameText}>
-                    {group.name} - {group.role}
+            (showAllClubs ? uwbClubs : uwbClubs.slice(0, 5)).map((club) => (
+              <TouchableOpacity
+                key={club.id}
+                style={styles.clubCard}
+                onPress={() => openClubDetail(club.id)}
+              >
+                <View style={styles.clubImageContainer}>
+                  <Image
+                    source={{ uri: club.image_url }}
+                    style={styles.clubImage}
+                    resizeMode="cover"
+                  />
+                </View>
+                <View style={styles.clubInfo}>
+                  <Text style={styles.clubName} numberOfLines={1}>
+                    {club.name}
                   </Text>
-                  {group.nextEventDate && (
-                    <Text style={styles.nextEventText}>
-                      {group.nextEvent} - {group.nextEventDate}
+                  <Text style={styles.clubType} numberOfLines={1}>
+                    {club.club_type}
+                    {club.category ? ` - ${club.category}` : ''}
+                  </Text>
+                  {club.description && (
+                    <Text style={styles.clubDescription} numberOfLines={2}>
+                      {club.description}
                     </Text>
                   )}
                 </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
             ))
           )}
@@ -273,5 +330,54 @@ const styles = StyleSheet.create({
   logo: {
     width: 200,
     height: 100,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  toggleText: {
+    fontSize: typography.fontSize14,
+    color: colors.primary,
+    fontWeight: typography.fontWeightSemiBold,
+  },
+  clubCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
+    gap: spacing.md,
+  },
+  clubImageContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+    backgroundColor: colors.gray100,
+  },
+  clubImage: {
+    width: '100%',
+    height: '100%',
+  },
+  clubInfo: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  clubName: {
+    fontSize: typography.fontSize16,
+    fontWeight: typography.fontWeightSemiBold,
+    color: colors.textPrimary,
+  },
+  clubType: {
+    fontSize: typography.fontSize12,
+    color: colors.textSecondary,
+  },
+  clubDescription: {
+    fontSize: typography.fontSize12,
+    color: colors.textSecondary,
+    lineHeight: typography.lineHeight16,
   },
 });

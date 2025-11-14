@@ -17,6 +17,8 @@ interface Event {
   end_time: string | null;
   creator_id: string;
   created_at: string;
+  event_type: string | null;
+  is_official_event: boolean;
 }
 
 export default function EventsScreen() {
@@ -287,6 +289,47 @@ export default function EventsScreen() {
     return `${hours}:${minutes}`;
   };
 
+  const getEventColor = (event: Event) => {
+    if (!event.is_official_event) {
+      return colors.gray400; // User events are gray
+    }
+
+    // Color code by event type
+    const eventType = event.event_type?.toLowerCase() || '';
+
+    // Academic events
+    if (eventType.includes('academic')) {
+      return '#3B82F6'; // Blue
+    }
+    // Social events
+    if (eventType.includes('social')) {
+      return '#EC4899'; // Pink
+    }
+    // Career/Application events
+    if (eventType.includes('career') || eventType.includes('application')) {
+      return '#8B5CF6'; // Purple
+    }
+    // Meetings
+    if (eventType.includes('meeting')) {
+      return '#10B981'; // Green
+    }
+    // Cultural events
+    if (eventType.includes('cultural')) {
+      return '#F59E0B'; // Orange
+    }
+    // Sports/Recreational/Athletic
+    if (eventType.includes('sport') || eventType.includes('recreation') || eventType.includes('athletic')) {
+      return '#EF4444'; // Red
+    }
+    // Campus Events (default for official events)
+    if (eventType.includes('campus')) {
+      return '#14B8A6'; // Teal
+    }
+
+    // Default fallback
+    return colors.primary;
+  };
+
   const renderCalendarDay = (date: Date | null, index: number) => {
     if (!date) {
       return <View key={`empty-${index}`} style={styles.calendarDay} />;
@@ -304,7 +347,13 @@ export default function EventsScreen() {
         </View>
         <View style={styles.eventIndicators}>
           {dayEvents.slice(0, 3).map((event, idx) => (
-            <View key={event.id} style={styles.eventBox} />
+            <View
+              key={event.id}
+              style={[
+                styles.eventBox,
+                { backgroundColor: getEventColor(event) }
+              ]}
+            />
           ))}
         </View>
       </View>
@@ -313,7 +362,10 @@ export default function EventsScreen() {
 
   const renderEventItem = ({ item }: { item: Event }) => (
     <TouchableOpacity style={styles.eventCard}>
-      <View style={styles.eventDateContainer}>
+      <View style={[
+        styles.eventDateContainer,
+        { backgroundColor: getEventColor(item) }
+      ]}>
         <Text style={styles.eventMonth}>
           {new Date(item.start_time).toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
         </Text>
@@ -323,7 +375,19 @@ export default function EventsScreen() {
       </View>
 
       <View style={styles.eventContent}>
-        <Text style={styles.eventTitle}>{item.title}</Text>
+        <View style={styles.eventTitleRow}>
+          <Text style={styles.eventTitle}>{item.title}</Text>
+          {item.is_official_event && (
+            <View style={styles.officialBadge}>
+              <Ionicons name="shield-checkmark" size={14} color={colors.primary} />
+              <Text style={styles.officialBadgeText}>Official</Text>
+            </View>
+          )}
+        </View>
+
+        {item.event_type && (
+          <Text style={styles.eventType}>{item.event_type}</Text>
+        )}
 
         {item.description && (
           <Text style={styles.eventDescription} numberOfLines={2}>
@@ -404,6 +468,45 @@ export default function EventsScreen() {
 
           <View style={styles.calendarGrid}>
             {days.map((day, index) => renderCalendarDay(day, index))}
+          </View>
+        </View>
+
+        {/* Color Legend */}
+        <View style={styles.legendContainer}>
+          <Text style={styles.legendTitle}>Event Categories</Text>
+          <View style={styles.legendGrid}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: '#3B82F6' }]} />
+              <Text style={styles.legendText}>Academic</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: '#EC4899' }]} />
+              <Text style={styles.legendText}>Social</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: '#8B5CF6' }]} />
+              <Text style={styles.legendText}>Career</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: '#10B981' }]} />
+              <Text style={styles.legendText}>Meeting</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: '#F59E0B' }]} />
+              <Text style={styles.legendText}>Cultural</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: '#EF4444' }]} />
+              <Text style={styles.legendText}>Sports</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: '#14B8A6' }]} />
+              <Text style={styles.legendText}>Campus</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: colors.gray400 }]} />
+              <Text style={styles.legendText}>User</Text>
+            </View>
           </View>
         </View>
 
@@ -753,7 +856,6 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: borderRadius.sm,
-    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.md,
@@ -771,8 +873,35 @@ const styles = StyleSheet.create({
   eventContent: {
     flex: 1,
   },
+  eventTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+    flexWrap: 'wrap',
+  },
   eventTitle: {
     ...textStyles.body1,
+    fontWeight: typography.fontWeightSemiBold,
+    flex: 1,
+  },
+  officialBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary + '15',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+    gap: 4,
+  },
+  officialBadgeText: {
+    fontSize: 11,
+    color: colors.primary,
+    fontWeight: typography.fontWeightSemiBold,
+  },
+  eventType: {
+    ...textStyles.caption,
+    color: colors.primary,
     fontWeight: typography.fontWeightSemiBold,
     marginBottom: spacing.xs,
   },
@@ -906,6 +1035,40 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 2,
     backgroundColor: colors.primary,
+  },
+  legendContainer: {
+    backgroundColor: colors.surface,
+    margin: spacing.md,
+    marginTop: 0,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    ...shadows.small,
+  },
+  legendTitle: {
+    ...textStyles.body1,
+    fontWeight: typography.fontWeightSemiBold,
+    marginBottom: spacing.sm,
+    color: colors.textPrimary,
+  },
+  legendGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minWidth: '30%',
+  },
+  legendDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  legendText: {
+    ...textStyles.caption,
+    color: colors.textSecondary,
   },
   eventsListSection: {
     padding: spacing.md,
