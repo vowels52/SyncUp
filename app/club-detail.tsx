@@ -144,7 +144,7 @@ export default function ClubDetailScreen() {
           <Image
             source={{ uri: club.image_url }}
             style={styles.clubImage}
-            resizeMode="cover"
+            resizeMode="contain"
           />
         </View>
 
@@ -245,6 +245,8 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 250,
     backgroundColor: colors.gray100,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   clubImage: {
     width: '100%',
