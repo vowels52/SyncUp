@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, FlatList, Image } from 'react-native';
 import { colors, spacing, borderRadius, shadows, typography } from '@/constants/theme';
 import { textStyles, commonStyles } from '@/constants/styles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, useAlert } from '@/template';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { getSupabaseClient } from '@/template';
 
 interface UserProfile {
@@ -39,6 +39,13 @@ export default function ProfileScreen() {
     fetchProfile();
     fetchStatistics();
   }, [user]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchProfile();
+      fetchStatistics();
+    }, [user])
+  );
 
   const fetchProfile = async () => {
     if (!user) return;
@@ -391,7 +398,7 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Settings</Text>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/edit-profile')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="person-outline" size={24} color={colors.textPrimary} />
               <Text style={styles.menuItemText}>Edit Profile</Text>
@@ -399,7 +406,7 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/notifications')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
               <Text style={styles.menuItemText}>Notifications</Text>
@@ -407,7 +414,7 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/privacy')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="lock-closed-outline" size={24} color={colors.textPrimary} />
               <Text style={styles.menuItemText}>Privacy</Text>
@@ -415,7 +422,7 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/help')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="help-circle-outline" size={24} color={colors.textPrimary} />
               <Text style={styles.menuItemText}>Help & Support</Text>
