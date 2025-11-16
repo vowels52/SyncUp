@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator, Modal, TextInput, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator, Modal, TextInput, Platform, KeyboardAvoidingView } from 'react-native';
 import { colors, spacing, borderRadius, shadows, typography } from '@/constants/theme';
 import { textStyles, commonStyles } from '@/constants/styles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -829,7 +829,10 @@ export default function HomeScreen() {
         transparent={true}
         onRequestClose={closeSearchModal}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Search People</Text>
@@ -854,7 +857,11 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            <ScrollView style={styles.searchResults} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.searchResults}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
               {searching ? (
                 <View style={styles.searchLoadingContainer}>
                   <ActivityIndicator size="large" color={colors.primary} />
@@ -918,7 +925,7 @@ export default function HomeScreen() {
               )}
             </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Create Group Modal */}
