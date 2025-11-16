@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, useAlert } from '@/template';
 import { getSupabaseClient } from '@/template';
+import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -46,6 +47,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showGroupModal, setShowGroupModal] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -77,6 +79,7 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const { showAlert } = useAlert();
   const supabase = getSupabaseClient();
+  const router = useRouter();
 
   const fetchData = async () => {
     if (!user) return;
@@ -433,9 +436,9 @@ export default function HomeScreen() {
               {profile?.major ? `${profile.major} • ${profile.year}` : 'Complete your profile'}
             </Text>
           </View>
-          <View style={styles.avatar}>
+          <TouchableOpacity style={styles.avatar} onPress={() => router.push('/profile')}>
             <Ionicons name="person" size={32} color={colors.white} />
-          </View>
+          </TouchableOpacity>
         </View>
       </LinearGradient>
 
@@ -914,6 +917,67 @@ export default function HomeScreen() {
                 ))
               )}
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Create Group Modal */}
+      <Modal
+        visible={showGroupModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={closeGroupModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Create Group</Text>
+              <TouchableOpacity onPress={closeGroupModal}>
+                <Ionicons name="close" size={28} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalForm} showsVerticalScrollIndicator={false}>
+              <Text style={styles.inputLabel}>Group Name *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter group name"
+                value={newGroup.name}
+                onChangeText={(text) => setNewGroup({ ...newGroup, name: text })}
+              />
+
+              <Text style={styles.inputLabel}>Description</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Enter group description"
+                value={newGroup.description}
+                onChangeText={(text) => setNewGroup({ ...newGroup, description: text })}
+                multiline
+                numberOfLines={4}
+              />
+
+              <Text style={styles.inputLabel}>Club Type</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g., Academic, Social, Sports"
+                value={newGroup.club_type}
+                onChangeText={(text) => setNewGroup({ ...newGroup, club_type: text })}
+              />
+
+              <Text style={styles.inputLabel}>Category</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g., Computer Science, Business"
+                value={newGroup.category}
+                onChangeText={(text) => setNewGroup({ ...newGroup, category: text })}
+              />
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity style={styles.createButton} onPress={handleCreateGroup}>
+                <Text style={styles.createButtonText}>Create Group</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
