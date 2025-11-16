@@ -30,6 +30,12 @@ interface Group {
   description: string | null;
 }
 
+interface Club {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
 interface SearchResult {
   id: string;
   full_name: string | null;
@@ -44,6 +50,7 @@ export default function HomeScreen() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
   const [recentGroups, setRecentGroups] = useState<Group[]>([]);
+  const [myClubs, setMyClubs] = useState<Club[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -52,6 +59,9 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [showAllEvents, setShowAllEvents] = useState(false);
+  const [showAllGroups, setShowAllGroups] = useState(false);
+  const [showAllClubs, setShowAllClubs] = useState(false);
 
   // Form state
   const [newEvent, setNewEvent] = useState({
@@ -96,27 +106,56 @@ export default function HomeScreen() {
         setProfile(profileData);
       }
 
-      // Fetch upcoming events
-      const { data: eventsData } = await supabase
-        .from('events')
-        .select('id, title, start_time, location')
-        .gte('start_time', new Date().toISOString())
-        .order('start_time', { ascending: true })
-        .limit(3);
+      // Fetch my events (events I'm attending)
+      const { data: attendingData } = await supabase
+        .from('event_attendees')
+        .select('events(id, title, start_time, location)')
+        .eq('user_id', user.id)
+        .eq('status', 'going');
 
-      if (eventsData) {
-        setUpcomingEvents(eventsData);
+      if (attendingData) {
+        const myEvents = attendingData
+          .filter((item: any) => item.events)
+          .map((item: any) => ({
+            id: item.events.id,
+            title: item.events.title,
+            start_time: item.events.start_time,
+            location: item.events.location,
+          }))
+          .filter((event: any) => new Date(event.start_time) >= new Date())
+          .sort((a: any, b: any) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+
+        setUpcomingEvents(myEvents);
       }
 
-      // Fetch recent groups
-      const { data: groupsData } = await supabase
-        .from('groups')
-        .select('id, name, description')
-        .order('created_at', { ascending: false })
-        .limit(3);
+      // Fetch my study groups and clubs (groups I've joined)
+      const { data: memberData } = await supabase
+        .from('group_members')
+        .select('groups(id, name, description, is_official_club)')
+        .eq('user_id', user.id);
 
-      if (groupsData) {
-        setRecentGroups(groupsData);
+      if (memberData) {
+        // Filter to only show non-official clubs (study groups)
+        const myStudyGroups = memberData
+          .filter((item: any) => item.groups && item.groups.is_official_club === false)
+          .map((item: any) => ({
+            id: item.groups.id,
+            name: item.groups.name,
+            description: item.groups.description,
+          }));
+
+        setRecentGroups(myStudyGroups);
+
+        // Filter to only show official clubs
+        const myJoinedClubs = memberData
+          .filter((item: any) => item.groups && item.groups.is_official_club === true)
+          .map((item: any) => ({
+            id: item.groups.id,
+            name: item.groups.name,
+            description: item.groups.description,
+          }));
+
+        setMyClubs(myJoinedClubs);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -475,21 +514,29 @@ export default function HomeScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Upcoming Events</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAllText}>See All</Text>
-            </TouchableOpacity>
+            <Text style={styles.sectionTitle}>My Events</Text>
+            {upcomingEvents.length > 3 && (
+              <TouchableOpacity onPress={() => setShowAllEvents(!showAllEvents)}>
+                <Text style={styles.seeAllText}>
+                  {showAllEvents ? 'Show Less' : `See All (${upcomingEvents.length})`}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {upcomingEvents.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="calendar-outline" size={48} color={colors.gray400} />
-              <Text style={styles.emptyStateText}>No upcoming events</Text>
-              <Text style={styles.emptyStateSubtext}>Check the Events tab to discover campus activities</Text>
+              <Text style={styles.emptyStateText}>No events yet</Text>
+              <Text style={styles.emptyStateSubtext}>Attend events from the Events tab to see them here</Text>
             </View>
           ) : (
-            upcomingEvents.map((event) => (
-              <TouchableOpacity key={event.id} style={styles.eventCard}>
+            (showAllEvents ? upcomingEvents : upcomingEvents.slice(0, 3)).map((event) => (
+              <TouchableOpacity
+                key={event.id}
+                style={styles.eventCard}
+                onPress={() => router.push(`/event-detail?id=${event.id}`)}
+              >
                 <View style={styles.eventIcon}>
                   <Ionicons name="calendar" size={20} color={colors.primary} />
                 </View>
@@ -508,10 +555,14 @@ export default function HomeScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Study Groups</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAllText}>See All</Text>
-            </TouchableOpacity>
+            <Text style={styles.sectionTitle}>My Study Groups</Text>
+            {recentGroups.length > 3 && (
+              <TouchableOpacity onPress={() => setShowAllGroups(!showAllGroups)}>
+                <Text style={styles.seeAllText}>
+                  {showAllGroups ? 'Show Less' : `See All (${recentGroups.length})`}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {recentGroups.length === 0 ? (
@@ -521,8 +572,12 @@ export default function HomeScreen() {
               <Text style={styles.emptyStateSubtext}>Create or join study groups to collaborate</Text>
             </View>
           ) : (
-            recentGroups.map((group) => (
-              <TouchableOpacity key={group.id} style={styles.groupCard}>
+            (showAllGroups ? recentGroups : recentGroups.slice(0, 3)).map((group) => (
+              <TouchableOpacity
+                key={group.id}
+                style={styles.groupCard}
+                onPress={() => router.push(`/study-group-detail?id=${group.id}`)}
+              >
                 <View style={[styles.groupIcon, { backgroundColor: colors.primaryLight }]}>
                   <Ionicons name="people" size={20} color={colors.white} />
                 </View>
@@ -530,6 +585,46 @@ export default function HomeScreen() {
                   <Text style={styles.groupName}>{group.name}</Text>
                   <Text style={styles.groupDescription} numberOfLines={1}>
                     {group.description || 'No description'}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>My Clubs</Text>
+            {myClubs.length > 3 && (
+              <TouchableOpacity onPress={() => setShowAllClubs(!showAllClubs)}>
+                <Text style={styles.seeAllText}>
+                  {showAllClubs ? 'Show Less' : `See All (${myClubs.length})`}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {myClubs.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="business-outline" size={48} color={colors.gray400} />
+              <Text style={styles.emptyStateText}>No clubs joined</Text>
+              <Text style={styles.emptyStateSubtext}>Discover and join UWB clubs in the Groups tab</Text>
+            </View>
+          ) : (
+            (showAllClubs ? myClubs : myClubs.slice(0, 3)).map((club) => (
+              <TouchableOpacity
+                key={club.id}
+                style={styles.groupCard}
+                onPress={() => router.push(`/club-detail?id=${club.id}`)}
+              >
+                <View style={[styles.groupIcon, { backgroundColor: colors.accent }]}>
+                  <Ionicons name="business" size={20} color={colors.white} />
+                </View>
+                <View style={styles.groupInfo}>
+                  <Text style={styles.groupName}>{club.name}</Text>
+                  <Text style={styles.groupDescription} numberOfLines={1}>
+                    {club.description || 'No description'}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
