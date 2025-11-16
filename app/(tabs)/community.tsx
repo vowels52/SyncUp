@@ -1025,12 +1025,12 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   filterButtonActive: {
-    backgroundColor: colors.text,
+    backgroundColor: colors.primary,
   },
   filterButtonText: {
     ...textStyles.body2,
     fontWeight: typography.fontWeightSemiBold,
-    color: colors.text,
+    color: colors.textPrimary,
   },
   filterButtonTextActive: {
     color: colors.white,

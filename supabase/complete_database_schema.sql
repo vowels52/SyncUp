@@ -519,10 +519,12 @@ CREATE POLICY "Users can update their own connections" ON connections
     TO authenticated
     USING (user_id = auth.uid() OR connected_user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can delete their own connections" ON connections;
+
 CREATE POLICY "Users can delete their own connections" ON connections
     FOR DELETE
     TO authenticated
-    USING (user_id = auth.uid());
+    USING (user_id = auth.uid() OR connected_user_id = auth.uid());
 
 -- =====================================================
 -- TABLE: match_history
