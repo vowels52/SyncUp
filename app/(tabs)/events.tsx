@@ -27,6 +27,7 @@ export default function EventsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [showAllUpcoming, setShowAllUpcoming] = useState(false);
 
   // Form state
   const [newEvent, setNewEvent] = useState({
@@ -512,7 +513,16 @@ export default function EventsScreen() {
 
         {/* Events List Section */}
         <View style={styles.eventsListSection}>
-          <Text style={styles.sectionTitle}>Upcoming Events</Text>
+          <View style={styles.eventsListHeader}>
+            <Text style={styles.sectionTitle}>Upcoming Events</Text>
+            {events.length > 5 && (
+              <TouchableOpacity onPress={() => setShowAllUpcoming(!showAllUpcoming)}>
+                <Text style={styles.showAllText}>
+                  {showAllUpcoming ? 'Show Less' : `Show All (${events.length})`}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
           {events.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="calendar-outline" size={80} color={colors.gray400} />
@@ -522,7 +532,7 @@ export default function EventsScreen() {
               </Text>
             </View>
           ) : (
-            events.map(item => (
+            (showAllUpcoming ? events : events.slice(0, 5)).map(item => (
               <View key={item.id}>
                 {renderEventItem({ item })}
               </View>
@@ -1073,9 +1083,19 @@ const styles = StyleSheet.create({
   eventsListSection: {
     padding: spacing.md,
   },
+  eventsListHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
   sectionTitle: {
     ...textStyles.h3,
-    marginBottom: spacing.md,
+  },
+  showAllText: {
+    ...textStyles.body2,
+    color: colors.primary,
+    fontWeight: typography.fontWeightSemiBold,
   },
   modalOverlay: {
     flex: 1,

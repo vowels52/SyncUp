@@ -8,13 +8,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth, useAlert } from '@/template';
 import { getSupabaseClient } from '@/template';
 
-interface GroupEvent {
-  id: string;
-  name: string;
-  date: string;
-  time: string;
-}
-
 interface UserGroup {
   id: string;
   name: string;
@@ -33,13 +26,23 @@ interface UWBClub {
   is_official_club: boolean;
 }
 
+interface StudyGroup {
+  id: string;
+  name: string;
+  description: string;
+  club_type: string;
+  category: string;
+  member_count: number;
+}
+
 export default function GroupsScreen() {
-  const [groupEvents, setGroupEvents] = useState<GroupEvent[]>([]);
   const [userGroups, setUserGroups] = useState<UserGroup[]>([]);
   const [uwbClubs, setUwbClubs] = useState<UWBClub[]>([]);
+  const [studyGroups, setStudyGroups] = useState<StudyGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showAllClubs, setShowAllClubs] = useState(false);
+  const [showAllStudyGroups, setShowAllStudyGroups] = useState(false);
 
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -52,7 +55,7 @@ export default function GroupsScreen() {
   }, []);
 
   const fetchData = async () => {
-    await Promise.all([fetchGroupEvents(), fetchUserGroups(), loadUWBClubs()]);
+    await Promise.all([fetchUserGroups(), loadUWBClubs(), loadStudyGroups()]);
     setLoading(false);
     setRefreshing(false);
   };
@@ -74,32 +77,41 @@ export default function GroupsScreen() {
     }
   };
 
-  const fetchGroupEvents = async () => {
+  const loadStudyGroups = async () => {
     try {
-      // Fetch upcoming events
+      // Only get user-created study groups (not official clubs)
+      // Filter out any groups that are official clubs OR have no is_official_club set
       const { data, error } = await supabase
-        .from('events')
-        .select('id, title, start_time')
-        .gte('start_time', new Date().toISOString())
-        .order('start_time', { ascending: true })
-        .limit(10);
+        .from('groups')
+        .select('id, name, description, club_type, category, is_official_club')
+        .eq('is_official_club', false)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
       if (data) {
-        const events: GroupEvent[] = data.map((event: any) => {
-          const date = new Date(event.start_time);
-          return {
-            id: event.id,
-            name: event.title,
-            date: date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }),
-            time: date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-          };
-        });
-        setGroupEvents(events);
+        // Filter to ensure we only get non-official clubs
+        const nonOfficialGroups = data.filter((group: any) => group.is_official_club === false);
+
+        // Get member counts for each study group
+        const groupsWithCounts = await Promise.all(
+          nonOfficialGroups.map(async (group: any) => {
+            const { count } = await supabase
+              .from('group_members')
+              .select('*', { count: 'exact', head: true })
+              .eq('group_id', group.id);
+
+            return {
+              ...group,
+              member_count: count || 0,
+            };
+          })
+        );
+
+        setStudyGroups(groupsWithCounts);
       }
-    } catch (error: any) {
-      console.error('Error fetching group events:', error);
+    } catch (error) {
+      console.error('Error loading study groups:', error);
     }
   };
 
@@ -156,12 +168,12 @@ export default function GroupsScreen() {
     fetchData();
   };
 
-  const formatEventDateTime = (event: GroupEvent) => {
-    return `${event.date} @ ${event.time}`;
-  };
-
   const openClubDetail = (clubId: string) => {
     router.push(`/club-detail?id=${clubId}`);
+  };
+
+  const openStudyGroupDetail = (groupId: string) => {
+    router.push(`/study-group-detail?id=${groupId}`);
   };
 
   if (loading) {
@@ -181,19 +193,47 @@ export default function GroupsScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
       }
     >
-      {/* Group Events Section */}
+      {/* Study Groups Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Group Events</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Study Groups</Text>
+          {studyGroups.length > 5 && (
+            <TouchableOpacity onPress={() => setShowAllStudyGroups(!showAllStudyGroups)}>
+              <Text style={styles.toggleText}>
+                {showAllStudyGroups ? 'Show Less' : `Show All (${studyGroups.length})`}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
         <View style={styles.sectionContent}>
-          {groupEvents.length === 0 ? (
-            <Text style={styles.emptyText}>No upcoming group events</Text>
+          {studyGroups.length === 0 ? (
+            <Text style={styles.emptyText}>No study groups available</Text>
           ) : (
-            groupEvents.map((event) => (
-              <TouchableOpacity key={event.id} style={styles.listItem}>
-                <Ionicons name="book" size={24} color={colors.textPrimary} style={styles.listIcon} />
-                <Text style={styles.listItemText}>
-                  {event.name} - {formatEventDateTime(event)}
-                </Text>
+            (showAllStudyGroups ? studyGroups : studyGroups.slice(0, 5)).map((group) => (
+              <TouchableOpacity
+                key={group.id}
+                style={styles.studyGroupCard}
+                onPress={() => openStudyGroupDetail(group.id)}
+              >
+                <View style={styles.studyGroupIcon}>
+                  <Ionicons name="people" size={24} color={colors.primary} />
+                </View>
+                <View style={styles.studyGroupInfo}>
+                  <Text style={styles.studyGroupName} numberOfLines={1}>
+                    {group.name}
+                  </Text>
+                  {(group.club_type || group.category) && (
+                    <Text style={styles.studyGroupType} numberOfLines={1}>
+                      {group.club_type}
+                      {group.club_type && group.category ? ' - ' : ''}
+                      {group.category}
+                    </Text>
+                  )}
+                  <Text style={styles.studyGroupMembers}>
+                    {group.member_count} {group.member_count === 1 ? 'member' : 'members'}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
             ))
           )}
@@ -379,5 +419,40 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize12,
     color: colors.textSecondary,
     lineHeight: typography.lineHeight16,
+  },
+  studyGroupCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
+    gap: spacing.md,
+  },
+  studyGroupIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.gray100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  studyGroupInfo: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  studyGroupName: {
+    fontSize: typography.fontSize16,
+    fontWeight: typography.fontWeightSemiBold,
+    color: colors.textPrimary,
+  },
+  studyGroupType: {
+    fontSize: typography.fontSize12,
+    color: colors.textSecondary,
+  },
+  studyGroupMembers: {
+    fontSize: typography.fontSize12,
+    color: colors.primary,
+    fontWeight: typography.fontWeightMedium,
   },
 });
