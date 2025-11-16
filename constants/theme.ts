@@ -34,6 +34,7 @@ export const colors = {
   overlay: 'rgba(0, 0, 0, 0.5)',
   
   // Text Colors
+  text: '#212121', // Added for backward compatibility
   textPrimary: '#212121',
   textSecondary: '#757575',
   textDisabled: '#BDBDBD',
