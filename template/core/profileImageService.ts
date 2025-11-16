@@ -124,3 +124,31 @@ export const updateProfileImage = async (
 
   return result;
 };
+
+/**
+ * Remove profile image completely
+ */
+export const removeProfileImage = async (
+  userId: string,
+  imageUrl: string
+): Promise<void> => {
+  const supabase = getSupabaseClient();
+
+  try {
+    // Delete from storage first
+    await deleteOldProfileImage(imageUrl);
+
+    // Update user profile to remove the image URL
+    const { error: updateError } = await supabase
+      .from('user_profiles')
+      .update({ profile_image_url: null })
+      .eq('id', userId);
+
+    if (updateError) {
+      throw updateError;
+    }
+  } catch (error: any) {
+    console.error('Failed to remove profile image:', error);
+    throw new Error(error.message || 'Failed to remove profile image');
+  }
+};

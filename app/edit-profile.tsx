@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth, useAlert } from '@/template';
 import { getSupabaseClient } from '@/template';
 import { pickImage } from '@/template/core/imageUpload';
-import { updateProfileImage } from '@/template/core/profileImageService';
+import { updateProfileImage, removeProfileImage } from '@/template/core/profileImageService';
 
 interface UserProfile {
   id: string;
@@ -99,6 +99,35 @@ export default function EditProfileScreen() {
     }
   };
 
+  const handleRemoveProfileImage = async () => {
+    if (!user || !profile || !profile.profile_image_url) return;
+
+    showAlert('Remove Profile Picture', 'Are you sure you want to remove your profile picture?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            setUploadingImage(true);
+
+            await removeProfileImage(user.id, profile.profile_image_url!);
+
+            // Update local profile state
+            setProfile({ ...profile, profile_image_url: null });
+
+            showAlert('Success', 'Profile picture removed');
+          } catch (error: any) {
+            console.error('Failed to remove profile image:', error);
+            showAlert('Error', error.message || 'Failed to remove profile picture');
+          } finally {
+            setUploadingImage(false);
+          }
+        },
+      },
+    ]);
+  };
+
   const handleSave = async () => {
     if (!user) return;
 
@@ -154,29 +183,39 @@ export default function EditProfileScreen() {
         <Text style={styles.description}>Keep your profile up to date so others can find you</Text>
 
         <View style={styles.profileImageSection}>
-          <TouchableOpacity
-            style={styles.profileImageContainer}
-            onPress={handleChangeProfileImage}
-            disabled={uploadingImage}
-          >
-            {profile?.profile_image_url ? (
-              <Image
-                source={{ uri: profile.profile_image_url }}
-                style={styles.profileImage}
-              />
-            ) : (
-              <View style={styles.profileImagePlaceholder}>
-                <Ionicons name="person" size={48} color={colors.white} />
-              </View>
-            )}
-            <View style={styles.profileImageOverlay}>
-              {uploadingImage ? (
-                <ActivityIndicator size="small" color={colors.white} />
+          <View style={styles.profileImageContainer}>
+            <TouchableOpacity
+              style={styles.profileImageTouchable}
+              onPress={handleChangeProfileImage}
+              disabled={uploadingImage}
+            >
+              {profile?.profile_image_url ? (
+                <Image
+                  source={{ uri: profile.profile_image_url }}
+                  style={styles.profileImage}
+                />
               ) : (
-                <Ionicons name="camera" size={24} color={colors.white} />
+                <View style={styles.profileImagePlaceholder}>
+                  <Ionicons name="person" size={48} color={colors.white} />
+                </View>
               )}
-            </View>
-          </TouchableOpacity>
+              <View style={styles.profileImageOverlay}>
+                {uploadingImage ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <Ionicons name="camera" size={24} color={colors.white} />
+                )}
+              </View>
+            </TouchableOpacity>
+            {profile?.profile_image_url && !uploadingImage && (
+              <TouchableOpacity
+                style={styles.removeProfileImageButton}
+                onPress={handleRemoveProfileImage}
+              >
+                <Ionicons name="close" size={20} color={colors.white} />
+              </TouchableOpacity>
+            )}
+          </View>
           <Text style={styles.profileImageLabel}>Tap to change profile picture</Text>
         </View>
 
@@ -378,8 +417,12 @@ const styles = StyleSheet.create({
     position: 'relative',
     width: 120,
     height: 120,
-    borderRadius: borderRadius.full,
     marginBottom: spacing.sm,
+  },
+  profileImageTouchable: {
+    width: 120,
+    height: 120,
+    borderRadius: borderRadius.full,
   },
   profileImage: {
     width: 120,
@@ -410,5 +453,18 @@ const styles = StyleSheet.create({
   profileImageLabel: {
     ...textStyles.caption,
     color: colors.textSecondary,
+  },
+  removeProfileImageButton: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.error,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: colors.background,
   },
 });
