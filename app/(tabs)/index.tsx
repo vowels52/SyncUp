@@ -331,12 +331,25 @@ export default function HomeScreen() {
       const { data, error } = await supabase
         .from('user_profiles')
         .select('id, full_name, major, year, bio, email')
-        .or(`full_name.ilike.%${query}%,email.ilike.%${query}%,major.ilike.%${query}%`)
         .neq('id', user.id)
-        .not('full_name', 'is', null)
-        .limit(20);
+        .not('full_name', 'is', null);
 
       if (error) throw error;
+
+      if (!data) {
+        setSearchResults([]);
+        setSearching(false);
+        return;
+      }
+
+      // Filter results client-side for better mobile compatibility
+      const queryLower = query.toLowerCase();
+      const filteredData = data.filter(profile => {
+        const nameMatch = profile.full_name && profile.full_name.toLowerCase().includes(queryLower);
+        const emailMatch = profile.email && profile.email.toLowerCase().includes(queryLower);
+        const majorMatch = profile.major && profile.major.toLowerCase().includes(queryLower);
+        return nameMatch || emailMatch || majorMatch;
+      }).slice(0, 20); // Limit to 20 results
 
       // Then, get all existing connections for the current user
       const { data: connections, error: connectionsError } = await supabase
@@ -344,10 +357,12 @@ export default function HomeScreen() {
         .select('user_id, connected_user_id, status')
         .or(`user_id.eq.${user.id},connected_user_id.eq.${user.id}`);
 
-      if (connectionsError) throw connectionsError;
+      if (connectionsError) {
+        console.error('Connections query error:', connectionsError);
+      }
 
       // Map connection status to each search result
-      const resultsWithStatus = (data || []).map(result => {
+      const resultsWithStatus = filteredData.map(result => {
         const connection = connections?.find(
           conn =>
             (conn.user_id === user.id && conn.connected_user_id === result.id) ||
@@ -362,6 +377,7 @@ export default function HomeScreen() {
 
       setSearchResults(resultsWithStatus);
     } catch (error: any) {
+      console.error('Search error:', error);
       showAlert('Error', error.message || 'Failed to search users');
     } finally {
       setSearching(false);
@@ -831,9 +847,9 @@ export default function HomeScreen() {
       >
         <KeyboardAvoidingView
           style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, styles.searchModalContent]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Search People</Text>
               <TouchableOpacity onPress={closeSearchModal}>
@@ -859,6 +875,7 @@ export default function HomeScreen() {
 
             <ScrollView
               style={styles.searchResults}
+              contentContainerStyle={styles.searchResultsContent}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
@@ -1170,6 +1187,10 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
     ...shadows.large,
   },
+  searchModalContent: {
+    height: '90%',
+    maxHeight: '90%',
+  },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1274,7 +1295,10 @@ const styles = StyleSheet.create({
   },
   searchResults: {
     flex: 1,
+  },
+  searchResultsContent: {
     paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   searchLoadingContainer: {
     paddingVertical: spacing.xl * 2,
