@@ -36,6 +36,7 @@ interface SearchResult {
   year: string | null;
   bio: string | null;
   email: string;
+  connectionStatus?: 'none' | 'pending' | 'accepted' | 'rejected';
 }
 
 export default function HomeScreen() {
@@ -323,6 +324,7 @@ export default function HomeScreen() {
     setSearching(true);
 
     try {
+      // First, get all user search results
       const { data, error } = await supabase
         .from('user_profiles')
         .select('id, full_name, major, year, bio, email')
@@ -333,7 +335,29 @@ export default function HomeScreen() {
 
       if (error) throw error;
 
-      setSearchResults(data || []);
+      // Then, get all existing connections for the current user
+      const { data: connections, error: connectionsError } = await supabase
+        .from('connections')
+        .select('user_id, connected_user_id, status')
+        .or(`user_id.eq.${user.id},connected_user_id.eq.${user.id}`);
+
+      if (connectionsError) throw connectionsError;
+
+      // Map connection status to each search result
+      const resultsWithStatus = (data || []).map(result => {
+        const connection = connections?.find(
+          conn =>
+            (conn.user_id === user.id && conn.connected_user_id === result.id) ||
+            (conn.connected_user_id === user.id && conn.user_id === result.id)
+        );
+
+        return {
+          ...result,
+          connectionStatus: connection?.status || 'none'
+        } as SearchResult;
+      });
+
+      setSearchResults(resultsWithStatus);
     } catch (error: any) {
       showAlert('Error', error.message || 'Failed to search users');
     } finally {
@@ -345,7 +369,8 @@ export default function HomeScreen() {
     if (!user) return;
 
     try {
-      const { error } = await supabase
+      // Insert connection request
+      const { error: connectionError } = await supabase
         .from('connections')
         .insert({
           user_id: user.id,
@@ -353,12 +378,28 @@ export default function HomeScreen() {
           status: 'pending',
         });
 
-      if (error) throw error;
+      if (connectionError) throw connectionError;
+
+      // Also record in match history so user doesn't appear in discover page
+      const { error: historyError } = await supabase
+        .from('match_history')
+        .insert({
+          user_id: user.id,
+          viewed_user_id: userId,
+          action: 'connect',
+        });
+
+      if (historyError) {
+        // Log but don't fail if history insert fails
+        console.error('Error recording match history:', historyError);
+      }
 
       showAlert('Success', 'Connection request sent!');
 
-      // Remove from search results
-      setSearchResults(searchResults.filter(r => r.id !== userId));
+      // Update the connection status in search results instead of removing
+      setSearchResults(searchResults.map(r =>
+        r.id === userId ? { ...r, connectionStatus: 'pending' as const } : r
+      ));
     } catch (error: any) {
       showAlert('Error', error.message || 'Failed to send connection request');
     }
@@ -850,13 +891,25 @@ export default function HomeScreen() {
                         <Text style={styles.searchResultEmail}>{result.email}</Text>
                       </View>
                     </View>
-                    <TouchableOpacity
-                      style={styles.connectButton}
-                      onPress={() => handleSendConnectionRequest(result.id)}
-                    >
-                      <Ionicons name="person-add" size={16} color={colors.white} />
-                      <Text style={styles.connectButtonText}>Connect</Text>
-                    </TouchableOpacity>
+                    {result.connectionStatus === 'accepted' ? (
+                      <View style={[styles.connectButton, styles.connectedButton]}>
+                        <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                        <Text style={styles.connectedButtonText}>Connected</Text>
+                      </View>
+                    ) : result.connectionStatus === 'pending' ? (
+                      <View style={[styles.connectButton, styles.connectedButton]}>
+                        <Ionicons name="time" size={16} color={colors.textSecondary} />
+                        <Text style={styles.connectedButtonText}>Pending</Text>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.connectButton}
+                        onPress={() => handleSendConnectionRequest(result.id)}
+                      >
+                        <Ionicons name="person-add" size={16} color={colors.white} />
+                        <Text style={styles.connectButtonText}>Connect</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 ))
               )}
@@ -1222,5 +1275,15 @@ const styles = StyleSheet.create({
     ...textStyles.body2,
     fontWeight: typography.fontWeightSemiBold,
     color: colors.white,
+  },
+  connectedButton: {
+    backgroundColor: colors.gray100,
+    borderWidth: 1,
+    borderColor: colors.gray300,
+  },
+  connectedButtonText: {
+    ...textStyles.body2,
+    fontWeight: typography.fontWeightSemiBold,
+    color: colors.textSecondary,
   },
 });
