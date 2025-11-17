@@ -606,7 +606,7 @@ export default function HomeScreen() {
               <TouchableOpacity
                 key={group.id}
                 style={styles.groupCard}
-                onPress={() => router.push(`/study-group-detail?id=${group.id}`)}
+                onPress={() => router.push(`/study-group-detail?id=${group.id}&from=home`)}
               >
                 <View style={[styles.groupIcon, { backgroundColor: colors.primaryLight }]}>
                   <Ionicons name="people" size={20} color={colors.white} />
@@ -646,7 +646,7 @@ export default function HomeScreen() {
               <TouchableOpacity
                 key={club.id}
                 style={styles.groupCard}
-                onPress={() => router.push(`/club-detail?id=${club.id}`)}
+                onPress={() => router.push(`/club-detail?id=${club.id}&from=home`)}
               >
                 <View style={[styles.groupIcon, { backgroundColor: colors.accent }]}>
                   <Ionicons name="business" size={20} color={colors.white} />

@@ -169,11 +169,11 @@ export default function GroupsScreen() {
   };
 
   const openClubDetail = (clubId: string) => {
-    router.push(`/club-detail?id=${clubId}`);
+    router.push(`/club-detail?id=${clubId}&from=groups`);
   };
 
   const openStudyGroupDetail = (groupId: string) => {
-    router.push(`/study-group-detail?id=${groupId}`);
+    router.push(`/study-group-detail?id=${groupId}&from=groups`);
   };
 
   if (loading) {

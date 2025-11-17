@@ -83,6 +83,15 @@ export default function EventDetailScreen() {
     }
   };
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      // Events are only shown on home, so default to home tab
+      router.replace('/(tabs)');
+    }
+  };
+
   const handleAttendEvent = async () => {
     if (!user || !event) return;
 
@@ -174,7 +183,7 @@ export default function EventDetailScreen() {
     return (
       <View style={[commonStyles.container, commonStyles.centerContent]}>
         <Text style={styles.errorText}>Event not found</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -187,7 +196,7 @@ export default function EventDetailScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
+        <TouchableOpacity onPress={handleBack} style={styles.headerButton}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Event Details</Text>

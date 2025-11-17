@@ -20,7 +20,7 @@ interface StudyGroup {
 }
 
 export default function StudyGroupDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -132,6 +132,16 @@ export default function StudyGroupDetailScreen() {
     }
   };
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      // If no navigation history, use the 'from' parameter to determine where to go
+      const destination = from === 'home' ? '/(tabs)' : '/(tabs)/groups';
+      router.replace(destination);
+    }
+  };
+
   const handleDeleteGroup = async () => {
     if (!user || !studyGroup || !isCreator) return;
 
@@ -184,7 +194,7 @@ export default function StudyGroupDetailScreen() {
     return (
       <View style={[commonStyles.container, commonStyles.centerContent]}>
         <Text style={styles.errorText}>Study group not found</Text>
-        <TouchableOpacity onPress={() => router.replace('/(tabs)/groups')} style={styles.backButton}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -195,7 +205,7 @@ export default function StudyGroupDetailScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
+        <TouchableOpacity onPress={handleBack} style={styles.headerButton}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Study Group</Text>
