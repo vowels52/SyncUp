@@ -229,7 +229,8 @@ export default function HomeScreen() {
     }
 
     try {
-      const { error } = await supabase
+      // Insert the new group and get the created group's ID
+      const { data: createdGroup, error: groupError } = await supabase
         .from('groups')
         .insert({
           name: newGroup.name,
@@ -238,9 +239,22 @@ export default function HomeScreen() {
           category: newGroup.category || null,
           creator_id: user.id,
           is_official_club: false,
+        })
+        .select()
+        .single();
+
+      if (groupError) throw groupError;
+
+      // Automatically add the creator as a member of the group
+      const { error: memberError } = await supabase
+        .from('group_members')
+        .insert({
+          group_id: createdGroup.id,
+          user_id: user.id,
+          role: 'admin',
         });
 
-      if (error) throw error;
+      if (memberError) throw memberError;
 
       showAlert('Success', 'Group created successfully!');
       closeGroupModal();
