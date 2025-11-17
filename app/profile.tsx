@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth, useAlert } from '@/template';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { getSupabaseClient } from '@/template';
+import { pickImage } from '@/template/core/imageUpload';
+import { updateProfileImage, removeProfileImage } from '@/template/core/profileImageService';
 
 interface UserProfile {
   id: string;
@@ -16,6 +18,7 @@ interface UserProfile {
   year: string | null;
   bio: string | null;
   university: string | null;
+  profile_image_url: string | null;
 }
 
 export default function ProfileScreen() {
@@ -28,6 +31,7 @@ export default function ProfileScreen() {
   const [modalType, setModalType] = useState<'connections' | 'groups' | 'events' | null>(null);
   const [modalData, setModalData] = useState<any[]>([]);
   const [loadingModal, setLoadingModal] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
@@ -104,6 +108,67 @@ export default function ProfileScreen() {
     } catch (error: any) {
       console.error('Failed to fetch statistics:', error.message);
     }
+  };
+
+  const handleChangeProfileImage = async () => {
+    if (!user || !profile) return;
+
+    try {
+      setUploadingImage(true);
+
+      // Pick and crop image
+      const image = await pickImage();
+      if (!image) {
+        setUploadingImage(false);
+        return; // User cancelled
+      }
+
+      // Upload image and update profile
+      const { imageUrl } = await updateProfileImage(
+        user.id,
+        image.uri,
+        profile.profile_image_url
+      );
+
+      // Update local profile state
+      setProfile({ ...profile, profile_image_url: imageUrl });
+
+      showAlert('Success', 'Profile picture updated successfully');
+    } catch (error: any) {
+      console.error('Failed to upload profile image:', error);
+      showAlert('Error', error.message || 'Failed to upload profile picture');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleRemoveProfileImage = async () => {
+    if (!user || !profile || !profile.profile_image_url) return;
+
+    showAlert('Remove Profile Picture', 'Are you sure you want to remove your profile picture?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            setUploadingImage(true);
+
+            await removeProfileImage(user.id, profile.profile_image_url!);
+
+            // Update local profile state
+            setProfile({ ...profile, profile_image_url: null });
+
+            showAlert('Success', 'Profile picture removed');
+          } catch (error: any) {
+            console.error('Failed to remove profile image:', error);
+            showAlert('Error', error.message || 'Failed to remove profile picture');
+          } finally {
+            setUploadingImage(false);
+          }
+        },
+      },
+    ]);
   };
 
   const handleLogout = async () => {
@@ -339,12 +404,35 @@ export default function ProfileScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
-            <View style={styles.avatarLarge}>
-              <Ionicons name="person" size={64} color={colors.white} />
-            </View>
-            <TouchableOpacity style={styles.editAvatarButton}>
-              <Ionicons name="camera" size={20} color={colors.white} />
+            {profile?.profile_image_url ? (
+              <Image
+                source={{ uri: profile.profile_image_url }}
+                style={styles.avatarLarge}
+              />
+            ) : (
+              <View style={styles.avatarLarge}>
+                <Ionicons name="person" size={64} color={colors.white} />
+              </View>
+            )}
+            <TouchableOpacity
+              style={styles.editAvatarButton}
+              onPress={handleChangeProfileImage}
+              disabled={uploadingImage}
+            >
+              {uploadingImage ? (
+                <ActivityIndicator size="small" color={colors.white} />
+              ) : (
+                <Ionicons name="camera" size={20} color={colors.white} />
+              )}
             </TouchableOpacity>
+            {profile?.profile_image_url && !uploadingImage && (
+              <TouchableOpacity
+                style={styles.removeAvatarButton}
+                onPress={handleRemoveProfileImage}
+              >
+                <Ionicons name="close" size={20} color={colors.white} />
+              </TouchableOpacity>
+            )}
           </View>
 
           <Text style={styles.profileName}>
@@ -618,6 +706,19 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: borderRadius.full,
     backgroundColor: colors.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: colors.surface,
+  },
+  removeAvatarButton: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.error,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,

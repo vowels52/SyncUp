@@ -5,7 +5,7 @@ import { colors, spacing, borderRadius, shadows, typography } from '@/constants/
 import { commonStyles } from '@/constants/styles';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from '@/template';
+import { useAuth, useAlert } from '@/template';
 import { getSupabaseClient } from '@/template';
 
 interface StudyGroup {
@@ -20,10 +20,11 @@ interface StudyGroup {
 }
 
 export default function StudyGroupDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { showAlert } = useAlert();
   const supabase = getSupabaseClient();
 
   const [studyGroup, setStudyGroup] = useState<StudyGroup | null>(null);
@@ -49,7 +50,16 @@ export default function StudyGroupDetailScreen() {
         .eq('is_official_club', false)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // Handle case where group doesn't exist or was deleted
+        if (error.code === 'PGRST116') {
+          // No rows returned - group doesn't exist
+          setStudyGroup(null);
+          return;
+        }
+        throw error;
+      }
+
       setStudyGroup(data);
       setIsCreator(user?.id === data.creator_id);
 
@@ -62,6 +72,7 @@ export default function StudyGroupDetailScreen() {
       setMemberCount(count || 0);
     } catch (error) {
       console.error('Error fetching study group details:', error);
+      setStudyGroup(null);
     } finally {
       setLoading(false);
     }
@@ -121,6 +132,56 @@ export default function StudyGroupDetailScreen() {
     }
   };
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      // If no navigation history, use the 'from' parameter to determine where to go
+      const destination = from === 'home' ? '/(tabs)' : '/(tabs)/groups';
+      router.replace(destination);
+    }
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!user || !studyGroup || !isCreator) return;
+
+    showAlert(
+      'Delete Group',
+      `Are you sure you want to delete "${studyGroup.name}"? This action cannot be undone.`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('groups')
+                .delete()
+                .eq('id', studyGroup.id)
+                .eq('creator_id', user.id);
+
+              if (error) throw error;
+
+              showAlert('Success', 'Group deleted successfully', [
+                {
+                  text: 'OK',
+                  onPress: () => router.replace('/(tabs)/groups'),
+                },
+              ]);
+            } catch (error: any) {
+              console.error('Error deleting group:', error);
+              showAlert('Error', error.message || 'Failed to delete group');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   if (loading) {
     return (
       <View style={[commonStyles.container, commonStyles.centerContent]}>
@@ -133,7 +194,7 @@ export default function StudyGroupDetailScreen() {
     return (
       <View style={[commonStyles.container, commonStyles.centerContent]}>
         <Text style={styles.errorText}>Study group not found</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -144,7 +205,7 @@ export default function StudyGroupDetailScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
+        <TouchableOpacity onPress={handleBack} style={styles.headerButton}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Study Group</Text>
@@ -229,6 +290,17 @@ export default function StudyGroupDetailScreen() {
               <Ionicons name="checkmark-circle" size={16} color={colors.success} />
               <Text style={styles.memberStatusText}>You are a member</Text>
             </View>
+          )}
+
+          {/* Delete Button for Creators */}
+          {isCreator && (
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={handleDeleteGroup}
+            >
+              <Ionicons name="trash-outline" size={20} color={colors.surface} style={styles.buttonIcon} />
+              <Text style={styles.deleteButtonText}>Delete Group</Text>
+            </TouchableOpacity>
           )}
         </View>
       </ScrollView>
@@ -381,6 +453,20 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: typography.fontSize14,
+    fontWeight: typography.fontWeightBold,
+    color: colors.surface,
+  },
+  deleteButton: {
+    backgroundColor: colors.error,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg,
+    marginTop: spacing.lg,
+  },
+  deleteButtonText: {
+    fontSize: typography.fontSize16,
     fontWeight: typography.fontWeightBold,
     color: colors.surface,
   },

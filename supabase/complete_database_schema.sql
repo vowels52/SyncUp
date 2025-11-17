@@ -5951,3 +5951,48 @@ END $$;
 -- Add comment
 COMMENT ON TABLE events IS 'Contains both user-created events and official UWB events';
 
+
+
+-- =====================================================
+-- STORAGE POLICIES FOR PROFILE IMAGES
+-- =====================================================
+
+-- Enable public read access for profile images
+CREATE POLICY "Public read access for profile images"
+ON storage.objects FOR SELECT
+TO public
+USING (bucket_id = 'profile-images');
+
+-- Allow authenticated users to upload profile images to their own folder
+CREATE POLICY "Authenticated users can upload profile images"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (
+  bucket_id = 'profile-images'
+  AND auth.uid()::text = (storage.foldername(name))[1]
+);
+
+-- Allow users to update their own profile images
+CREATE POLICY "Users can update their own profile images"
+ON storage.objects FOR UPDATE
+TO authenticated
+USING (
+  bucket_id = 'profile-images'
+  AND auth.uid()::text = (storage.foldername(name))[1]
+);
+
+-- Allow users to delete their own profile images
+CREATE POLICY "Users can delete their own profile images"
+ON storage.objects FOR DELETE
+TO authenticated
+USING (
+  bucket_id = 'profile-images'
+  AND auth.uid()::text = (storage.foldername(name))[1]
+);
+
+-- Add comment
+COMMENT ON POLICY "Public read access for profile images" ON storage.objects IS 'Allows public access to view profile images';
+COMMENT ON POLICY "Authenticated users can upload profile images" ON storage.objects IS 'Authenticated users can upload images to their own folder (userId/filename.jpg)';
+COMMENT ON POLICY "Users can update their own profile images" ON storage.objects IS 'Users can only update images in their own folder';
+COMMENT ON POLICY "Users can delete their own profile images" ON storage.objects IS 'Users can only delete images in their own folder';
+

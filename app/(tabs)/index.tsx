@@ -229,7 +229,8 @@ export default function HomeScreen() {
     }
 
     try {
-      const { error } = await supabase
+      // Insert the new group and get the created group's ID
+      const { data: createdGroup, error: groupError } = await supabase
         .from('groups')
         .insert({
           name: newGroup.name,
@@ -238,9 +239,22 @@ export default function HomeScreen() {
           category: newGroup.category || null,
           creator_id: user.id,
           is_official_club: false,
+        })
+        .select()
+        .single();
+
+      if (groupError) throw groupError;
+
+      // Automatically add the creator as a member of the group
+      const { error: memberError } = await supabase
+        .from('group_members')
+        .insert({
+          group_id: createdGroup.id,
+          user_id: user.id,
+          role: 'admin',
         });
 
-      if (error) throw error;
+      if (memberError) throw memberError;
 
       showAlert('Success', 'Group created successfully!');
       closeGroupModal();
@@ -592,7 +606,7 @@ export default function HomeScreen() {
               <TouchableOpacity
                 key={group.id}
                 style={styles.groupCard}
-                onPress={() => router.push(`/study-group-detail?id=${group.id}`)}
+                onPress={() => router.push(`/study-group-detail?id=${group.id}&from=home`)}
               >
                 <View style={[styles.groupIcon, { backgroundColor: colors.primaryLight }]}>
                   <Ionicons name="people" size={20} color={colors.white} />
@@ -632,7 +646,7 @@ export default function HomeScreen() {
               <TouchableOpacity
                 key={club.id}
                 style={styles.groupCard}
-                onPress={() => router.push(`/club-detail?id=${club.id}`)}
+                onPress={() => router.push(`/club-detail?id=${club.id}&from=home`)}
               >
                 <View style={[styles.groupIcon, { backgroundColor: colors.accent }]}>
                   <Ionicons name="business" size={20} color={colors.white} />

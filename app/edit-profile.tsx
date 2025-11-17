@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors, typography, spacing, borderRadius, shadows } from '@/constants/theme';
 import { textStyles } from '@/constants/styles';
@@ -7,6 +7,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, useAlert } from '@/template';
 import { getSupabaseClient } from '@/template';
+import { pickImage } from '@/template/core/imageUpload';
+import { updateProfileImage, removeProfileImage } from '@/template/core/profileImageService';
 
 interface UserProfile {
   id: string;
@@ -16,6 +18,7 @@ interface UserProfile {
   year: string | null;
   bio: string | null;
   university: string | null;
+  profile_image_url: string | null;
 }
 
 export default function EditProfileScreen() {
@@ -26,6 +29,7 @@ export default function EditProfileScreen() {
   const [bio, setBio] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -61,6 +65,67 @@ export default function EditProfileScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleChangeProfileImage = async () => {
+    if (!user || !profile) return;
+
+    try {
+      setUploadingImage(true);
+
+      // Pick and crop image
+      const image = await pickImage();
+      if (!image) {
+        setUploadingImage(false);
+        return; // User cancelled
+      }
+
+      // Upload image and update profile
+      const { imageUrl } = await updateProfileImage(
+        user.id,
+        image.uri,
+        profile.profile_image_url
+      );
+
+      // Update local profile state
+      setProfile({ ...profile, profile_image_url: imageUrl });
+
+      showAlert('Success', 'Profile picture updated successfully');
+    } catch (error: any) {
+      console.error('Failed to upload profile image:', error);
+      showAlert('Error', error.message || 'Failed to upload profile picture');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleRemoveProfileImage = async () => {
+    if (!user || !profile || !profile.profile_image_url) return;
+
+    showAlert('Remove Profile Picture', 'Are you sure you want to remove your profile picture?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            setUploadingImage(true);
+
+            await removeProfileImage(user.id, profile.profile_image_url!);
+
+            // Update local profile state
+            setProfile({ ...profile, profile_image_url: null });
+
+            showAlert('Success', 'Profile picture removed');
+          } catch (error: any) {
+            console.error('Failed to remove profile image:', error);
+            showAlert('Error', error.message || 'Failed to remove profile picture');
+          } finally {
+            setUploadingImage(false);
+          }
+        },
+      },
+    ]);
   };
 
   const handleSave = async () => {
@@ -116,6 +181,43 @@ export default function EditProfileScreen() {
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
         <Text style={styles.title}>Update your information</Text>
         <Text style={styles.description}>Keep your profile up to date so others can find you</Text>
+
+        <View style={styles.profileImageSection}>
+          <View style={styles.profileImageContainer}>
+            <TouchableOpacity
+              style={styles.profileImageTouchable}
+              onPress={handleChangeProfileImage}
+              disabled={uploadingImage}
+            >
+              {profile?.profile_image_url ? (
+                <Image
+                  source={{ uri: profile.profile_image_url }}
+                  style={styles.profileImage}
+                />
+              ) : (
+                <View style={styles.profileImagePlaceholder}>
+                  <Ionicons name="person" size={48} color={colors.white} />
+                </View>
+              )}
+              <View style={styles.profileImageOverlay}>
+                {uploadingImage ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <Ionicons name="camera" size={24} color={colors.white} />
+                )}
+              </View>
+            </TouchableOpacity>
+            {profile?.profile_image_url && !uploadingImage && (
+              <TouchableOpacity
+                style={styles.removeProfileImageButton}
+                onPress={handleRemoveProfileImage}
+              >
+                <Ionicons name="close" size={20} color={colors.white} />
+              </TouchableOpacity>
+            )}
+          </View>
+          <Text style={styles.profileImageLabel}>Tap to change profile picture</Text>
+        </View>
 
         <View style={styles.form}>
           <View style={styles.inputGroup}>
@@ -306,5 +408,63 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     ...textStyles.body2,
     color: colors.primary,
+  },
+  profileImageSection: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  profileImageContainer: {
+    position: 'relative',
+    width: 120,
+    height: 120,
+    marginBottom: spacing.sm,
+  },
+  profileImageTouchable: {
+    width: 120,
+    height: 120,
+    borderRadius: borderRadius.full,
+  },
+  profileImage: {
+    width: 120,
+    height: 120,
+    borderRadius: borderRadius.full,
+  },
+  profileImagePlaceholder: {
+    width: 120,
+    height: 120,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileImageOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: colors.background,
+  },
+  profileImageLabel: {
+    ...textStyles.caption,
+    color: colors.textSecondary,
+  },
+  removeProfileImageButton: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.error,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: colors.background,
   },
 });
