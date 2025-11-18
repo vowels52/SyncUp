@@ -502,6 +502,14 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
           </TouchableOpacity>
 
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/match-preferences')}>
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="options-outline" size={24} color={colors.textPrimary} />
+              <Text style={styles.menuItemText}>Match Preferences</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/notifications')}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
