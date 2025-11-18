@@ -1,14 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, FlatList, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, FlatList, Image, Switch } from 'react-native';
 import { colors, spacing, borderRadius, shadows, typography } from '@/constants/theme';
 import { textStyles, commonStyles } from '@/constants/styles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth, useAlert } from '@/template';
+import { useAuth, useAlert, useTheme } from '@/template';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { getSupabaseClient } from '@/template';
 import { pickImage } from '@/template/core/imageUpload';
 import { updateProfileImage, removeProfileImage } from '@/template/core/profileImageService';
+import { useThemedColors } from '@/hooks/useThemedColors';
 
 interface UserProfile {
   id: string;
@@ -36,8 +37,10 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
   const { showAlert } = useAlert();
+  const { themeMode, isDarkMode, setThemeMode } = useTheme();
   const router = useRouter();
   const supabase = getSupabaseClient();
+  const themedColors = useThemedColors();
 
   useEffect(() => {
     fetchProfile();
@@ -385,10 +388,265 @@ export default function ProfileScreen() {
     }
   };
 
+  // Generate styles dynamically based on theme
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: themedColors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.md,
+      paddingBottom: spacing.md,
+      backgroundColor: themedColors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: themedColors.gray200,
+    },
+    backButton: {
+      padding: spacing.xs,
+    },
+    headerTitle: {
+      ...textStyles.h3,
+      color: themedColors.textPrimary,
+      flex: 1,
+      textAlign: 'center',
+    },
+    headerSpacer: {
+      width: 40,
+    },
+    content: {
+      flex: 1,
+    },
+    profileHeader: {
+      backgroundColor: themedColors.surface,
+      paddingVertical: spacing.xl,
+      alignItems: 'center',
+      ...shadows.small,
+    },
+    avatarContainer: {
+      position: 'relative',
+      marginBottom: spacing.md,
+    },
+    avatarLarge: {
+      width: 120,
+      height: 120,
+      borderRadius: borderRadius.full,
+      backgroundColor: themedColors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    editAvatarButton: {
+      position: 'absolute',
+      bottom: 0,
+      right: 0,
+      width: 36,
+      height: 36,
+      borderRadius: borderRadius.full,
+      backgroundColor: themedColors.accent,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 3,
+      borderColor: themedColors.surface,
+    },
+    removeAvatarButton: {
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      width: 36,
+      height: 36,
+      borderRadius: borderRadius.full,
+      backgroundColor: themedColors.error,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 3,
+      borderColor: themedColors.surface,
+    },
+    profileName: {
+      ...textStyles.h2,
+      color: themedColors.textPrimary,
+      marginBottom: spacing.xs,
+    },
+    profileEmail: {
+      ...textStyles.body2,
+      color: themedColors.textSecondary,
+      marginBottom: spacing.md,
+    },
+    badge: {
+      backgroundColor: themedColors.gray100,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: borderRadius.full,
+    },
+    badgeText: {
+      ...textStyles.caption,
+      color: themedColors.textPrimary,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    section: {
+      padding: spacing.md,
+    },
+    sectionTitle: {
+      ...textStyles.h4,
+      color: themedColors.textPrimary,
+      marginBottom: spacing.md,
+    },
+    card: {
+      backgroundColor: themedColors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      ...shadows.small,
+    },
+    bioText: {
+      ...textStyles.body2,
+      color: themedColors.textSecondary,
+      lineHeight: typography.lineHeight24,
+    },
+    statsGrid: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      gap: spacing.sm,
+    },
+    statCard: {
+      flex: 1,
+      backgroundColor: themedColors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      alignItems: 'center',
+      ...shadows.small,
+    },
+    statValue: {
+      ...textStyles.h3,
+      color: themedColors.textPrimary,
+      marginTop: spacing.sm,
+      marginBottom: spacing.xs,
+    },
+    statLabel: {
+      ...textStyles.caption,
+      color: themedColors.textSecondary,
+    },
+    menuItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: themedColors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      marginBottom: spacing.sm,
+      ...shadows.small,
+    },
+    menuItemLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    menuItemText: {
+      ...textStyles.body1,
+      color: themedColors.textPrimary,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: themedColors.overlay,
+      justifyContent: 'flex-end',
+    },
+    modalContent: {
+      backgroundColor: themedColors.surface,
+      borderTopLeftRadius: borderRadius.lg,
+      borderTopRightRadius: borderRadius.lg,
+      maxHeight: '80%',
+      paddingBottom: spacing.xl,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: themedColors.gray200,
+    },
+    modalTitle: {
+      ...textStyles.h3,
+      color: themedColors.textPrimary,
+    },
+    modalLoading: {
+      padding: spacing.xl,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 200,
+    },
+    emptyState: {
+      padding: spacing.xl,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 200,
+    },
+    emptyText: {
+      ...textStyles.body1,
+      color: themedColors.textSecondary,
+      marginTop: spacing.md,
+    },
+    modalItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: spacing.md,
+      marginHorizontal: spacing.md,
+      marginVertical: spacing.xs,
+      backgroundColor: themedColors.background,
+      borderRadius: borderRadius.md,
+      ...shadows.small,
+    },
+    modalItemIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: borderRadius.md,
+      backgroundColor: themedColors.gray100,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: spacing.md,
+    },
+    modalItemContent: {
+      flex: 1,
+    },
+    modalItemTitle: {
+      ...textStyles.body1,
+      color: themedColors.textPrimary,
+      fontWeight: typography.fontWeightSemiBold,
+      marginBottom: spacing.xs,
+    },
+    modalItemSubtitle: {
+      ...textStyles.caption,
+      color: themedColors.textSecondary,
+      marginBottom: spacing.xs,
+    },
+    modalItemEmail: {
+      ...textStyles.caption,
+      color: themedColors.textSecondary,
+    },
+    connectionAvatar: {
+      width: 56,
+      height: 56,
+      borderRadius: borderRadius.full,
+      backgroundColor: themedColors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: spacing.md,
+    },
+    groupImage: {
+      width: 48,
+      height: 48,
+      borderRadius: borderRadius.md,
+      marginRight: spacing.md,
+    },
+    deleteButton: {
+      padding: spacing.xs,
+    },
+  });
+
   if (loading) {
     return (
       <View style={[commonStyles.container, commonStyles.centerContent]}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator size="large" color={themedColors.primary} />
       </View>
     );
   }
@@ -397,7 +655,7 @@ export default function ProfileScreen() {
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+          <Ionicons name="arrow-back" size={24} color={themedColors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
         <View style={styles.headerSpacer} />
@@ -412,7 +670,7 @@ export default function ProfileScreen() {
               />
             ) : (
               <View style={styles.avatarLarge}>
-                <Ionicons name="person" size={64} color={colors.white} />
+                <Ionicons name="person" size={64} color={themedColors.white} />
               </View>
             )}
             <TouchableOpacity
@@ -421,9 +679,9 @@ export default function ProfileScreen() {
               disabled={uploadingImage}
             >
               {uploadingImage ? (
-                <ActivityIndicator size="small" color={colors.white} />
+                <ActivityIndicator size="small" color={themedColors.white} />
               ) : (
-                <Ionicons name="camera" size={20} color={colors.white} />
+                <Ionicons name="camera" size={20} color={themedColors.white} />
               )}
             </TouchableOpacity>
             {profile?.profile_image_url && !uploadingImage && (
@@ -431,7 +689,7 @@ export default function ProfileScreen() {
                 style={styles.removeAvatarButton}
                 onPress={handleRemoveProfileImage}
               >
-                <Ionicons name="close" size={20} color={colors.white} />
+                <Ionicons name="close" size={20} color={themedColors.white} />
               </TouchableOpacity>
             )}
           </View>
@@ -466,7 +724,7 @@ export default function ProfileScreen() {
               style={styles.statCard}
               onPress={() => handleStatPress('connections')}
             >
-              <Ionicons name="people" size={32} color={colors.primary} />
+              <Ionicons name="people" size={32} color={themedColors.primary} />
               <Text style={styles.statValue}>{connectionsCount}</Text>
               <Text style={styles.statLabel}>Connections</Text>
             </TouchableOpacity>
@@ -475,7 +733,7 @@ export default function ProfileScreen() {
               style={styles.statCard}
               onPress={() => handleStatPress('groups')}
             >
-              <Ionicons name="grid" size={32} color={colors.accent} />
+              <Ionicons name="grid" size={32} color={themedColors.accent} />
               <Text style={styles.statValue}>{groupsCount}</Text>
               <Text style={styles.statLabel}>Groups</Text>
             </TouchableOpacity>
@@ -484,7 +742,7 @@ export default function ProfileScreen() {
               style={styles.statCard}
               onPress={() => handleStatPress('events')}
             >
-              <Ionicons name="calendar" size={32} color={colors.success} />
+              <Ionicons name="calendar" size={32} color={themedColors.success} />
               <Text style={styles.statValue}>{eventsCount}</Text>
               <Text style={styles.statLabel}>Events</Text>
             </TouchableOpacity>
@@ -492,14 +750,51 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Appearance</Text>
+
+          <View style={styles.menuItem}>
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="moon-outline" size={24} color={themedColors.textPrimary} />
+              <Text style={styles.menuItemText}>Dark Mode</Text>
+            </View>
+            <Switch
+              value={themeMode === 'dark'}
+              onValueChange={(value) => setThemeMode(value ? 'dark' : 'light')}
+              trackColor={{ false: themedColors.gray300, true: themedColors.primary }}
+              thumbColor={themedColors.white}
+            />
+          </View>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => {
+              if (themeMode === 'auto') {
+                showAlert('Auto Theme', 'Theme is set to follow your system settings');
+              } else {
+                setThemeMode('auto');
+                showAlert('Auto Theme', 'Theme will now follow your system settings');
+              }
+            }}
+          >
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="contrast-outline" size={24} color={themedColors.textPrimary} />
+              <Text style={styles.menuItemText}>Auto (System)</Text>
+            </View>
+            {themeMode === 'auto' && (
+              <Ionicons name="checkmark-circle" size={24} color={themedColors.primary} />
+            )}
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Settings</Text>
 
           <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/edit-profile')}>
             <View style={styles.menuItemLeft}>
-              <Ionicons name="person-outline" size={24} color={colors.textPrimary} />
+              <Ionicons name="person-outline" size={24} color={themedColors.textPrimary} />
               <Text style={styles.menuItemText}>Edit Profile</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+            <Ionicons name="chevron-forward" size={20} color={themedColors.gray400} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/match-preferences')}>
@@ -512,34 +807,34 @@ export default function ProfileScreen() {
 
           <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/notifications')}>
             <View style={styles.menuItemLeft}>
-              <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
+              <Ionicons name="notifications-outline" size={24} color={themedColors.textPrimary} />
               <Text style={styles.menuItemText}>Notifications</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+            <Ionicons name="chevron-forward" size={20} color={themedColors.gray400} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/privacy')}>
             <View style={styles.menuItemLeft}>
-              <Ionicons name="lock-closed-outline" size={24} color={colors.textPrimary} />
+              <Ionicons name="lock-closed-outline" size={24} color={themedColors.textPrimary} />
               <Text style={styles.menuItemText}>Privacy</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+            <Ionicons name="chevron-forward" size={20} color={themedColors.gray400} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/help')}>
             <View style={styles.menuItemLeft}>
-              <Ionicons name="help-circle-outline" size={24} color={colors.textPrimary} />
+              <Ionicons name="help-circle-outline" size={24} color={themedColors.textPrimary} />
               <Text style={styles.menuItemText}>Help & Support</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+            <Ionicons name="chevron-forward" size={20} color={themedColors.gray400} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
             <View style={styles.menuItemLeft}>
-              <Ionicons name="log-out-outline" size={24} color={colors.error} />
-              <Text style={[styles.menuItemText, { color: colors.error }]}>Logout</Text>
+              <Ionicons name="log-out-outline" size={24} color={themedColors.error} />
+              <Text style={[styles.menuItemText, { color: themedColors.error }]}>Logout</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+            <Ionicons name="chevron-forward" size={20} color={themedColors.gray400} />
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -559,20 +854,20 @@ export default function ProfileScreen() {
                 {modalType === 'events' && 'My Events'}
               </Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={28} color={colors.textPrimary} />
+                <Ionicons name="close" size={28} color={themedColors.textPrimary} />
               </TouchableOpacity>
             </View>
 
             {loadingModal ? (
               <View style={styles.modalLoading}>
-                <ActivityIndicator size="large" color={colors.primary} />
+                <ActivityIndicator size="large" color={themedColors.primary} />
               </View>
             ) : modalData.length === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons
                   name={modalType === 'connections' ? 'people-outline' : modalType === 'groups' ? 'grid-outline' : 'calendar-outline'}
                   size={64}
-                  color={colors.gray400}
+                  color={themedColors.gray400}
                 />
                 <Text style={styles.emptyText}>
                   {modalType === 'connections' && 'No connections yet'}
@@ -595,7 +890,7 @@ export default function ProfileScreen() {
                           />
                         ) : (
                           <View style={styles.connectionAvatar}>
-                            <Ionicons name="person" size={28} color={colors.white} />
+                            <Ionicons name="person" size={28} color={themedColors.white} />
                           </View>
                         )}
                         <View style={styles.modalItemContent}>
@@ -609,7 +904,7 @@ export default function ProfileScreen() {
                           onPress={() => handleDisconnect(item.id)}
                           style={styles.deleteButton}
                         >
-                          <Ionicons name="close-circle" size={24} color={colors.error} />
+                          <Ionicons name="close-circle" size={24} color={themedColors.error} />
                         </TouchableOpacity>
                       </>
                     )}
@@ -622,7 +917,7 @@ export default function ProfileScreen() {
                           />
                         ) : (
                           <View style={styles.modalItemIcon}>
-                            <Ionicons name="grid" size={24} color={colors.accent} />
+                            <Ionicons name="grid" size={24} color={themedColors.accent} />
                           </View>
                         )}
                         <View style={styles.modalItemContent}>
@@ -633,14 +928,14 @@ export default function ProfileScreen() {
                           onPress={() => handleLeaveGroup(item.id)}
                           style={styles.deleteButton}
                         >
-                          <Ionicons name="close-circle" size={24} color={colors.error} />
+                          <Ionicons name="close-circle" size={24} color={themedColors.error} />
                         </TouchableOpacity>
                       </>
                     )}
                     {modalType === 'events' && (
                       <>
                         <View style={styles.modalItemIcon}>
-                          <Ionicons name="calendar" size={24} color={colors.success} />
+                          <Ionicons name="calendar" size={24} color={themedColors.success} />
                         </View>
                         <View style={styles.modalItemContent}>
                           <Text style={styles.modalItemTitle}>{item.title}</Text>
@@ -652,7 +947,7 @@ export default function ProfileScreen() {
                           onPress={() => handleUnattendEvent(item.id)}
                           style={styles.deleteButton}
                         >
-                          <Ionicons name="close-circle" size={24} color={colors.error} />
+                          <Ionicons name="close-circle" size={24} color={themedColors.error} />
                         </TouchableOpacity>
                       </>
                     )}
@@ -666,250 +961,3 @@ export default function ProfileScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  backButton: {
-    padding: spacing.xs,
-  },
-  headerTitle: {
-    ...textStyles.h3,
-    flex: 1,
-    textAlign: 'center',
-  },
-  headerSpacer: {
-    width: 40, // Same width as back button to center title
-  },
-  content: {
-    flex: 1,
-  },
-  profileHeader: {
-    backgroundColor: colors.surface,
-    paddingVertical: spacing.xl,
-    alignItems: 'center',
-    ...shadows.small,
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginBottom: spacing.md,
-  },
-  avatarLarge: {
-    width: 120,
-    height: 120,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  editAvatarButton: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 36,
-    height: 36,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.accent,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: colors.surface,
-  },
-  removeAvatarButton: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 36,
-    height: 36,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.error,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: colors.surface,
-  },
-  profileName: {
-    ...textStyles.h2,
-    marginBottom: spacing.xs,
-  },
-  profileEmail: {
-    ...textStyles.body2,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-  },
-  badge: {
-    backgroundColor: colors.gray100,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
-  },
-  badgeText: {
-    ...textStyles.caption,
-    color: colors.textPrimary,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  section: {
-    padding: spacing.md,
-  },
-  sectionTitle: {
-    ...textStyles.h4,
-    marginBottom: spacing.md,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    ...shadows.small,
-  },
-  bioText: {
-    ...textStyles.body2,
-    color: colors.textSecondary,
-    lineHeight: typography.lineHeight24,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    alignItems: 'center',
-    ...shadows.small,
-  },
-  statValue: {
-    ...textStyles.h3,
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  statLabel: {
-    ...textStyles.caption,
-    color: colors.textSecondary,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    ...shadows.small,
-  },
-  menuItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  menuItemText: {
-    ...textStyles.body1,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: borderRadius.lg,
-    borderTopRightRadius: borderRadius.lg,
-    maxHeight: '80%',
-    paddingBottom: spacing.xl,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  modalTitle: {
-    ...textStyles.h3,
-  },
-  modalLoading: {
-    padding: spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 200,
-  },
-  emptyState: {
-    padding: spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 200,
-  },
-  emptyText: {
-    ...textStyles.body1,
-    color: colors.textSecondary,
-    marginTop: spacing.md,
-  },
-  modalItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    marginHorizontal: spacing.md,
-    marginVertical: spacing.xs,
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.md,
-    ...shadows.small,
-  },
-  modalItemIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.gray100,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  modalItemContent: {
-    flex: 1,
-  },
-  modalItemTitle: {
-    ...textStyles.body1,
-    fontWeight: typography.fontWeightSemiBold,
-    marginBottom: spacing.xs,
-  },
-  modalItemSubtitle: {
-    ...textStyles.caption,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  modalItemEmail: {
-    ...textStyles.caption,
-    color: colors.textSecondary,
-  },
-  connectionAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  groupImage: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.md,
-    marginRight: spacing.md,
-  },
-  deleteButton: {
-    padding: spacing.xs,
-  },
-});

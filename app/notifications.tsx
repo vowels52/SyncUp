@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Switch, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors, typography, spacing, borderRadius, shadows } from '@/constants/theme';
-import { textStyles } from '@/constants/styles';
+import { typography, spacing, borderRadius, shadows } from '@/constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, useAlert } from '@/template';
 import { getSupabaseClient } from '@/template';
+import { useThemedColors } from '@/hooks/useThemedColors';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 
 interface NotificationSettings {
   push_enabled: boolean;
@@ -19,6 +20,8 @@ interface NotificationSettings {
 }
 
 export default function NotificationsScreen() {
+  const colors = useThemedColors();
+  const { commonStyles, textStyles } = useThemedStyles();
   const [settings, setSettings] = useState<NotificationSettings>({
     push_enabled: true,
     email_enabled: true,
@@ -87,6 +90,86 @@ export default function NotificationsScreen() {
       setSaving(false);
     }
   };
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    centerContent: {
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: spacing.md,
+      backgroundColor: colors.surface,
+      ...shadows.small,
+    },
+    backButton: {
+      padding: spacing.xs,
+    },
+    headerTitle: {
+      ...textStyles.h3,
+      color: colors.textPrimary,
+    },
+    content: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: spacing.lg,
+    },
+    title: {
+      ...textStyles.h2,
+      color: colors.textPrimary,
+      marginBottom: spacing.sm,
+    },
+    description: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+      marginBottom: spacing.lg,
+    },
+    section: {
+      marginBottom: spacing.lg,
+    },
+    sectionTitle: {
+      ...textStyles.h4,
+      color: colors.textPrimary,
+      marginBottom: spacing.md,
+    },
+    settingItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      marginBottom: spacing.sm,
+      ...shadows.small,
+    },
+    settingInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+      marginRight: spacing.md,
+    },
+    settingText: {
+      marginLeft: spacing.md,
+      flex: 1,
+    },
+    settingLabel: {
+      ...textStyles.body1,
+      color: colors.textPrimary,
+      fontWeight: typography.fontWeightSemiBold,
+      marginBottom: spacing.xs,
+    },
+    settingDescription: {
+      ...textStyles.caption,
+      color: colors.textSecondary,
+    },
+  });
 
   if (loading) {
     return (
@@ -260,79 +343,3 @@ export default function NotificationsScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  centerContent: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-    ...shadows.small,
-  },
-  backButton: {
-    padding: spacing.xs,
-  },
-  headerTitle: {
-    ...textStyles.h3,
-  },
-  content: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: spacing.lg,
-  },
-  title: {
-    ...textStyles.h2,
-    marginBottom: spacing.sm,
-  },
-  description: {
-    ...textStyles.body2,
-    color: colors.textSecondary,
-    marginBottom: spacing.lg,
-  },
-  section: {
-    marginBottom: spacing.lg,
-  },
-  sectionTitle: {
-    ...textStyles.h4,
-    marginBottom: spacing.md,
-  },
-  settingItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    ...shadows.small,
-  },
-  settingInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: spacing.md,
-  },
-  settingText: {
-    marginLeft: spacing.md,
-    flex: 1,
-  },
-  settingLabel: {
-    ...textStyles.body1,
-    fontWeight: typography.fontWeightSemiBold,
-    marginBottom: spacing.xs,
-  },
-  settingDescription: {
-    ...textStyles.caption,
-    color: colors.textSecondary,
-  },
-});

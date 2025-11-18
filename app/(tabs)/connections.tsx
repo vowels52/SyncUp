@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, ScrollView, Image } from 'react-native';
-import { colors, spacing, borderRadius, shadows, typography } from '@/constants/theme';
-import { textStyles, commonStyles } from '@/constants/styles';
+import { spacing, borderRadius, shadows, typography } from '@/constants/theme';
+import { useThemedColors } from '@/hooks/useThemedColors';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, useAlert } from '@/template';
@@ -53,6 +54,9 @@ export default function ConnectionsScreen() {
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [viewMode, setViewMode] = useState<'matches' | 'requests' | 'connections'>('matches');
+
+  const colors = useThemedColors();
+  const { commonStyles, textStyles } = useThemedStyles();
 
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -353,7 +357,7 @@ export default function ConnectionsScreen() {
       if (error) throw error;
 
       if (data) {
-        setPendingRequests(data as ConnectionRequest[]);
+        setPendingRequests(data as unknown as ConnectionRequest[]);
       }
     } catch (error: any) {
       console.error('Error fetching pending requests:', error);
@@ -505,6 +509,303 @@ export default function ConnectionsScreen() {
       showAlert('Error', error.message || 'Failed to start conversation');
     }
   };
+
+  // Define styles inside component to use themed colors
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      backgroundColor: colors.surface,
+      ...shadows.small,
+    },
+    title: {
+      ...textStyles.h3,
+    },
+    subtitle: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+      marginTop: spacing.xs,
+    },
+    content: {
+      flex: 1,
+      padding: spacing.md,
+    },
+    cardContainer: {
+      flex: 1,
+      justifyContent: 'center',
+    },
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.lg,
+      padding: spacing.lg,
+      ...shadows.large,
+    },
+    profileSection: {
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+    },
+    avatarLarge: {
+      width: 120,
+      height: 120,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+    },
+    name: {
+      ...textStyles.h2,
+      marginBottom: spacing.xs,
+    },
+    info: {
+      ...textStyles.body1,
+      color: colors.textSecondary,
+      marginBottom: spacing.md,
+    },
+    bio: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      paddingHorizontal: spacing.md,
+    },
+    statsContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      paddingVertical: spacing.lg,
+      backgroundColor: colors.gray50,
+      borderRadius: borderRadius.md,
+    },
+    statItem: {
+      alignItems: 'center',
+      flex: 1,
+    },
+    statLabel: {
+      ...textStyles.caption,
+      color: colors.textSecondary,
+      marginTop: spacing.xs,
+    },
+    statValue: {
+      ...textStyles.h4,
+      color: colors.primary,
+      marginTop: spacing.xs,
+    },
+    statDivider: {
+      width: 1,
+      backgroundColor: colors.gray200,
+    },
+    actionsContainer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingVertical: spacing.lg,
+      gap: spacing.xl,
+    },
+    actionButton: {
+      width: 64,
+      height: 64,
+      borderRadius: borderRadius.full,
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...shadows.medium,
+    },
+    skipButton: {
+      backgroundColor: colors.surface,
+      borderWidth: 2,
+      borderColor: colors.error,
+    },
+    connectButton: {
+      backgroundColor: colors.surface,
+      borderWidth: 2,
+      borderColor: colors.success,
+    },
+    progressContainer: {
+      alignItems: 'center',
+    },
+    progressText: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: spacing.xl,
+    },
+    emptyTitle: {
+      ...textStyles.h3,
+      marginTop: spacing.lg,
+      marginBottom: spacing.sm,
+    },
+    emptySubtitle: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+    toggleContainer: {
+      flexDirection: 'row',
+      marginTop: spacing.md,
+      backgroundColor: colors.gray100,
+      borderRadius: borderRadius.md,
+      padding: spacing.xs,
+      gap: spacing.xs,
+    },
+    toggleButton: {
+      flex: 1,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.xs,
+      borderRadius: borderRadius.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 36,
+    },
+    toggleButtonActive: {
+      backgroundColor: colors.primary,
+    },
+    toggleText: {
+      ...textStyles.body2,
+      fontSize: 13,
+      fontWeight: typography.fontWeightSemiBold,
+      color: colors.textSecondary,
+    },
+    toggleTextActive: {
+      color: colors.white,
+    },
+    requestsContainer: {
+      flex: 1,
+      padding: spacing.md,
+    },
+    requestsList: {
+      paddingBottom: spacing.lg,
+    },
+    requestCard: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      marginBottom: spacing.md,
+      ...shadows.small,
+    },
+    requestHeader: {
+      flexDirection: 'row',
+      marginBottom: spacing.md,
+    },
+    requestAvatar: {
+      width: 56,
+      height: 56,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: spacing.md,
+    },
+    requestInfo: {
+      flex: 1,
+    },
+    requestName: {
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
+      marginBottom: spacing.xs,
+    },
+    requestDetails: {
+      ...textStyles.caption,
+      color: colors.textSecondary,
+      marginBottom: spacing.xs,
+    },
+    requestBio: {
+      ...textStyles.caption,
+      color: colors.textSecondary,
+    },
+    requestActions: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    requestButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderRadius: borderRadius.sm,
+      gap: spacing.xs,
+    },
+    declineButton: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.error,
+    },
+    acceptButton: {
+      backgroundColor: colors.success,
+    },
+    declineButtonText: {
+      ...textStyles.body2,
+      fontWeight: typography.fontWeightSemiBold,
+      color: colors.error,
+    },
+    acceptButtonText: {
+      ...textStyles.body2,
+      fontWeight: typography.fontWeightSemiBold,
+      color: colors.white,
+    },
+    connectionCard: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      marginBottom: spacing.md,
+      ...shadows.small,
+    },
+    messageButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderRadius: borderRadius.sm,
+      backgroundColor: colors.primary,
+      gap: spacing.xs,
+    },
+    messageButtonText: {
+      ...textStyles.body2,
+      fontWeight: typography.fontWeightSemiBold,
+      color: colors.white,
+    },
+    avatarContainer: {
+      position: 'relative',
+    },
+    unreadBadge: {
+      position: 'absolute',
+      top: -4,
+      right: -4,
+      backgroundColor: colors.error,
+      borderRadius: borderRadius.full,
+      minWidth: 20,
+      height: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: spacing.xs,
+      borderWidth: 2,
+      borderColor: colors.surface,
+    },
+    unreadBadgeText: {
+      color: colors.white,
+      fontSize: 11,
+      fontWeight: typography.fontWeightBold,
+    },
+    nameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    unreadDot: {
+      width: 8,
+      height: 8,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.error,
+    },
+  });
 
   if (loading) {
     return (
@@ -783,299 +1084,3 @@ export default function ConnectionsScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-    ...shadows.small,
-  },
-  title: {
-    ...textStyles.h3,
-  },
-  subtitle: {
-    ...textStyles.body2,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-  content: {
-    flex: 1,
-    padding: spacing.md,
-  },
-  cardContainer: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    ...shadows.large,
-  },
-  profileSection: {
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  avatarLarge: {
-    width: 120,
-    height: 120,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  name: {
-    ...textStyles.h2,
-    marginBottom: spacing.xs,
-  },
-  info: {
-    ...textStyles.body1,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-  },
-  bio: {
-    ...textStyles.body2,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    paddingHorizontal: spacing.md,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: spacing.lg,
-    backgroundColor: colors.gray50,
-    borderRadius: borderRadius.md,
-  },
-  statItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  statLabel: {
-    ...textStyles.caption,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-  statValue: {
-    ...textStyles.h4,
-    color: colors.primary,
-    marginTop: spacing.xs,
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: colors.gray200,
-  },
-  actionsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: spacing.lg,
-    gap: spacing.xl,
-  },
-  actionButton: {
-    width: 64,
-    height: 64,
-    borderRadius: borderRadius.full,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...shadows.medium,
-  },
-  skipButton: {
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    borderColor: colors.error,
-  },
-  connectButton: {
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    borderColor: colors.success,
-  },
-  progressContainer: {
-    alignItems: 'center',
-  },
-  progressText: {
-    ...textStyles.body2,
-    color: colors.textSecondary,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xl,
-  },
-  emptyTitle: {
-    ...textStyles.h3,
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-  emptySubtitle: {
-    ...textStyles.body2,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  toggleContainer: {
-    flexDirection: 'row',
-    marginTop: spacing.md,
-    backgroundColor: colors.gray100,
-    borderRadius: borderRadius.md,
-    padding: spacing.xs,
-    gap: spacing.xs,
-  },
-  toggleButton: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
-    borderRadius: borderRadius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 36,
-  },
-  toggleButtonActive: {
-    backgroundColor: colors.primary,
-  },
-  toggleText: {
-    ...textStyles.body2,
-    fontSize: 13,
-    fontWeight: typography.fontWeightSemiBold,
-    color: colors.textSecondary,
-  },
-  toggleTextActive: {
-    color: colors.white,
-  },
-  requestsContainer: {
-    flex: 1,
-    padding: spacing.md,
-  },
-  requestsList: {
-    paddingBottom: spacing.lg,
-  },
-  requestCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    ...shadows.small,
-  },
-  requestHeader: {
-    flexDirection: 'row',
-    marginBottom: spacing.md,
-  },
-  requestAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  requestInfo: {
-    flex: 1,
-  },
-  requestName: {
-    ...textStyles.body1,
-    fontWeight: typography.fontWeightSemiBold,
-    marginBottom: spacing.xs,
-  },
-  requestDetails: {
-    ...textStyles.caption,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  requestBio: {
-    ...textStyles.caption,
-    color: colors.textSecondary,
-  },
-  requestActions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  requestButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.sm,
-    gap: spacing.xs,
-  },
-  declineButton: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.error,
-  },
-  acceptButton: {
-    backgroundColor: colors.success,
-  },
-  declineButtonText: {
-    ...textStyles.body2,
-    fontWeight: typography.fontWeightSemiBold,
-    color: colors.error,
-  },
-  acceptButtonText: {
-    ...textStyles.body2,
-    fontWeight: typography.fontWeightSemiBold,
-    color: colors.white,
-  },
-  connectionCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    ...shadows.small,
-  },
-  messageButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.primary,
-    gap: spacing.xs,
-  },
-  messageButtonText: {
-    ...textStyles.body2,
-    fontWeight: typography.fontWeightSemiBold,
-    color: colors.white,
-  },
-  avatarContainer: {
-    position: 'relative',
-  },
-  unreadBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: colors.error,
-    borderRadius: borderRadius.full,
-    minWidth: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xs,
-    borderWidth: 2,
-    borderColor: colors.surface,
-  },
-  unreadBadgeText: {
-    color: colors.white,
-    fontSize: 11,
-    fontWeight: typography.fontWeightBold,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.error,
-  },
-});

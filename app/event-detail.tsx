@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { colors, spacing, borderRadius, shadows, typography } from '@/constants/theme';
-import { commonStyles, textStyles } from '@/constants/styles';
+import { spacing, borderRadius, shadows, typography } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth, useAlert } from '@/template';
 import { getSupabaseClient } from '@/template';
+import { useThemedColors } from '@/hooks/useThemedColors';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 
 interface Event {
   id: string;
@@ -21,6 +22,8 @@ interface Event {
 }
 
 export default function EventDetailScreen() {
+  const colors = useThemedColors();
+  const { commonStyles, textStyles } = useThemedStyles();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -171,6 +174,170 @@ export default function EventDetailScreen() {
     return colors.primary;
   };
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.gray200,
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerTitle: {
+      fontSize: typography.fontSize18,
+      fontWeight: typography.fontWeightBold,
+      color: colors.textPrimary,
+    },
+    content: {
+      flex: 1,
+    },
+    dateBanner: {
+      width: '100%',
+      paddingVertical: spacing.xl,
+      alignItems: 'center',
+    },
+    dateMonth: {
+      fontSize: typography.fontSize16,
+      fontWeight: typography.fontWeightBold,
+      color: colors.white,
+      letterSpacing: 2,
+    },
+    dateDay: {
+      fontSize: 64,
+      fontWeight: typography.fontWeightBold,
+      color: colors.white,
+      lineHeight: 72,
+    },
+    dateYear: {
+      fontSize: typography.fontSize16,
+      color: colors.white,
+      opacity: 0.9,
+    },
+    infoSection: {
+      padding: spacing.lg,
+    },
+    eventTitle: {
+      fontSize: typography.fontSize24,
+      fontWeight: typography.fontWeightBold,
+      color: colors.textPrimary,
+      marginBottom: spacing.sm,
+    },
+    officialBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      marginBottom: spacing.md,
+    },
+    officialText: {
+      fontSize: typography.fontSize14,
+      color: colors.primary,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    typeBadge: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: borderRadius.full,
+      marginBottom: spacing.lg,
+    },
+    typeText: {
+      fontSize: typography.fontSize12,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    detailsContainer: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      gap: spacing.md,
+      ...shadows.small,
+      marginBottom: spacing.lg,
+    },
+    detailItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    detailText: {
+      fontSize: typography.fontSize14,
+      color: colors.textPrimary,
+      flex: 1,
+    },
+    section: {
+      marginBottom: spacing.lg,
+    },
+    sectionTitle: {
+      fontSize: typography.fontSize18,
+      fontWeight: typography.fontWeightBold,
+      color: colors.textPrimary,
+      marginBottom: spacing.sm,
+    },
+    description: {
+      fontSize: typography.fontSize14,
+      color: colors.textSecondary,
+      lineHeight: typography.lineHeight24,
+    },
+    attendButton: {
+      backgroundColor: colors.primary,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: spacing.md,
+      borderRadius: borderRadius.lg,
+      marginTop: spacing.md,
+    },
+    cancelButton: {
+      backgroundColor: colors.error,
+    },
+    buttonIcon: {
+      marginRight: spacing.sm,
+    },
+    attendButtonText: {
+      fontSize: typography.fontSize16,
+      fontWeight: typography.fontWeightBold,
+      color: colors.surface,
+    },
+    attendingStatusBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.xs,
+      marginTop: spacing.md,
+    },
+    attendingStatusText: {
+      fontSize: typography.fontSize14,
+      color: colors.success,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    errorText: {
+      fontSize: typography.fontSize16,
+      color: colors.textSecondary,
+      marginBottom: spacing.lg,
+    },
+    backButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      borderRadius: borderRadius.lg,
+    },
+    backButtonText: {
+      fontSize: typography.fontSize14,
+      fontWeight: typography.fontWeightBold,
+      color: colors.surface,
+    },
+  });
+
   if (loading) {
     return (
       <View style={[commonStyles.container, commonStyles.centerContent]}>
@@ -304,167 +471,3 @@ export default function EventDetailScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: typography.fontSize18,
-    fontWeight: typography.fontWeightBold,
-    color: colors.textPrimary,
-  },
-  content: {
-    flex: 1,
-  },
-  dateBanner: {
-    width: '100%',
-    paddingVertical: spacing.xl,
-    alignItems: 'center',
-  },
-  dateMonth: {
-    fontSize: typography.fontSize16,
-    fontWeight: typography.fontWeightBold,
-    color: colors.white,
-    letterSpacing: 2,
-  },
-  dateDay: {
-    fontSize: 64,
-    fontWeight: typography.fontWeightBold,
-    color: colors.white,
-    lineHeight: 72,
-  },
-  dateYear: {
-    fontSize: typography.fontSize16,
-    color: colors.white,
-    opacity: 0.9,
-  },
-  infoSection: {
-    padding: spacing.lg,
-  },
-  eventTitle: {
-    fontSize: typography.fontSize24,
-    fontWeight: typography.fontWeightBold,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  officialBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.md,
-  },
-  officialText: {
-    fontSize: typography.fontSize14,
-    color: colors.primary,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  typeBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
-    marginBottom: spacing.lg,
-  },
-  typeText: {
-    fontSize: typography.fontSize12,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  detailsContainer: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    gap: spacing.md,
-    ...shadows.small,
-    marginBottom: spacing.lg,
-  },
-  detailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  detailText: {
-    fontSize: typography.fontSize14,
-    color: colors.textPrimary,
-    flex: 1,
-  },
-  section: {
-    marginBottom: spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: typography.fontSize18,
-    fontWeight: typography.fontWeightBold,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  description: {
-    fontSize: typography.fontSize14,
-    color: colors.textSecondary,
-    lineHeight: typography.lineHeight24,
-  },
-  attendButton: {
-    backgroundColor: colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.lg,
-    marginTop: spacing.md,
-  },
-  cancelButton: {
-    backgroundColor: colors.error,
-  },
-  buttonIcon: {
-    marginRight: spacing.sm,
-  },
-  attendButtonText: {
-    fontSize: typography.fontSize16,
-    fontWeight: typography.fontWeightBold,
-    color: colors.surface,
-  },
-  attendingStatusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.md,
-  },
-  attendingStatusText: {
-    fontSize: typography.fontSize14,
-    color: colors.success,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  errorText: {
-    fontSize: typography.fontSize16,
-    color: colors.textSecondary,
-    marginBottom: spacing.lg,
-  },
-  backButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.lg,
-  },
-  backButtonText: {
-    fontSize: typography.fontSize14,
-    fontWeight: typography.fontWeightBold,
-    color: colors.surface,
-  },
-});

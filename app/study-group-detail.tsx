@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { colors, spacing, borderRadius, shadows, typography } from '@/constants/theme';
-import { commonStyles } from '@/constants/styles';
+import { spacing, borderRadius, shadows, typography } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth, useAlert } from '@/template';
 import { getSupabaseClient } from '@/template';
+import { useThemedColors } from '@/hooks/useThemedColors';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 
 interface StudyGroup {
   id: string;
@@ -20,6 +21,8 @@ interface StudyGroup {
 }
 
 export default function StudyGroupDetailScreen() {
+  const colors = useThemedColors();
+  const { commonStyles, textStyles } = useThemedStyles();
   const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -182,6 +185,170 @@ export default function StudyGroupDetailScreen() {
     );
   };
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.gray200,
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerTitle: {
+      fontSize: typography.fontSize18,
+      fontWeight: typography.fontWeightBold,
+      color: colors.textPrimary,
+    },
+    content: {
+      flex: 1,
+    },
+    iconContainer: {
+      width: '100%',
+      height: 200,
+      backgroundColor: colors.gray100,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    infoSection: {
+      padding: spacing.lg,
+    },
+    groupName: {
+      fontSize: typography.fontSize24,
+      fontWeight: typography.fontWeightBold,
+      color: colors.textPrimary,
+      marginBottom: spacing.sm,
+    },
+    tagContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.xs,
+      marginBottom: spacing.md,
+    },
+    tag: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: borderRadius.full,
+    },
+    categoryTag: {
+      backgroundColor: colors.accent,
+    },
+    tagText: {
+      fontSize: typography.fontSize12,
+      color: colors.surface,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    memberInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      marginBottom: spacing.md,
+    },
+    memberCount: {
+      fontSize: typography.fontSize14,
+      color: colors.textSecondary,
+    },
+    creatorBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      marginBottom: spacing.lg,
+    },
+    creatorText: {
+      fontSize: typography.fontSize14,
+      color: colors.warning,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    section: {
+      marginBottom: spacing.lg,
+    },
+    sectionTitle: {
+      fontSize: typography.fontSize18,
+      fontWeight: typography.fontWeightBold,
+      color: colors.textPrimary,
+      marginBottom: spacing.sm,
+    },
+    description: {
+      fontSize: typography.fontSize14,
+      color: colors.textSecondary,
+      lineHeight: typography.lineHeight24,
+    },
+    joinButton: {
+      backgroundColor: colors.primary,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: spacing.md,
+      borderRadius: borderRadius.lg,
+      marginTop: spacing.md,
+    },
+    leaveButton: {
+      backgroundColor: colors.error,
+    },
+    buttonIcon: {
+      marginRight: spacing.xs,
+    },
+    joinButtonText: {
+      fontSize: typography.fontSize16,
+      fontWeight: typography.fontWeightBold,
+      color: colors.surface,
+    },
+    memberStatusBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.xs,
+      marginTop: spacing.md,
+    },
+    memberStatusText: {
+      fontSize: typography.fontSize14,
+      color: colors.success,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    errorText: {
+      fontSize: typography.fontSize16,
+      color: colors.textSecondary,
+      marginBottom: spacing.lg,
+    },
+    backButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      borderRadius: borderRadius.lg,
+    },
+    backButtonText: {
+      fontSize: typography.fontSize14,
+      fontWeight: typography.fontWeightBold,
+      color: colors.surface,
+    },
+    deleteButton: {
+      backgroundColor: colors.error,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: spacing.md,
+      borderRadius: borderRadius.lg,
+      marginTop: spacing.lg,
+    },
+    deleteButtonText: {
+      fontSize: typography.fontSize16,
+      fontWeight: typography.fontWeightBold,
+      color: colors.surface,
+    },
+  });
+
   if (loading) {
     return (
       <View style={[commonStyles.container, commonStyles.centerContent]}>
@@ -307,167 +474,3 @@ export default function StudyGroupDetailScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: typography.fontSize18,
-    fontWeight: typography.fontWeightBold,
-    color: colors.textPrimary,
-  },
-  content: {
-    flex: 1,
-  },
-  iconContainer: {
-    width: '100%',
-    height: 200,
-    backgroundColor: colors.gray100,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  infoSection: {
-    padding: spacing.lg,
-  },
-  groupName: {
-    fontSize: typography.fontSize24,
-    fontWeight: typography.fontWeightBold,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  tagContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-    marginBottom: spacing.md,
-  },
-  tag: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
-  },
-  categoryTag: {
-    backgroundColor: colors.secondary,
-  },
-  tagText: {
-    fontSize: typography.fontSize12,
-    color: colors.surface,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  memberInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.md,
-  },
-  memberCount: {
-    fontSize: typography.fontSize14,
-    color: colors.textSecondary,
-  },
-  creatorBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.lg,
-  },
-  creatorText: {
-    fontSize: typography.fontSize14,
-    color: colors.warning,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  section: {
-    marginBottom: spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: typography.fontSize18,
-    fontWeight: typography.fontWeightBold,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  description: {
-    fontSize: typography.fontSize14,
-    color: colors.textSecondary,
-    lineHeight: typography.lineHeight24,
-  },
-  joinButton: {
-    backgroundColor: colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.lg,
-    marginTop: spacing.md,
-  },
-  leaveButton: {
-    backgroundColor: colors.error,
-  },
-  buttonIcon: {
-    marginRight: spacing.xs,
-  },
-  joinButtonText: {
-    fontSize: typography.fontSize16,
-    fontWeight: typography.fontWeightBold,
-    color: colors.surface,
-  },
-  memberStatusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.md,
-  },
-  memberStatusText: {
-    fontSize: typography.fontSize14,
-    color: colors.success,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  errorText: {
-    fontSize: typography.fontSize16,
-    color: colors.textSecondary,
-    marginBottom: spacing.lg,
-  },
-  backButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.lg,
-  },
-  backButtonText: {
-    fontSize: typography.fontSize14,
-    fontWeight: typography.fontWeightBold,
-    color: colors.surface,
-  },
-  deleteButton: {
-    backgroundColor: colors.error,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.lg,
-    marginTop: spacing.lg,
-  },
-  deleteButtonText: {
-    fontSize: typography.fontSize16,
-    fontWeight: typography.fontWeightBold,
-    color: colors.surface,
-  },
-});

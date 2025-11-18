@@ -1,13 +1,14 @@
-export const colors = {
+// Light theme colors
+const lightColors = {
   // Primary Brand Colors
   primary: '#009688',
   primaryDark: '#00796B',
   primaryLight: '#4DB6AC',
-  
+
   // Accent Colors
   accent: '#00BCD4',
   accentLight: '#B2EBF2',
-  
+
   // Neutral Colors
   white: '#FFFFFF',
   black: '#000000',
@@ -21,24 +22,76 @@ export const colors = {
   gray700: '#616161',
   gray800: '#424242',
   gray900: '#212121',
-  
+
   // Semantic Colors
   success: '#4CAF50',
   warning: '#FF9800',
   error: '#F44336',
   info: '#2196F3',
-  
+
   // Background Colors
   background: '#FAFAFA',
   surface: '#FFFFFF',
   overlay: 'rgba(0, 0, 0, 0.5)',
-  
+
   // Text Colors
   text: '#212121', // Added for backward compatibility
   textPrimary: '#212121',
   textSecondary: '#757575',
   textDisabled: '#BDBDBD',
   textOnPrimary: '#FFFFFF',
+};
+
+// Dark theme colors
+const darkColors = {
+  // Primary Brand Colors
+  primary: '#4DB6AC',
+  primaryDark: '#009688',
+  primaryLight: '#80CBC4',
+
+  // Accent Colors
+  accent: '#4DD0E1',
+  accentLight: '#26C6DA',
+
+  // Neutral Colors
+  white: '#FFFFFF',
+  black: '#000000',
+  gray50: '#1E1E1E',
+  gray100: '#2C2C2C',
+  gray200: '#3A3A3A',
+  gray300: '#484848',
+  gray400: '#6B6B6B',
+  gray500: '#8E8E8E',
+  gray600: '#B1B1B1',
+  gray700: '#C4C4C4',
+  gray800: '#D7D7D7',
+  gray900: '#EAEAEA',
+
+  // Semantic Colors
+  success: '#66BB6A',
+  warning: '#FFA726',
+  error: '#EF5350',
+  info: '#42A5F5',
+
+  // Background Colors
+  background: '#121212',
+  surface: '#1E1E1E',
+  overlay: 'rgba(0, 0, 0, 0.7)',
+
+  // Text Colors
+  text: '#EAEAEA',
+  textPrimary: '#EAEAEA',
+  textSecondary: '#B1B1B1',
+  textDisabled: '#6B6B6B',
+  textOnPrimary: '#000000',
+};
+
+// Default export for backward compatibility (light mode)
+export const colors = lightColors;
+
+// Export function to get colors based on theme
+export const getColors = (isDarkMode: boolean) => {
+  return isDarkMode ? darkColors : lightColors;
 };
 
 export const typography = {

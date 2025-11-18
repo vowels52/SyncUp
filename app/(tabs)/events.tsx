@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Modal, TextInput, ScrollView, Platform } from 'react-native';
-import { colors, spacing, borderRadius, shadows, typography } from '@/constants/theme';
-import { textStyles, commonStyles } from '@/constants/styles';
+import { spacing, borderRadius, shadows, typography } from '@/constants/theme';
+import { useThemedColors } from '@/hooks/useThemedColors';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth, useAlert } from '@/template';
+import { useAuth, useAlert, useTheme } from '@/template';
 import { getSupabaseClient } from '@/template';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -47,6 +48,10 @@ export default function EventsScreen() {
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
+
+  const colors = useThemedColors();
+  const { commonStyles, textStyles } = useThemedStyles();
+  const { isDarkMode } = useTheme();
 
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -527,6 +532,520 @@ export default function EventsScreen() {
     );
   };
 
+  // Define styles inside component to use themed colors
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      backgroundColor: colors.surface,
+      ...shadows.small,
+    },
+    title: {
+      ...textStyles.h3,
+    },
+    subtitle: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+      marginTop: spacing.xs,
+    },
+    listContent: {
+      padding: spacing.md,
+      paddingBottom: spacing.xxl,
+    },
+    eventCard: {
+      flexDirection: 'row',
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      marginBottom: spacing.md,
+      ...shadows.small,
+    },
+    eventDateContainer: {
+      width: 60,
+      height: 60,
+      borderRadius: borderRadius.sm,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: spacing.md,
+    },
+    eventMonth: {
+      ...textStyles.caption,
+      color: colors.white,
+      fontWeight: typography.fontWeightBold,
+    },
+    eventDay: {
+      ...textStyles.h3,
+      color: colors.white,
+      lineHeight: typography.lineHeight28,
+    },
+    eventContent: {
+      flex: 1,
+    },
+    eventTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      marginBottom: spacing.xs,
+      flexWrap: 'wrap',
+    },
+    eventTitle: {
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
+      flex: 1,
+    },
+    officialBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.primary + '15',
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 2,
+      borderRadius: borderRadius.sm,
+      gap: 4,
+    },
+    officialBadgeText: {
+      fontSize: 11,
+      color: colors.primary,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    eventType: {
+      ...textStyles.caption,
+      color: colors.primary,
+      fontWeight: typography.fontWeightSemiBold,
+      marginBottom: spacing.xs,
+    },
+    eventDescription: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+      marginBottom: spacing.sm,
+    },
+    eventDetails: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.md,
+      marginBottom: spacing.md,
+    },
+    eventDetailItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    eventDetailText: {
+      ...textStyles.caption,
+      color: colors.textSecondary,
+    },
+    attendButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      backgroundColor: colors.primary,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: borderRadius.sm,
+      gap: spacing.xs,
+    },
+    attendingButton: {
+      backgroundColor: colors.white,
+      borderWidth: 2,
+      borderColor: colors.primary,
+    },
+    attendButtonText: {
+      ...textStyles.body2,
+      color: colors.white,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    attendingButtonText: {
+      color: colors.primary,
+    },
+    fab: {
+      position: 'absolute',
+      bottom: spacing.xl,
+      right: spacing.lg,
+      width: 56,
+      height: 56,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...shadows.large,
+    },
+    emptyContainer: {
+      alignItems: 'center',
+      paddingVertical: spacing.xxxl,
+    },
+    emptyTitle: {
+      ...textStyles.h3,
+      marginTop: spacing.lg,
+      marginBottom: spacing.sm,
+    },
+    emptySubtitle: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+    calendarContainer: {
+      backgroundColor: colors.surface,
+      margin: spacing.md,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      ...shadows.small,
+    },
+    calendarHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: spacing.md,
+    },
+    monthButton: {
+      padding: spacing.sm,
+    },
+    monthTitle: {
+      ...textStyles.h3,
+    },
+    weekDaysRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      marginBottom: spacing.sm,
+    },
+    weekDayText: {
+      ...textStyles.caption,
+      color: colors.textSecondary,
+      fontWeight: typography.fontWeightBold,
+      width: 40,
+      textAlign: 'center',
+    },
+    calendarGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+    },
+    calendarDay: {
+      width: '14.28%',
+      aspectRatio: 1,
+      padding: spacing.xs,
+      alignItems: 'center',
+    },
+    dayNumber: {
+      width: 32,
+      height: 32,
+      borderRadius: borderRadius.full,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    todayNumber: {
+      backgroundColor: colors.primary,
+    },
+    dayText: {
+      ...textStyles.body2,
+      color: colors.text,
+    },
+    todayText: {
+      color: colors.white,
+      fontWeight: typography.fontWeightBold,
+    },
+    eventIndicators: {
+      flexDirection: 'row',
+      gap: 2,
+      marginTop: spacing.xs,
+    },
+    eventBox: {
+      width: 6,
+      height: 6,
+      borderRadius: 2,
+      backgroundColor: colors.primary,
+    },
+    legendContainer: {
+      backgroundColor: colors.surface,
+      margin: spacing.md,
+      marginTop: 0,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      ...shadows.small,
+    },
+    legendHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
+    legendTitle: {
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
+      color: colors.textPrimary,
+    },
+    clearFilterText: {
+      ...textStyles.caption,
+      color: colors.primary,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    legendGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.md,
+    },
+    legendItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      minWidth: '30%',
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      borderRadius: borderRadius.sm,
+    },
+    legendItemSelected: {
+      backgroundColor: colors.primary + '15',
+    },
+    legendDot: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+    },
+    legendText: {
+      ...textStyles.caption,
+      color: colors.textSecondary,
+    },
+    legendTextSelected: {
+      color: colors.primary,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    eventsListSection: {
+      padding: spacing.md,
+    },
+    eventsListHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+    },
+    sectionTitle: {
+      ...textStyles.h3,
+    },
+    showAllText: {
+      ...textStyles.body2,
+      color: colors.primary,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'flex-end',
+    },
+    modalContent: {
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: borderRadius.lg,
+      borderTopRightRadius: borderRadius.lg,
+      maxHeight: '80%',
+      ...shadows.large,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.gray200,
+    },
+    modalTitle: {
+      ...textStyles.h2,
+    },
+    modalForm: {
+      padding: spacing.lg,
+    },
+    inputLabel: {
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
+      marginBottom: spacing.sm,
+      marginTop: spacing.md,
+    },
+    input: {
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.gray300,
+      borderRadius: borderRadius.sm,
+      padding: spacing.md,
+      ...textStyles.body1,
+    },
+    textArea: {
+      height: 100,
+      textAlignVertical: 'top',
+    },
+    dateDisplay: {
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.gray300,
+      borderRadius: borderRadius.sm,
+      padding: spacing.md,
+      ...textStyles.body1,
+      color: colors.textSecondary,
+    },
+    dateButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.gray300,
+      borderRadius: borderRadius.sm,
+      padding: spacing.md,
+      gap: spacing.sm,
+    },
+    dateButtonText: {
+      ...textStyles.body1,
+      color: colors.text,
+      flex: 1,
+    },
+    pickerContainer: {
+      marginTop: spacing.sm,
+      marginBottom: spacing.md,
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      borderWidth: 1,
+      borderColor: colors.gray300,
+    },
+    doneButton: {
+      backgroundColor: colors.primary,
+      padding: spacing.sm,
+      borderRadius: borderRadius.sm,
+      alignItems: 'center',
+      marginTop: spacing.sm,
+    },
+    doneButtonText: {
+      ...textStyles.body2,
+      color: colors.white,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    createButton: {
+      backgroundColor: colors.primary,
+      padding: spacing.md,
+      borderRadius: borderRadius.sm,
+      alignItems: 'center',
+      marginTop: spacing.xl,
+      marginBottom: spacing.lg,
+    },
+    createButtonText: {
+      ...textStyles.body1,
+      color: colors.white,
+      fontWeight: typography.fontWeightBold,
+    },
+    compactPickerContainer: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.gray300,
+      borderRadius: borderRadius.sm,
+      overflow: 'hidden',
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+    },
+    inlinePickerContainer: {
+      marginTop: spacing.sm,
+      marginBottom: spacing.md,
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      borderWidth: 1,
+      borderColor: colors.gray300,
+    },
+    pickerWrapper: {
+      height: 200,
+      justifyContent: 'center',
+      alignItems: 'center',
+      width: '100%',
+    },
+    picker: {
+      width: '100%',
+      height: 200,
+    },
+    dayModalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: spacing.lg,
+    },
+    dayModalContent: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.lg,
+      width: '100%',
+      maxWidth: 500,
+      maxHeight: '80%',
+      ...shadows.large,
+    },
+    dayModalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.gray200,
+    },
+    dayModalTitle: {
+      ...textStyles.h3,
+      flex: 1,
+    },
+    dayModalScroll: {
+      padding: spacing.lg,
+    },
+    dayModalEmpty: {
+      alignItems: 'center',
+      paddingVertical: spacing.xxxl,
+    },
+    dayModalEmptyText: {
+      ...textStyles.body1,
+      color: colors.textSecondary,
+      marginTop: spacing.md,
+    },
+    dayModalEventCard: {
+      flexDirection: 'row',
+      backgroundColor: colors.background,
+      borderRadius: borderRadius.md,
+      marginBottom: spacing.md,
+      overflow: 'hidden',
+    },
+    dayModalEventIndicator: {
+      width: 4,
+      backgroundColor: colors.primary,
+    },
+    dayModalEventContent: {
+      flex: 1,
+      padding: spacing.md,
+    },
+    dayModalEventTitle: {
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
+      marginBottom: spacing.xs,
+      flex: 1,
+    },
+    dayModalEventDescription: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+      marginBottom: spacing.sm,
+    },
+    dayModalEventDetails: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      marginBottom: spacing.sm,
+      flexWrap: 'wrap',
+    },
+    dayModalAttendButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      backgroundColor: colors.primary,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: borderRadius.sm,
+      gap: spacing.xs,
+    },
+    dayModalAttendButtonText: {
+      ...textStyles.caption,
+      color: colors.white,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+  });
+
   if (loading) {
     return (
       <View style={[commonStyles.container, commonStyles.centerContent]}>
@@ -801,6 +1320,7 @@ export default function EventsScreen() {
                     fontSize: 16,
                     fontFamily: 'inherit',
                     width: '100%',
+                    color: colors.textPrimary,
                   }}
                 />
               ) : Platform.OS === 'ios' ? (
@@ -814,7 +1334,7 @@ export default function EventsScreen() {
                         handleStartDateConfirm(selectedDate);
                       }
                     }}
-                    themeVariant="light"
+                    themeVariant={isDarkMode ? "dark" : "light"}
                   />
                 </View>
               ) : (
@@ -823,7 +1343,7 @@ export default function EventsScreen() {
                     style={styles.dateButton}
                     onPress={() => setShowStartDatePicker(true)}
                   >
-                    <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+                    <Ionicons name="calendar-outline" size={20} color={colors.white} />
                     <Text style={styles.dateButtonText}>
                       {newEvent.start_time.toLocaleDateString()}
                     </Text>
@@ -859,6 +1379,7 @@ export default function EventsScreen() {
                     fontSize: 16,
                     fontFamily: 'inherit',
                     width: '100%',
+                    color: colors.textPrimary,
                   }}
                 />
               ) : Platform.OS === 'ios' ? (
@@ -872,7 +1393,7 @@ export default function EventsScreen() {
                         handleStartTimeConfirm(selectedTime);
                       }
                     }}
-                    themeVariant="light"
+                    themeVariant={isDarkMode ? "dark" : "light"}
                   />
                 </View>
               ) : (
@@ -881,7 +1402,7 @@ export default function EventsScreen() {
                     style={styles.dateButton}
                     onPress={() => setShowStartTimePicker(true)}
                   >
-                    <Ionicons name="time-outline" size={20} color={colors.primary} />
+                    <Ionicons name="time-outline" size={20} color={colors.white} />
                     <Text style={styles.dateButtonText}>
                       {newEvent.start_time.toLocaleTimeString()}
                     </Text>
@@ -917,6 +1438,7 @@ export default function EventsScreen() {
                     fontSize: 16,
                     fontFamily: 'inherit',
                     width: '100%',
+                    color: colors.textPrimary,
                   }}
                 />
               ) : Platform.OS === 'ios' ? (
@@ -930,7 +1452,7 @@ export default function EventsScreen() {
                         handleEndDateConfirm(selectedDate);
                       }
                     }}
-                    themeVariant="light"
+                    themeVariant={isDarkMode ? "dark" : "light"}
                   />
                 </View>
               ) : (
@@ -939,7 +1461,7 @@ export default function EventsScreen() {
                     style={styles.dateButton}
                     onPress={() => setShowEndDatePicker(true)}
                   >
-                    <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+                    <Ionicons name="calendar-outline" size={20} color={colors.white} />
                     <Text style={styles.dateButtonText}>
                       {newEvent.end_time.toLocaleDateString()}
                     </Text>
@@ -975,6 +1497,7 @@ export default function EventsScreen() {
                     fontSize: 16,
                     fontFamily: 'inherit',
                     width: '100%',
+                    color: colors.textPrimary,
                   }}
                 />
               ) : Platform.OS === 'ios' ? (
@@ -988,7 +1511,7 @@ export default function EventsScreen() {
                         handleEndTimeConfirm(selectedTime);
                       }
                     }}
-                    themeVariant="light"
+                    themeVariant={isDarkMode ? "dark" : "light"}
                   />
                 </View>
               ) : (
@@ -997,7 +1520,7 @@ export default function EventsScreen() {
                     style={styles.dateButton}
                     onPress={() => setShowEndTimePicker(true)}
                   >
-                    <Ionicons name="time-outline" size={20} color={colors.primary} />
+                    <Ionicons name="time-outline" size={20} color={colors.white} />
                     <Text style={styles.dateButtonText}>
                       {newEvent.end_time.toLocaleTimeString()}
                     </Text>
@@ -1028,515 +1551,3 @@ export default function EventsScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-    ...shadows.small,
-  },
-  title: {
-    ...textStyles.h3,
-  },
-  subtitle: {
-    ...textStyles.body2,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-  listContent: {
-    padding: spacing.md,
-    paddingBottom: spacing.xxl,
-  },
-  eventCard: {
-    flexDirection: 'row',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    ...shadows.small,
-  },
-  eventDateContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: borderRadius.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  eventMonth: {
-    ...textStyles.caption,
-    color: colors.white,
-    fontWeight: typography.fontWeightBold,
-  },
-  eventDay: {
-    ...textStyles.h3,
-    color: colors.white,
-    lineHeight: typography.lineHeight28,
-  },
-  eventContent: {
-    flex: 1,
-  },
-  eventTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.xs,
-    flexWrap: 'wrap',
-  },
-  eventTitle: {
-    ...textStyles.body1,
-    fontWeight: typography.fontWeightSemiBold,
-    flex: 1,
-  },
-  officialBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary + '15',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
-    gap: 4,
-  },
-  officialBadgeText: {
-    fontSize: 11,
-    color: colors.primary,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  eventType: {
-    ...textStyles.caption,
-    color: colors.primary,
-    fontWeight: typography.fontWeightSemiBold,
-    marginBottom: spacing.xs,
-  },
-  eventDescription: {
-    ...textStyles.body2,
-    color: colors.textSecondary,
-    marginBottom: spacing.sm,
-  },
-  eventDetails: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
-  eventDetailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  eventDetailText: {
-    ...textStyles.caption,
-    color: colors.textSecondary,
-  },
-  attendButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.sm,
-    gap: spacing.xs,
-  },
-  attendingButton: {
-    backgroundColor: colors.white,
-    borderWidth: 2,
-    borderColor: colors.primary,
-  },
-  attendButtonText: {
-    ...textStyles.body2,
-    color: colors.white,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  attendingButtonText: {
-    color: colors.primary,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: spacing.xl,
-    right: spacing.lg,
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...shadows.large,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: spacing.xxxl,
-  },
-  emptyTitle: {
-    ...textStyles.h3,
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-  emptySubtitle: {
-    ...textStyles.body2,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  calendarContainer: {
-    backgroundColor: colors.surface,
-    margin: spacing.md,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    ...shadows.small,
-  },
-  calendarHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
-  },
-  monthButton: {
-    padding: spacing.sm,
-  },
-  monthTitle: {
-    ...textStyles.h3,
-  },
-  weekDaysRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: spacing.sm,
-  },
-  weekDayText: {
-    ...textStyles.caption,
-    color: colors.textSecondary,
-    fontWeight: typography.fontWeightBold,
-    width: 40,
-    textAlign: 'center',
-  },
-  calendarGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  calendarDay: {
-    width: '14.28%',
-    aspectRatio: 1,
-    padding: spacing.xs,
-    alignItems: 'center',
-  },
-  dayNumber: {
-    width: 32,
-    height: 32,
-    borderRadius: borderRadius.full,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  todayNumber: {
-    backgroundColor: colors.primary,
-  },
-  dayText: {
-    ...textStyles.body2,
-    color: colors.text,
-  },
-  todayText: {
-    color: colors.white,
-    fontWeight: typography.fontWeightBold,
-  },
-  eventIndicators: {
-    flexDirection: 'row',
-    gap: 2,
-    marginTop: spacing.xs,
-  },
-  eventBox: {
-    width: 6,
-    height: 6,
-    borderRadius: 2,
-    backgroundColor: colors.primary,
-  },
-  legendContainer: {
-    backgroundColor: colors.surface,
-    margin: spacing.md,
-    marginTop: 0,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    ...shadows.small,
-  },
-  legendHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  legendTitle: {
-    ...textStyles.body1,
-    fontWeight: typography.fontWeightSemiBold,
-    color: colors.textPrimary,
-  },
-  clearFilterText: {
-    ...textStyles.caption,
-    color: colors.primary,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  legendGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    minWidth: '30%',
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: borderRadius.sm,
-  },
-  legendItemSelected: {
-    backgroundColor: colors.primary + '15',
-  },
-  legendDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  legendText: {
-    ...textStyles.caption,
-    color: colors.textSecondary,
-  },
-  legendTextSelected: {
-    color: colors.primary,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  eventsListSection: {
-    padding: spacing.md,
-  },
-  eventsListHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  sectionTitle: {
-    ...textStyles.h3,
-  },
-  showAllText: {
-    ...textStyles.body2,
-    color: colors.primary,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: borderRadius.lg,
-    borderTopRightRadius: borderRadius.lg,
-    maxHeight: '80%',
-    ...shadows.large,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  modalTitle: {
-    ...textStyles.h2,
-  },
-  modalForm: {
-    padding: spacing.lg,
-  },
-  inputLabel: {
-    ...textStyles.body1,
-    fontWeight: typography.fontWeightSemiBold,
-    marginBottom: spacing.sm,
-    marginTop: spacing.md,
-  },
-  input: {
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: borderRadius.sm,
-    padding: spacing.md,
-    ...textStyles.body1,
-  },
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-  dateDisplay: {
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: borderRadius.sm,
-    padding: spacing.md,
-    ...textStyles.body1,
-    color: colors.textSecondary,
-  },
-  dateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: borderRadius.sm,
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  dateButtonText: {
-    ...textStyles.body1,
-    color: colors.text,
-    flex: 1,
-  },
-  pickerContainer: {
-    marginTop: spacing.sm,
-    marginBottom: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.gray300,
-  },
-  doneButton: {
-    backgroundColor: colors.primary,
-    padding: spacing.sm,
-    borderRadius: borderRadius.sm,
-    alignItems: 'center',
-    marginTop: spacing.sm,
-  },
-  doneButtonText: {
-    ...textStyles.body2,
-    color: colors.white,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  createButton: {
-    backgroundColor: colors.primary,
-    padding: spacing.md,
-    borderRadius: borderRadius.sm,
-    alignItems: 'center',
-    marginTop: spacing.xl,
-    marginBottom: spacing.lg,
-  },
-  createButtonText: {
-    ...textStyles.body1,
-    color: colors.white,
-    fontWeight: typography.fontWeightBold,
-  },
-  compactPickerContainer: {
-    backgroundColor: colors.white || '#FFFFFF',
-    borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: borderRadius.sm,
-    overflow: 'hidden',
-    paddingVertical: spacing.xs,
-  },
-  inlinePickerContainer: {
-    marginTop: spacing.sm,
-    marginBottom: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.gray300,
-  },
-  pickerWrapper: {
-    height: 200,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
-  },
-  picker: {
-    width: '100%',
-    height: 200,
-  },
-  dayModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.lg,
-  },
-  dayModalContent: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    width: '100%',
-    maxWidth: 500,
-    maxHeight: '80%',
-    ...shadows.large,
-  },
-  dayModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  dayModalTitle: {
-    ...textStyles.h3,
-    flex: 1,
-  },
-  dayModalScroll: {
-    padding: spacing.lg,
-  },
-  dayModalEmpty: {
-    alignItems: 'center',
-    paddingVertical: spacing.xxxl,
-  },
-  dayModalEmptyText: {
-    ...textStyles.body1,
-    color: colors.textSecondary,
-    marginTop: spacing.md,
-  },
-  dayModalEventCard: {
-    flexDirection: 'row',
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.md,
-    overflow: 'hidden',
-  },
-  dayModalEventIndicator: {
-    width: 4,
-    backgroundColor: colors.primary,
-  },
-  dayModalEventContent: {
-    flex: 1,
-    padding: spacing.md,
-  },
-  dayModalEventTitle: {
-    ...textStyles.body1,
-    fontWeight: typography.fontWeightSemiBold,
-    marginBottom: spacing.xs,
-    flex: 1,
-  },
-  dayModalEventDescription: {
-    ...textStyles.body2,
-    color: colors.textSecondary,
-    marginBottom: spacing.sm,
-  },
-  dayModalEventDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.sm,
-    flexWrap: 'wrap',
-  },
-  dayModalAttendButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.sm,
-    gap: spacing.xs,
-  },
-  dayModalAttendButtonText: {
-    ...textStyles.caption,
-    color: colors.white,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-});

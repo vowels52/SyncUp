@@ -32,7 +32,7 @@ export const useDMNotification = () => {
 export const DMNotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [notification, setNotification] = useState<DMNotification | null>(null);
   const slideAnim = useRef(new Animated.Value(-100)).current;
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const { user } = useAuth();
   const supabase = getSupabaseClient();
   const pathname = usePathname();
@@ -80,7 +80,7 @@ export const DMNotificationProvider: React.FC<{ children: React.ReactNode }> = (
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      channel.unsubscribe();
     };
   }, [user, pathname]);
 
