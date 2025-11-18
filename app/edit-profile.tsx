@@ -18,15 +18,21 @@ interface UserProfile {
   year: string | null;
   bio: string | null;
   university: string | null;
+  study_habits: string | null;
+  skills: string | null;
   profile_image_url: string | null;
 }
 
 export default function EditProfileScreen() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
   const [major, setMajor] = useState('');
   const [year, setYear] = useState('');
   const [bio, setBio] = useState('');
+  const [university, setUniversity] = useState('');
+  const [studyHabits, setStudyHabits] = useState('');
+  const [skills, setSkills] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -56,9 +62,13 @@ export default function EditProfileScreen() {
       if (data) {
         setProfile(data);
         setFullName(data.full_name || '');
+        setEmail(data.email || '');
         setMajor(data.major || '');
         setYear(data.year || '');
         setBio(data.bio || '');
+        setUniversity(data.university || '');
+        setStudyHabits(data.study_habits || '');
+        setSkills(data.skills || '');
       }
     } catch (error: any) {
       showAlert('Error', error.message || 'Failed to fetch profile');
@@ -131,7 +141,7 @@ export default function EditProfileScreen() {
   const handleSave = async () => {
     if (!user) return;
 
-    if (!fullName || !major || !year) {
+    if (!fullName || !email || !major || !year) {
       showAlert('Missing Information', 'Please fill in all required fields');
       return;
     }
@@ -142,9 +152,13 @@ export default function EditProfileScreen() {
         .from('user_profiles')
         .update({
           full_name: fullName,
+          email,
           major,
           year,
           bio,
+          university,
+          study_habits: studyHabits,
+          skills,
           updated_at: new Date().toISOString(),
         })
         .eq('id', user.id);
@@ -231,6 +245,28 @@ export default function EditProfileScreen() {
           </View>
 
           <View style={styles.inputGroup}>
+            <Text style={styles.label}>Email *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="john@example.com"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>University (Optional)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="University of Washington"
+              value={university}
+              onChangeText={setUniversity}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
             <Text style={styles.label}>Major *</Text>
             <TextInput
               style={styles.input}
@@ -266,6 +302,32 @@ export default function EditProfileScreen() {
               onChangeText={setBio}
               multiline
               numberOfLines={4}
+              textAlignVertical="top"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Study Habits (Optional)</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Describe your study habits and preferences..."
+              value={studyHabits}
+              onChangeText={setStudyHabits}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Skills (Optional)</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="List your skills (e.g., Python, Java, React...)"
+              value={skills}
+              onChangeText={setSkills}
+              multiline
+              numberOfLines={3}
               textAlignVertical="top"
             />
           </View>
