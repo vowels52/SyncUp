@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator, Modal, TextInput, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator, Modal, TextInput, Platform, KeyboardAvoidingView, Image } from 'react-native';
 import { colors, spacing, borderRadius, shadows, typography } from '@/constants/theme';
 import { textStyles, commonStyles } from '@/constants/styles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,6 +15,7 @@ interface UserProfile {
   full_name: string | null;
   major: string | null;
   year: string | null;
+  profile_image_url: string | null;
 }
 
 interface Event {
@@ -43,6 +44,7 @@ interface SearchResult {
   year: string | null;
   bio: string | null;
   email: string;
+  profile_image_url: string | null;
   connectionStatus?: 'none' | 'pending' | 'accepted' | 'rejected';
 }
 
@@ -98,7 +100,7 @@ export default function HomeScreen() {
       // Fetch user profile
       const { data: profileData } = await supabase
         .from('user_profiles')
-        .select('id, full_name, major, year')
+        .select('id, full_name, major, year, profile_image_url')
         .eq('id', user.id)
         .single();
 
@@ -383,7 +385,7 @@ export default function HomeScreen() {
       // First, get all user search results
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('id, full_name, major, year, bio, email')
+        .select('id, full_name, major, year, bio, email, profile_image_url')
         .neq('id', user.id)
         .not('full_name', 'is', null);
 
@@ -506,7 +508,11 @@ export default function HomeScreen() {
             </Text>
           </View>
           <TouchableOpacity style={styles.avatar} onPress={() => router.push('/profile')}>
-            <Ionicons name="person" size={32} color={colors.white} />
+            {profile?.profile_image_url ? (
+              <Image source={{ uri: profile.profile_image_url }} style={styles.avatarImage} />
+            ) : (
+              <Ionicons name="person" size={32} color={colors.white} />
+            )}
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -1012,9 +1018,16 @@ export default function HomeScreen() {
                 searchResults.map((result) => (
                   <View key={result.id} style={styles.searchResultCard}>
                     <View style={styles.searchResultHeader}>
-                      <View style={styles.searchResultAvatar}>
-                        <Ionicons name="person" size={24} color={colors.white} />
-                      </View>
+                      {result.profile_image_url ? (
+                        <Image
+                          source={{ uri: result.profile_image_url }}
+                          style={styles.searchResultAvatar}
+                        />
+                      ) : (
+                        <View style={styles.searchResultAvatar}>
+                          <Ionicons name="person" size={24} color={colors.white} />
+                        </View>
+                      )}
                       <View style={styles.searchResultInfo}>
                         <Text style={styles.searchResultName}>
                           {result.full_name || 'Anonymous Student'}
@@ -1156,6 +1169,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 56,
+    height: 56,
   },
   content: {
     flex: 1,

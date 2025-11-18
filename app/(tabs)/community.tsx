@@ -9,7 +9,8 @@ import {
   ActivityIndicator,
   TextInput,
   FlatList,
-  Modal
+  Modal,
+  Image
 } from 'react-native';
 import { colors, spacing, borderRadius, shadows, typography } from '@/constants/theme';
 import { textStyles, commonStyles } from '@/constants/styles';
@@ -39,6 +40,7 @@ interface Comment {
   author: {
     id: string;
     name: string;
+    avatar?: string;
   };
   created_at: string;
 }
@@ -91,7 +93,7 @@ export default function CommunityScreen() {
         const authorIds = [...new Set(postsData.map(p => p.author_id))];
         const { data: authorsData, error: authorsError } = await supabase
           .from('user_profiles')
-          .select('id, full_name')
+          .select('id, full_name, profile_image_url')
           .in('id', authorIds);
 
         if (authorsError) {
@@ -99,9 +101,12 @@ export default function CommunityScreen() {
         }
 
         // Create authors map
-        const authorsMap: { [key: string]: string } = {};
+        const authorsMap: { [key: string]: { name: string; profile_image_url: string | null } } = {};
         authorsData?.forEach(author => {
-          authorsMap[author.id] = author.full_name || 'Anonymous';
+          authorsMap[author.id] = {
+            name: author.full_name || 'Anonymous',
+            profile_image_url: author.profile_image_url || null,
+          };
         });
 
         // Fetch tags for all posts
@@ -163,7 +168,8 @@ export default function CommunityScreen() {
           content: post.content,
           author: {
             id: post.author_id,
-            name: authorsMap[post.author_id] || 'Anonymous',
+            name: authorsMap[post.author_id]?.name || 'Anonymous',
+            avatar: authorsMap[post.author_id]?.profile_image_url,
           },
           tags: tagsMap[post.id] || [],
           created_at: post.created_at,
@@ -203,12 +209,15 @@ export default function CommunityScreen() {
         const authorIds = [...new Set(commentsData.map(c => c.author_id))];
         const { data: authorsData } = await supabase
           .from('user_profiles')
-          .select('id, full_name')
+          .select('id, full_name, profile_image_url')
           .in('id', authorIds);
 
-        const authorsMap: { [key: string]: string } = {};
+        const authorsMap: { [key: string]: { name: string; profile_image_url: string | null } } = {};
         authorsData?.forEach(author => {
-          authorsMap[author.id] = author.full_name || 'Anonymous';
+          authorsMap[author.id] = {
+            name: author.full_name || 'Anonymous',
+            profile_image_url: author.profile_image_url || null,
+          };
         });
 
         const transformedComments: Comment[] = commentsData.map(comment => ({
@@ -216,7 +225,8 @@ export default function CommunityScreen() {
           content: comment.content,
           author: {
             id: comment.author_id,
-            name: authorsMap[comment.author_id] || 'Anonymous',
+            name: authorsMap[comment.author_id]?.name || 'Anonymous',
+            avatar: authorsMap[comment.author_id]?.profile_image_url,
           },
           created_at: comment.created_at,
         }));
@@ -614,9 +624,16 @@ export default function CommunityScreen() {
 
         <View style={styles.postFooter}>
           <View style={styles.authorInfo}>
-            <View style={styles.avatar}>
-              <Ionicons name="person" size={16} color={colors.gray600} />
-            </View>
+            {item.author.avatar ? (
+              <Image
+                source={{ uri: item.author.avatar }}
+                style={styles.avatar}
+              />
+            ) : (
+              <View style={styles.avatar}>
+                <Ionicons name="person" size={16} color={colors.gray600} />
+              </View>
+            )}
             <Text style={styles.authorName}>{item.author.name}</Text>
           </View>
 
@@ -859,9 +876,16 @@ export default function CommunityScreen() {
                 {/* Post Header */}
                 <View style={styles.detailPostHeader}>
                   <View style={styles.detailAuthorInfo}>
-                    <View style={styles.avatar}>
-                      <Ionicons name="person" size={20} color={colors.gray600} />
-                    </View>
+                    {selectedPost.author.avatar ? (
+                      <Image
+                        source={{ uri: selectedPost.author.avatar }}
+                        style={styles.avatar}
+                      />
+                    ) : (
+                      <View style={styles.avatar}>
+                        <Ionicons name="person" size={20} color={colors.gray600} />
+                      </View>
+                    )}
                     <View>
                       <Text style={styles.detailAuthorName}>{selectedPost.author.name}</Text>
                       <Text style={styles.detailTimeText}>
@@ -932,9 +956,16 @@ export default function CommunityScreen() {
                       <View key={comment.id} style={styles.commentCard}>
                         <View style={styles.commentHeader}>
                           <View style={styles.commentAuthorInfo}>
-                            <View style={styles.commentAvatar}>
-                              <Ionicons name="person" size={14} color={colors.gray600} />
-                            </View>
+                            {comment.author.avatar ? (
+                              <Image
+                                source={{ uri: comment.author.avatar }}
+                                style={styles.commentAvatar}
+                              />
+                            ) : (
+                              <View style={styles.commentAvatar}>
+                                <Ionicons name="person" size={14} color={colors.gray600} />
+                              </View>
+                            )}
                             <Text style={styles.commentAuthorName}>{comment.author.name}</Text>
                             <Text style={styles.commentTime}>
                               {formatTimeAgo(comment.created_at)}
