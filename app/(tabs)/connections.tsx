@@ -66,7 +66,7 @@ export default function ConnectionsScreen() {
 
     // Subscribe to new messages to update unread counts
     if (user) {
-      const channel = supabase
+      const dmChannel = supabase
         .channel('dm-notifications')
         .on(
           'postgres_changes',
@@ -96,8 +96,62 @@ export default function ConnectionsScreen() {
         )
         .subscribe();
 
+      // Subscribe to connection changes
+      const connectionsChannel = supabase
+        .channel('connections-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'connections',
+            filter: `connected_user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            // New connection request received
+            fetchPendingRequests();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'connections',
+          },
+          (payload) => {
+            const connection = payload.new as any;
+
+            // If connection was accepted, refresh both requests and connections
+            if (connection.status === 'accepted') {
+              fetchPendingRequests();
+              fetchAcceptedConnections();
+            }
+
+            // If connection was rejected, refresh requests
+            if (connection.status === 'rejected') {
+              fetchPendingRequests();
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'connections',
+          },
+          (payload) => {
+            // Connection was deleted, refresh both lists
+            fetchPendingRequests();
+            fetchAcceptedConnections();
+          }
+        )
+        .subscribe();
+
       return () => {
-        supabase.removeChannel(channel);
+        supabase.removeChannel(dmChannel);
+        supabase.removeChannel(connectionsChannel);
       };
     }
   }, [user]);
