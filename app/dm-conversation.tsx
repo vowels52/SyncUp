@@ -86,8 +86,10 @@ export default function DMConversationScreen() {
 
       if (data) {
         setMessages(data);
-        // Mark messages as read
-        await markMessagesAsRead();
+        // Mark messages as read immediately when opening conversation
+        setTimeout(() => {
+          markMessagesAsRead();
+        }, 500);
       }
     } catch (error: any) {
       showAlert('Error', error.message || 'Failed to fetch messages');
@@ -100,12 +102,16 @@ export default function DMConversationScreen() {
     if (!user) return;
 
     try {
-      await supabase
+      const { data, error } = await supabase
         .from('direct_messages')
         .update({ is_read: true })
         .eq('conversation_id', conversationId)
         .eq('receiver_id', user.id)
-        .eq('is_read', false);
+        .eq('is_read', false)
+        .select();
+
+      if (error) throw error;
+      console.log('Marked messages as read:', data);
     } catch (error: any) {
       console.error('Error marking messages as read:', error);
     }
@@ -123,6 +129,7 @@ export default function DMConversationScreen() {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
+          console.log('New message in conversation:', payload);
           const newMsg = payload.new as Message;
           setMessages((prev) => [...prev, newMsg]);
 
@@ -133,7 +140,10 @@ export default function DMConversationScreen() {
 
           // Mark as read if it's from the other user
           if (newMsg.sender_id === otherUserId) {
-            markMessagesAsRead();
+            console.log('Marking message as read');
+            setTimeout(() => {
+              markMessagesAsRead();
+            }, 500);
           }
         }
       )

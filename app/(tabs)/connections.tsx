@@ -6,7 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, useAlert } from '@/template';
 import { getSupabaseClient } from '@/template';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 
 interface UserMatch {
   id: string;
@@ -39,6 +40,7 @@ interface AcceptedConnection {
     bio: string | null;
   };
   created_at: string;
+  unread_count?: number;
 }
 
 export default function ConnectionsScreen() {
@@ -58,7 +60,56 @@ export default function ConnectionsScreen() {
     fetchMatches();
     fetchPendingRequests();
     fetchAcceptedConnections();
+
+    // Subscribe to new messages to update unread counts
+    if (user) {
+      const channel = supabase
+        .channel('dm-notifications')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'direct_messages',
+            filter: `receiver_id=eq.${user.id}`,
+          },
+          (payload) => {
+            console.log('New message received in connections tab:', payload);
+            // Refresh connections to update unread counts
+            fetchAcceptedConnections();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'direct_messages',
+            filter: `receiver_id=eq.${user.id}`,
+          },
+          (payload) => {
+            console.log('Message updated in connections tab:', payload);
+            // Refresh when messages are marked as read
+            fetchAcceptedConnections();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, [user]);
+
+  // Refresh connections when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('Connections screen focused, refreshing data');
+      if (viewMode === 'connections') {
+        fetchAcceptedConnections();
+      }
+    }, [viewMode])
+  );
 
   const fetchMatches = async () => {
     if (!user) return;
@@ -325,13 +376,28 @@ export default function ConnectionsScreen() {
 
       if (data) {
         // Map the data to get the connected user (not the current user)
-        const mappedConnections: AcceptedConnection[] = data.map((conn: any) => ({
-          id: conn.id,
-          created_at: conn.created_at,
-          connected_user: conn.user_id === user.id
-            ? conn.connected_profiles
-            : conn.user_profiles,
-        }));
+        const mappedConnections: AcceptedConnection[] = await Promise.all(
+          data.map(async (conn: any) => {
+            const connectedUser = conn.user_id === user.id
+              ? conn.connected_profiles
+              : conn.user_profiles;
+
+            // Fetch unread message count for this connection
+            const { count } = await supabase
+              .from('direct_messages')
+              .select('*', { count: 'exact', head: true })
+              .eq('receiver_id', user.id)
+              .eq('sender_id', connectedUser.id)
+              .eq('is_read', false);
+
+            return {
+              id: conn.id,
+              created_at: conn.created_at,
+              connected_user: connectedUser,
+              unread_count: count || 0,
+            };
+          })
+        );
 
         setAcceptedConnections(mappedConnections);
       }
@@ -589,13 +655,27 @@ export default function ConnectionsScreen() {
               {acceptedConnections.map((connection) => (
                 <View key={connection.id} style={styles.connectionCard}>
                   <View style={styles.requestHeader}>
-                    <View style={styles.requestAvatar}>
-                      <Ionicons name="person" size={32} color={colors.white} />
+                    <View style={styles.avatarContainer}>
+                      <View style={styles.requestAvatar}>
+                        <Ionicons name="person" size={32} color={colors.white} />
+                      </View>
+                      {connection.unread_count && connection.unread_count > 0 && (
+                        <View style={styles.unreadBadge}>
+                          <Text style={styles.unreadBadgeText}>
+                            {connection.unread_count > 9 ? '9+' : connection.unread_count}
+                          </Text>
+                        </View>
+                      )}
                     </View>
                     <View style={styles.requestInfo}>
-                      <Text style={styles.requestName}>
-                        {connection.connected_user.full_name || 'Anonymous Student'}
-                      </Text>
+                      <View style={styles.nameRow}>
+                        <Text style={styles.requestName}>
+                          {connection.connected_user.full_name || 'Anonymous Student'}
+                        </Text>
+                        {connection.unread_count && connection.unread_count > 0 && (
+                          <View style={styles.unreadDot} />
+                        )}
+                      </View>
                       {connection.connected_user.major && connection.connected_user.year && (
                         <Text style={styles.requestDetails}>
                           {connection.connected_user.major} • {connection.connected_user.year}
@@ -882,5 +962,38 @@ const styles = StyleSheet.create({
     ...textStyles.body2,
     fontWeight: typography.fontWeightSemiBold,
     color: colors.white,
+  },
+  avatarContainer: {
+    position: 'relative',
+  },
+  unreadBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: colors.error,
+    borderRadius: borderRadius.full,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xs,
+    borderWidth: 2,
+    borderColor: colors.surface,
+  },
+  unreadBadgeText: {
+    color: colors.white,
+    fontSize: 11,
+    fontWeight: typography.fontWeightBold,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.error,
   },
 });
