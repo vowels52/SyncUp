@@ -529,14 +529,24 @@ export default function CommunityScreen() {
 
         // Add category as a tag
         if (newPost.category && newPost.category !== 'all') {
-          tags.push(newPost.category.replace('-', ' '));
+          const categoryTag = newPost.category.replace('-', ' ');
+          // Capitalize each word (e.g., "study tips" -> "Study Tips")
+          const capitalizedCategory = categoryTag
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+          tags.push(capitalizedCategory);
         }
 
         // Extract common keywords
         const keywords = ['study', 'tips', 'exam', 'essay', 'professor', 'algorithm', 'writing'];
         keywords.forEach(keyword => {
           if (newPost.title.toLowerCase().includes(keyword)) {
-            tags.push(keyword.charAt(0).toUpperCase() + keyword.slice(1));
+            const capitalizedKeyword = keyword.charAt(0).toUpperCase() + keyword.slice(1);
+            // Only add if not already in tags (avoid duplicates)
+            if (!tags.some(tag => tag.toLowerCase() === capitalizedKeyword.toLowerCase())) {
+              tags.push(capitalizedKeyword);
+            }
           }
         });
 
