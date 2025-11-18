@@ -659,33 +659,33 @@ export default function ConnectionsScreen() {
                       <View style={styles.requestAvatar}>
                         <Ionicons name="person" size={32} color={colors.white} />
                       </View>
-                      {connection.unread_count && connection.unread_count > 0 && (
+                      {(connection.unread_count ?? 0) > 0 ? (
                         <View style={styles.unreadBadge}>
                           <Text style={styles.unreadBadgeText}>
-                            {connection.unread_count > 9 ? '9+' : connection.unread_count}
+                            {connection.unread_count! > 9 ? '9+' : String(connection.unread_count)}
                           </Text>
                         </View>
-                      )}
+                      ) : null}
                     </View>
                     <View style={styles.requestInfo}>
                       <View style={styles.nameRow}>
                         <Text style={styles.requestName}>
-                          {connection.connected_user.full_name || 'Anonymous Student'}
+                          {connection.connected_user?.full_name || 'Anonymous Student'}
                         </Text>
-                        {connection.unread_count && connection.unread_count > 0 && (
+                        {(connection.unread_count ?? 0) > 0 && (
                           <View style={styles.unreadDot} />
                         )}
                       </View>
-                      {connection.connected_user.major && connection.connected_user.year && (
+                      {connection.connected_user?.major && connection.connected_user?.year ? (
                         <Text style={styles.requestDetails}>
                           {connection.connected_user.major} • {connection.connected_user.year}
                         </Text>
-                      )}
-                      {connection.connected_user.bio && (
+                      ) : null}
+                      {connection.connected_user?.bio ? (
                         <Text style={styles.requestBio} numberOfLines={2}>
                           {connection.connected_user.bio}
                         </Text>
-                      )}
+                      ) : null}
                     </View>
                   </View>
 
@@ -846,19 +846,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray100,
     borderRadius: borderRadius.md,
     padding: spacing.xs,
+    gap: spacing.xs,
   },
   toggleButton: {
     flex: 1,
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.xs,
     borderRadius: borderRadius.sm,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 36,
   },
   toggleButtonActive: {
     backgroundColor: colors.primary,
   },
   toggleText: {
     ...textStyles.body2,
+    fontSize: 13,
     fontWeight: typography.fontWeightSemiBold,
     color: colors.textSecondary,
   },
