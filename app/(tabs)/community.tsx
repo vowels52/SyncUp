@@ -10,7 +10,9 @@ import {
   TextInput,
   FlatList,
   Modal,
-  Image
+  Image,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { spacing, borderRadius, shadows, typography } from '@/constants/theme';
 import { useThemedColors } from '@/hooks/useThemedColors';
@@ -1348,7 +1350,10 @@ export default function CommunityScreen() {
         transparent={true}
         onRequestClose={closeModal}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Create Post</Text>
@@ -1429,7 +1434,7 @@ export default function CommunityScreen() {
               </TouchableOpacity>
             </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Post Detail Modal with Comments */}
@@ -1439,7 +1444,10 @@ export default function CommunityScreen() {
         transparent={true}
         onRequestClose={closeDetailModal}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
           <View style={[styles.modalContent, { height: '90%' }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Post Details</Text>
@@ -1591,7 +1599,7 @@ export default function CommunityScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
