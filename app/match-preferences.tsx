@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors, typography, spacing, borderRadius, shadows } from '@/constants/theme';
-import { textStyles } from '@/constants/styles';
+import { typography, spacing, borderRadius, shadows } from '@/constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, useAlert } from '@/template';
 import { getSupabaseClient } from '@/template';
+import { useThemedColors } from '@/hooks/useThemedColors';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 
 const MAJOR_OPTIONS = [
   'Computer Science',
@@ -39,6 +40,8 @@ interface MatchPreferences {
 }
 
 export default function MatchPreferencesScreen() {
+  const colors = useThemedColors();
+  const { commonStyles, textStyles } = useThemedStyles();
   const [preferences, setPreferences] = useState<MatchPreferences | null>(null);
   const [preferredMajors, setPreferredMajors] = useState<string[]>([]);
   const [preferredYears, setPreferredYears] = useState<string[]>([]);
@@ -149,6 +152,168 @@ export default function MatchPreferencesScreen() {
       setSaving(false);
     }
   };
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    centerContent: {
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: spacing.md,
+      backgroundColor: colors.surface,
+      ...shadows.small,
+    },
+    backButton: {
+      padding: spacing.xs,
+    },
+    headerTitle: {
+      ...textStyles.h3,
+      color: colors.textPrimary,
+    },
+    content: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: spacing.lg,
+    },
+    title: {
+      ...textStyles.h2,
+      color: colors.textPrimary,
+      marginBottom: spacing.sm,
+    },
+    description: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+      marginBottom: spacing.lg,
+    },
+    form: {
+      gap: spacing.md,
+    },
+    inputGroup: {
+      marginBottom: spacing.lg,
+    },
+    label: {
+      ...textStyles.body2,
+      color: colors.textPrimary,
+      fontWeight: typography.fontWeightSemiBold,
+      marginBottom: spacing.xs,
+    },
+    helperText: {
+      ...textStyles.caption,
+      color: colors.textSecondary,
+      marginBottom: spacing.sm,
+    },
+    input: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      fontSize: typography.fontSize16,
+      color: colors.textPrimary,
+      borderWidth: 1,
+      borderColor: colors.gray200,
+    },
+    textArea: {
+      minHeight: 80,
+      paddingTop: spacing.md,
+    },
+    chipContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+    },
+    chip: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.gray200,
+    },
+    chipSelected: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    chipText: {
+      ...textStyles.body2,
+      color: colors.textPrimary,
+      fontWeight: typography.fontWeightMedium,
+    },
+    chipTextSelected: {
+      color: colors.white,
+    },
+    sliderContainer: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    numberButton: {
+      flex: 1,
+      paddingVertical: spacing.md,
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.gray200,
+      alignItems: 'center',
+    },
+    numberButtonSelected: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    numberButtonText: {
+      ...textStyles.body2,
+      color: colors.textPrimary,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    numberButtonTextSelected: {
+      color: colors.white,
+    },
+    switchRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      borderWidth: 1,
+      borderColor: colors.gray200,
+    },
+    switchLeft: {
+      flex: 1,
+      marginRight: spacing.md,
+    },
+    footer: {
+      padding: spacing.md,
+      backgroundColor: colors.surface,
+      ...shadows.medium,
+    },
+    primaryButton: {
+      backgroundColor: colors.primary,
+      borderRadius: borderRadius.md,
+      height: 50,
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...shadows.small,
+    },
+    primaryButtonText: {
+      ...textStyles.button,
+      color: colors.white,
+    },
+    cancelButton: {
+      marginTop: spacing.sm,
+      alignItems: 'center',
+      paddingVertical: spacing.sm,
+    },
+    cancelButtonText: {
+      ...textStyles.body2,
+      color: colors.primary,
+    },
+  });
 
   if (loading) {
     return (
@@ -342,162 +507,3 @@ export default function MatchPreferencesScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  centerContent: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-    ...shadows.small,
-  },
-  backButton: {
-    padding: spacing.xs,
-  },
-  headerTitle: {
-    ...textStyles.h3,
-  },
-  content: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: spacing.lg,
-  },
-  title: {
-    ...textStyles.h2,
-    marginBottom: spacing.sm,
-  },
-  description: {
-    ...textStyles.body2,
-    color: colors.textSecondary,
-    marginBottom: spacing.lg,
-  },
-  form: {
-    gap: spacing.md,
-  },
-  inputGroup: {
-    marginBottom: spacing.lg,
-  },
-  label: {
-    ...textStyles.body2,
-    fontWeight: typography.fontWeightSemiBold,
-    marginBottom: spacing.xs,
-  },
-  helperText: {
-    ...textStyles.caption,
-    color: colors.textSecondary,
-    marginBottom: spacing.sm,
-  },
-  input: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    fontSize: typography.fontSize16,
-    color: colors.textPrimary,
-    borderWidth: 1,
-    borderColor: colors.gray200,
-  },
-  textArea: {
-    minHeight: 80,
-    paddingTop: spacing.md,
-  },
-  chipContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.gray200,
-  },
-  chipSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  chipText: {
-    ...textStyles.body2,
-    color: colors.textPrimary,
-    fontWeight: typography.fontWeightMedium,
-  },
-  chipTextSelected: {
-    color: colors.white,
-  },
-  sliderContainer: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  numberButton: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.gray200,
-    alignItems: 'center',
-  },
-  numberButtonSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  numberButtonText: {
-    ...textStyles.body2,
-    color: colors.textPrimary,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  numberButtonTextSelected: {
-    color: colors.white,
-  },
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.gray200,
-  },
-  switchLeft: {
-    flex: 1,
-    marginRight: spacing.md,
-  },
-  footer: {
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-    ...shadows.medium,
-  },
-  primaryButton: {
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.md,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...shadows.small,
-  },
-  primaryButtonText: {
-    ...textStyles.button,
-    color: colors.white,
-  },
-  cancelButton: {
-    marginTop: spacing.sm,
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  cancelButtonText: {
-    ...textStyles.body2,
-    color: colors.primary,
-  },
-});

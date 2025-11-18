@@ -799,10 +799,10 @@ export default function ProfileScreen() {
 
           <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/match-preferences')}>
             <View style={styles.menuItemLeft}>
-              <Ionicons name="options-outline" size={24} color={colors.textPrimary} />
+              <Ionicons name="options-outline" size={24} color={themedColors.textPrimary} />
               <Text style={styles.menuItemText}>Match Preferences</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+            <Ionicons name="chevron-forward" size={20} color={themedColors.gray400} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/notifications')}>

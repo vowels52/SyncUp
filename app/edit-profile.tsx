@@ -478,6 +478,41 @@ export default function EditProfileScreen() {
       borderWidth: 3,
       borderColor: colors.background,
     },
+    helperText: {
+      ...textStyles.caption,
+      color: colors.textSecondary,
+      marginBottom: spacing.sm,
+    },
+    chipContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+    },
+    chip: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.gray200,
+    },
+    chipSelected: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    chipText: {
+      ...textStyles.body2,
+      color: colors.textPrimary,
+      fontWeight: typography.fontWeightMedium,
+    },
+    chipTextSelected: {
+      color: colors.white,
+    },
+    chipSubtext: {
+      ...textStyles.caption,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
   });
 
   if (loading) {
