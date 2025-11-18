@@ -293,20 +293,30 @@ export default function CommunityScreen() {
     if (!selectedPost) return;
 
     try {
-      if (isLiked) {
-        // Unlike the post
+      // First check current database state to avoid conflicts
+      const { data: existingLike, error: checkError } = await supabase
+        .from('post_reactions')
+        .select('id')
+        .eq('post_id', selectedPost.id)
+        .eq('user_id', user.id)
+        .eq('reaction_type', 'like')
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+
+      if (existingLike) {
+        // Like exists, so delete it
         const { error } = await supabase
           .from('post_reactions')
           .delete()
           .eq('post_id', selectedPost.id)
-          .eq('user_id', user.id);
+          .eq('user_id', user.id)
+          .eq('reaction_type', 'like');
 
         if (error) throw error;
-
-        setIsLiked(false);
-        setLikeCount(prev => Math.max(0, prev - 1));
+        // Real-time subscription will update the UI
       } else {
-        // Like the post
+        // Like doesn't exist, so insert it
         const { error } = await supabase
           .from('post_reactions')
           .insert({
@@ -316,13 +326,8 @@ export default function CommunityScreen() {
           });
 
         if (error) throw error;
-
-        setIsLiked(true);
-        setLikeCount(prev => prev + 1);
+        // Real-time subscription will update the UI
       }
-
-      // Refresh the posts list to update the like count in the feed
-      fetchPosts();
     } catch (error: any) {
       console.error('Error toggling like:', error);
       showAlert('Error', error.message || 'Failed to update like');
@@ -422,11 +427,142 @@ export default function CommunityScreen() {
 
   useEffect(() => {
     fetchPosts();
+
+    // Set up real-time subscriptions
+    const postsChannel = supabase
+      .channel('forum-posts-changes')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'forum_posts' },
+        (payload) => {
+          // When a new post is created, refetch all posts to get complete data
+          fetchPosts();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'forum_posts' },
+        (payload) => {
+          // Remove the deleted post from state
+          setPosts(prev => prev.filter(p => p.id !== payload.old.id));
+        }
+      )
+      .subscribe();
+
+    const commentsChannel = supabase
+      .channel('forum-comments-changes')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'forum_comments' },
+        (payload) => {
+          // Update comment count for the affected post
+          const postId = (payload.new as any).post_id;
+          setPosts(prev => prev.map(post =>
+            post.id === postId
+              ? { ...post, comments: post.comments + 1 }
+              : post
+          ));
+
+          // If viewing this post's comments, add the new comment
+          setSelectedPost(current => {
+            if (current?.id === postId) {
+              fetchComments(postId);
+            }
+            return current;
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'forum_comments' },
+        (payload) => {
+          // Update comment count for the affected post
+          const postId = (payload.old as any).post_id;
+          setPosts(prev => prev.map(post =>
+            post.id === postId
+              ? { ...post, comments: Math.max(0, post.comments - 1) }
+              : post
+          ));
+
+          // If viewing this post's comments, refetch them
+          setSelectedPost(current => {
+            if (current?.id === postId) {
+              fetchComments(postId);
+            }
+            return current;
+          });
+        }
+      )
+      .subscribe();
+
+    const reactionsChannel = supabase
+      .channel('post-reactions-changes')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'post_reactions' },
+        (payload) => {
+          // Update like count for the affected post
+          const postId = (payload.new as any).post_id;
+          const userId = (payload.new as any).user_id;
+          const reactionType = (payload.new as any).reaction_type;
+
+          // Only process 'like' reactions
+          if (reactionType !== 'like') return;
+
+          setPosts(prev => prev.map(post =>
+            post.id === postId
+              ? { ...post, likes: post.likes + 1 }
+              : post
+          ));
+
+          // If viewing this post in detail, update isLiked status
+          // Note: likeCount will be updated by the useEffect that watches posts array
+          setSelectedPost(current => {
+            if (current?.id === postId && user && userId === user.id) {
+              setIsLiked(true);
+            }
+            return current;
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'post_reactions' },
+        (payload) => {
+          // Since Supabase doesn't send old row data for DELETE,
+          // we need to refetch posts to get accurate like counts
+          fetchPosts();
+
+          // If viewing a post in detail, refresh the like status
+          if (selectedPost && user) {
+            checkUserLikeStatus(selectedPost.id);
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      supabase.removeChannel(postsChannel);
+      supabase.removeChannel(commentsChannel);
+      supabase.removeChannel(reactionsChannel);
+    };
   }, []);
 
   useEffect(() => {
     filterPosts();
   }, [searchQuery, activeFilter, posts]);
+
+  // Update selectedPost when posts array changes (for real-time updates)
+  useEffect(() => {
+    if (selectedPost) {
+      const updatedPost = posts.find(p => p.id === selectedPost.id);
+      if (updatedPost) {
+        setSelectedPost(updatedPost);
+        setLikeCount(updatedPost.likes);
+      }
+    }
+  }, [posts]);
 
   const filterPosts = () => {
     let filtered = [...posts];
