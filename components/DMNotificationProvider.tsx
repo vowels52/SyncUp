@@ -54,14 +54,10 @@ export const DMNotificationProvider: React.FC<{ children: React.ReactNode }> = (
         async (payload) => {
           const newMessage = payload.new as any;
 
-          console.log('New message received:', newMessage);
-          console.log('Current pathname:', pathname);
-
           // Don't show notification if user is viewing this conversation
           const isViewingConversation = pathname.includes('dm-conversation');
 
           if (isViewingConversation) {
-            console.log('User is viewing a conversation, skipping notification');
             return;
           }
 
@@ -71,8 +67,6 @@ export const DMNotificationProvider: React.FC<{ children: React.ReactNode }> = (
             .select('full_name')
             .eq('id', newMessage.sender_id)
             .single();
-
-          console.log('Showing notification for message from:', senderData?.full_name);
 
           showNotification({
             id: newMessage.id,

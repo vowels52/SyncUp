@@ -111,7 +111,6 @@ export default function DMConversationScreen() {
         .select();
 
       if (error) throw error;
-      console.log('Marked messages as read:', data);
     } catch (error: any) {
       console.error('Error marking messages as read:', error);
     }
@@ -129,7 +128,6 @@ export default function DMConversationScreen() {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
-          console.log('New message in conversation:', payload);
           const newMsg = payload.new as Message;
           setMessages((prev) => [...prev, newMsg]);
 
@@ -140,7 +138,6 @@ export default function DMConversationScreen() {
 
           // Mark as read if it's from the other user
           if (newMsg.sender_id === otherUserId) {
-            console.log('Marking message as read');
             setTimeout(() => {
               markMessagesAsRead();
             }, 500);

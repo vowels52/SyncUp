@@ -74,7 +74,6 @@ export default function ConnectionsScreen() {
             filter: `receiver_id=eq.${user.id}`,
           },
           (payload) => {
-            console.log('New message received in connections tab:', payload);
             // Refresh connections to update unread counts
             fetchAcceptedConnections();
           }
@@ -88,7 +87,6 @@ export default function ConnectionsScreen() {
             filter: `receiver_id=eq.${user.id}`,
           },
           (payload) => {
-            console.log('Message updated in connections tab:', payload);
             // Refresh when messages are marked as read
             fetchAcceptedConnections();
           }
@@ -104,7 +102,6 @@ export default function ConnectionsScreen() {
   // Refresh connections when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      console.log('Connections screen focused, refreshing data');
       if (viewMode === 'connections') {
         fetchAcceptedConnections();
       }
