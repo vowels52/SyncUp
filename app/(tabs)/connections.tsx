@@ -6,6 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, useAlert } from '@/template';
 import { getSupabaseClient } from '@/template';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 
 interface UserMatch {
   id: string;
@@ -28,12 +30,26 @@ interface ConnectionRequest {
   };
 }
 
+interface AcceptedConnection {
+  id: string;
+  connected_user: {
+    id: string;
+    full_name: string | null;
+    major: string | null;
+    year: string | null;
+    bio: string | null;
+  };
+  created_at: string;
+  unread_count?: number;
+}
+
 export default function ConnectionsScreen() {
   const [matches, setMatches] = useState<UserMatch[]>([]);
   const [pendingRequests, setPendingRequests] = useState<ConnectionRequest[]>([]);
+  const [acceptedConnections, setAcceptedConnections] = useState<AcceptedConnection[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [viewMode, setViewMode] = useState<'matches' | 'requests'>('matches');
+  const [viewMode, setViewMode] = useState<'matches' | 'requests' | 'connections'>('matches');
 
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -43,7 +59,54 @@ export default function ConnectionsScreen() {
   useEffect(() => {
     fetchMatches();
     fetchPendingRequests();
+    fetchAcceptedConnections();
+
+    // Subscribe to new messages to update unread counts
+    if (user) {
+      const channel = supabase
+        .channel('dm-notifications')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'direct_messages',
+            filter: `receiver_id=eq.${user.id}`,
+          },
+          (payload) => {
+            // Refresh connections to update unread counts
+            fetchAcceptedConnections();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'direct_messages',
+            filter: `receiver_id=eq.${user.id}`,
+          },
+          (payload) => {
+            // Refresh when messages are marked as read
+            fetchAcceptedConnections();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, [user]);
+
+  // Refresh connections when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (viewMode === 'connections') {
+        fetchAcceptedConnections();
+      }
+    }, [viewMode])
+  );
 
   const fetchMatches = async () => {
     if (!user) return;
@@ -275,6 +338,114 @@ export default function ConnectionsScreen() {
     }
   };
 
+  const fetchAcceptedConnections = async () => {
+    if (!user) return;
+
+    try {
+      // Fetch accepted connections
+      const { data, error } = await supabase
+        .from('connections')
+        .select(`
+          id,
+          created_at,
+          user_id,
+          connected_user_id,
+          user_profiles!connections_user_id_fkey (
+            id,
+            full_name,
+            major,
+            year,
+            bio
+          ),
+          connected_profiles:user_profiles!connections_connected_user_id_fkey (
+            id,
+            full_name,
+            major,
+            year,
+            bio
+          )
+        `)
+        .eq('status', 'accepted')
+        .or(`user_id.eq.${user.id},connected_user_id.eq.${user.id}`)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data) {
+        // Map the data to get the connected user (not the current user)
+        const mappedConnections: AcceptedConnection[] = await Promise.all(
+          data.map(async (conn: any) => {
+            const connectedUser = conn.user_id === user.id
+              ? conn.connected_profiles
+              : conn.user_profiles;
+
+            // Fetch unread message count for this connection
+            const { count } = await supabase
+              .from('direct_messages')
+              .select('*', { count: 'exact', head: true })
+              .eq('receiver_id', user.id)
+              .eq('sender_id', connectedUser.id)
+              .eq('is_read', false);
+
+            return {
+              id: conn.id,
+              created_at: conn.created_at,
+              connected_user: connectedUser,
+              unread_count: count || 0,
+            };
+          })
+        );
+
+        setAcceptedConnections(mappedConnections);
+      }
+    } catch (error: any) {
+      console.error('Error fetching accepted connections:', error);
+    }
+  };
+
+  const handleStartDM = async (connectedUserId: string) => {
+    if (!user) return;
+
+    try {
+      // Check if conversation already exists
+      const { data: existingConversation, error: fetchError } = await supabase
+        .from('conversations')
+        .select('id')
+        .or(`and(participant1_id.eq.${user.id},participant2_id.eq.${connectedUserId}),and(participant1_id.eq.${connectedUserId},participant2_id.eq.${user.id})`)
+        .maybeSingle();
+
+      if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
+
+      let conversationId = existingConversation?.id;
+
+      // If no conversation exists, create one
+      if (!conversationId) {
+        const { data: newConversation, error: createError } = await supabase
+          .from('conversations')
+          .insert({
+            participant1_id: user.id,
+            participant2_id: connectedUserId,
+          })
+          .select('id')
+          .single();
+
+        if (createError) throw createError;
+        conversationId = newConversation.id;
+      }
+
+      // Navigate to the DM screen
+      router.push({
+        pathname: '/dm-conversation',
+        params: {
+          conversationId,
+          otherUserId: connectedUserId,
+        },
+      });
+    } catch (error: any) {
+      showAlert('Error', error.message || 'Failed to start conversation');
+    }
+  };
+
   if (loading) {
     return (
       <View style={[commonStyles.container, commonStyles.centerContent]}>
@@ -290,7 +461,11 @@ export default function ConnectionsScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Find Your Match</Text>
         <Text style={styles.subtitle}>
-          {viewMode === 'matches' ? 'Swipe to connect with peers' : 'Manage connection requests'}
+          {viewMode === 'matches'
+            ? 'Swipe to connect with peers'
+            : viewMode === 'requests'
+            ? 'Manage connection requests'
+            : 'Message your connections'}
         </Text>
 
         {/* Toggle Buttons */}
@@ -309,6 +484,14 @@ export default function ConnectionsScreen() {
           >
             <Text style={[styles.toggleText, viewMode === 'requests' && styles.toggleTextActive]}>
               Requests {pendingRequests.length > 0 && `(${pendingRequests.length})`}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.toggleButton, viewMode === 'connections' && styles.toggleButtonActive]}
+            onPress={() => setViewMode('connections')}
+          >
+            <Text style={[styles.toggleText, viewMode === 'connections' && styles.toggleTextActive]}>
+              Connections
             </Text>
           </TouchableOpacity>
         </View>
@@ -396,7 +579,7 @@ export default function ConnectionsScreen() {
           </View>
         </View>
       )
-      ) : (
+      ) : viewMode === 'requests' ? (
         /* Pending Requests View */
         <ScrollView style={styles.requestsContainer} showsVerticalScrollIndicator={false}>
           {pendingRequests.length === 0 ? (
@@ -448,6 +631,68 @@ export default function ConnectionsScreen() {
                       <Text style={styles.acceptButtonText}>Accept</Text>
                     </TouchableOpacity>
                   </View>
+                </View>
+              ))}
+            </View>
+          )}
+        </ScrollView>
+      ) : (
+        /* My Connections View */
+        <ScrollView style={styles.requestsContainer} showsVerticalScrollIndicator={false}>
+          {acceptedConnections.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="chatbubbles-outline" size={80} color={colors.gray400} />
+              <Text style={styles.emptyTitle}>No connections yet</Text>
+              <Text style={styles.emptySubtitle}>
+                Connect with other students to start messaging
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.requestsList}>
+              {acceptedConnections.map((connection) => (
+                <View key={connection.id} style={styles.connectionCard}>
+                  <View style={styles.requestHeader}>
+                    <View style={styles.avatarContainer}>
+                      <View style={styles.requestAvatar}>
+                        <Ionicons name="person" size={32} color={colors.white} />
+                      </View>
+                      {(connection.unread_count ?? 0) > 0 ? (
+                        <View style={styles.unreadBadge}>
+                          <Text style={styles.unreadBadgeText}>
+                            {connection.unread_count! > 9 ? '9+' : String(connection.unread_count)}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <View style={styles.requestInfo}>
+                      <View style={styles.nameRow}>
+                        <Text style={styles.requestName}>
+                          {connection.connected_user?.full_name || 'Anonymous Student'}
+                        </Text>
+                        {(connection.unread_count ?? 0) > 0 && (
+                          <View style={styles.unreadDot} />
+                        )}
+                      </View>
+                      {connection.connected_user?.major && connection.connected_user?.year ? (
+                        <Text style={styles.requestDetails}>
+                          {connection.connected_user.major} • {connection.connected_user.year}
+                        </Text>
+                      ) : null}
+                      {connection.connected_user?.bio ? (
+                        <Text style={styles.requestBio} numberOfLines={2}>
+                          {connection.connected_user.bio}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.messageButton}
+                    onPress={() => handleStartDM(connection.connected_user.id)}
+                  >
+                    <Ionicons name="chatbubble-outline" size={20} color={colors.white} />
+                    <Text style={styles.messageButtonText}>Message</Text>
+                  </TouchableOpacity>
                 </View>
               ))}
             </View>
@@ -598,19 +843,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray100,
     borderRadius: borderRadius.md,
     padding: spacing.xs,
+    gap: spacing.xs,
   },
   toggleButton: {
     flex: 1,
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.xs,
     borderRadius: borderRadius.sm,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 36,
   },
   toggleButtonActive: {
     backgroundColor: colors.primary,
   },
   toggleText: {
     ...textStyles.body2,
+    fontSize: 13,
     fontWeight: typography.fontWeightSemiBold,
     color: colors.textSecondary,
   },
@@ -692,5 +941,60 @@ const styles = StyleSheet.create({
     ...textStyles.body2,
     fontWeight: typography.fontWeightSemiBold,
     color: colors.white,
+  },
+  connectionCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadows.small,
+  },
+  messageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.primary,
+    gap: spacing.xs,
+  },
+  messageButtonText: {
+    ...textStyles.body2,
+    fontWeight: typography.fontWeightSemiBold,
+    color: colors.white,
+  },
+  avatarContainer: {
+    position: 'relative',
+  },
+  unreadBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: colors.error,
+    borderRadius: borderRadius.full,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xs,
+    borderWidth: 2,
+    borderColor: colors.surface,
+  },
+  unreadBadgeText: {
+    color: colors.white,
+    fontSize: 11,
+    fontWeight: typography.fontWeightBold,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.error,
   },
 });
