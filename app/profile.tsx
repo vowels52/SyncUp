@@ -200,8 +200,8 @@ export default function ProfileScreen() {
           id,
           user_id,
           connected_user_id,
-          user_profiles!connections_connected_user_id_fkey(id, full_name, email, major, year),
-          connected_profiles:user_profiles!connections_user_id_fkey(id, full_name, email, major, year)
+          user_profiles!connections_connected_user_id_fkey(id, full_name, email, major, year, profile_image_url),
+          connected_profiles:user_profiles!connections_user_id_fkey(id, full_name, email, major, year, profile_image_url)
         `)
         .eq('status', 'accepted')
         .or(`user_id.eq.${user.id},connected_user_id.eq.${user.id}`);
@@ -219,6 +219,7 @@ export default function ProfileScreen() {
           email: connectedUser.email,
           major: connectedUser.major || 'N/A',
           year: connectedUser.year || '',
+          profile_image_url: connectedUser.profile_image_url || null,
         };
       }) || [];
 
@@ -579,9 +580,16 @@ export default function ProfileScreen() {
                   <View style={styles.modalItem}>
                     {modalType === 'connections' && (
                       <>
-                        <View style={styles.connectionAvatar}>
-                          <Ionicons name="person" size={28} color={colors.white} />
-                        </View>
+                        {item.profile_image_url ? (
+                          <Image
+                            source={{ uri: item.profile_image_url }}
+                            style={styles.connectionAvatar}
+                          />
+                        ) : (
+                          <View style={styles.connectionAvatar}>
+                            <Ionicons name="person" size={28} color={colors.white} />
+                          </View>
+                        )}
                         <View style={styles.modalItemContent}>
                           <Text style={styles.modalItemTitle}>{item.name}</Text>
                           <Text style={styles.modalItemSubtitle}>

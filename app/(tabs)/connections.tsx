@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, ScrollView, Image } from 'react-native';
 import { colors, spacing, borderRadius, shadows, typography } from '@/constants/theme';
 import { textStyles, commonStyles } from '@/constants/styles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,6 +15,7 @@ interface UserMatch {
   major: string | null;
   year: string | null;
   bio: string | null;
+  profile_image_url: string | null;
 }
 
 interface ConnectionRequest {
@@ -27,6 +28,7 @@ interface ConnectionRequest {
     major: string | null;
     year: string | null;
     bio: string | null;
+    profile_image_url: string | null;
   };
 }
 
@@ -38,6 +40,7 @@ interface AcceptedConnection {
     major: string | null;
     year: string | null;
     bio: string | null;
+    profile_image_url: string | null;
   };
   created_at: string;
   unread_count?: number;
@@ -150,7 +153,7 @@ export default function ConnectionsScreen() {
       // Fetch all users except current user and those with existing connections/history
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('id, full_name, major, year, bio')
+        .select('id, full_name, major, year, bio, profile_image_url')
         .neq('id', user.id)
         .not('full_name', 'is', null)
         .limit(50);
@@ -285,7 +288,8 @@ export default function ConnectionsScreen() {
             full_name,
             major,
             year,
-            bio
+            bio,
+            profile_image_url
           )
         `)
         .eq('connected_user_id', user.id)
@@ -355,14 +359,16 @@ export default function ConnectionsScreen() {
             full_name,
             major,
             year,
-            bio
+            bio,
+            profile_image_url
           ),
           connected_profiles:user_profiles!connections_connected_user_id_fkey (
             id,
             full_name,
             major,
             year,
-            bio
+            bio,
+            profile_image_url
           )
         `)
         .eq('status', 'accepted')
@@ -511,9 +517,16 @@ export default function ConnectionsScreen() {
           <View style={styles.cardContainer}>
             <View style={styles.card}>
               <View style={styles.profileSection}>
-                <View style={styles.avatarLarge}>
-                  <Ionicons name="person" size={80} color={colors.white} />
-                </View>
+                {currentMatch.profile_image_url ? (
+                  <Image
+                    source={{ uri: currentMatch.profile_image_url }}
+                    style={styles.avatarLarge}
+                  />
+                ) : (
+                  <View style={styles.avatarLarge}>
+                    <Ionicons name="person" size={80} color={colors.white} />
+                  </View>
+                )}
 
                 <Text style={styles.name}>
                   {currentMatch.full_name || 'Anonymous Student'}
@@ -595,9 +608,16 @@ export default function ConnectionsScreen() {
               {pendingRequests.map((request) => (
                 <View key={request.id} style={styles.requestCard}>
                   <View style={styles.requestHeader}>
-                    <View style={styles.requestAvatar}>
-                      <Ionicons name="person" size={32} color={colors.white} />
-                    </View>
+                    {request.user_profiles.profile_image_url ? (
+                      <Image
+                        source={{ uri: request.user_profiles.profile_image_url }}
+                        style={styles.requestAvatar}
+                      />
+                    ) : (
+                      <View style={styles.requestAvatar}>
+                        <Ionicons name="person" size={32} color={colors.white} />
+                      </View>
+                    )}
                     <View style={styles.requestInfo}>
                       <Text style={styles.requestName}>
                         {request.user_profiles.full_name || 'Anonymous Student'}
@@ -653,9 +673,16 @@ export default function ConnectionsScreen() {
                 <View key={connection.id} style={styles.connectionCard}>
                   <View style={styles.requestHeader}>
                     <View style={styles.avatarContainer}>
-                      <View style={styles.requestAvatar}>
-                        <Ionicons name="person" size={32} color={colors.white} />
-                      </View>
+                      {connection.connected_user.profile_image_url ? (
+                        <Image
+                          source={{ uri: connection.connected_user.profile_image_url }}
+                          style={styles.requestAvatar}
+                        />
+                      ) : (
+                        <View style={styles.requestAvatar}>
+                          <Ionicons name="person" size={32} color={colors.white} />
+                        </View>
+                      )}
                       {(connection.unread_count ?? 0) > 0 ? (
                         <View style={styles.unreadBadge}>
                           <Text style={styles.unreadBadgeText}>
