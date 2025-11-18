@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Image } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors, spacing, borderRadius, shadows, typography } from '@/constants/theme';
-import { textStyles, commonStyles } from '@/constants/styles';
+import { spacing, borderRadius, shadows, typography } from '@/constants/theme';
+import { useThemedColors } from '@/hooks/useThemedColors';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, useAlert } from '@/template';
@@ -43,6 +44,9 @@ export default function GroupsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showAllClubs, setShowAllClubs] = useState(false);
   const [showAllStudyGroups, setShowAllStudyGroups] = useState(false);
+
+  const colors = useThemedColors();
+  const { commonStyles, textStyles } = useThemedStyles();
 
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -176,6 +180,164 @@ export default function GroupsScreen() {
     router.push(`/study-group-detail?id=${groupId}&from=groups`);
   };
 
+  // Define styles inside component to use themed colors
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    contentContainer: {
+      padding: spacing.lg,
+      paddingBottom: spacing.xxxl,
+    },
+    section: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.xl,
+      padding: spacing.lg,
+      marginBottom: spacing.lg,
+      ...shadows.small,
+    },
+    sectionTitle: {
+      fontSize: typography.fontSize20,
+      fontWeight: typography.fontWeightBold,
+      color: colors.textPrimary,
+      marginBottom: spacing.md,
+    },
+    sectionContent: {
+      gap: spacing.xs,
+    },
+    listItem: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      paddingVertical: spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.gray200,
+    },
+    listIcon: {
+      marginRight: spacing.md,
+      marginTop: 2,
+    },
+    listItemText: {
+      flex: 1,
+      fontSize: typography.fontSize14,
+      color: colors.textPrimary,
+      lineHeight: typography.lineHeight24,
+    },
+    groupTextContainer: {
+      flex: 1,
+    },
+    groupNameText: {
+      fontSize: typography.fontSize14,
+      fontWeight: typography.fontWeightSemiBold,
+      color: colors.textPrimary,
+      marginBottom: spacing.xs,
+    },
+    nextEventText: {
+      fontSize: typography.fontSize12,
+      color: colors.textSecondary,
+      lineHeight: typography.lineHeight20,
+    },
+    emptyText: {
+      fontSize: typography.fontSize14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      paddingVertical: spacing.lg,
+    },
+    logoContainer: {
+      alignItems: 'center',
+      paddingVertical: spacing.xl,
+      marginTop: spacing.lg,
+    },
+    logo: {
+      width: 200,
+      height: 100,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+    },
+    toggleText: {
+      fontSize: typography.fontSize14,
+      color: colors.primary,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    clubCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.gray200,
+      gap: spacing.md,
+    },
+    clubImageContainer: {
+      width: 60,
+      height: 60,
+      borderRadius: borderRadius.md,
+      overflow: 'hidden',
+      backgroundColor: colors.gray100,
+    },
+    clubImage: {
+      width: '100%',
+      height: '100%',
+    },
+    clubInfo: {
+      flex: 1,
+      gap: spacing.xs,
+    },
+    clubName: {
+      fontSize: typography.fontSize16,
+      fontWeight: typography.fontWeightSemiBold,
+      color: colors.textPrimary,
+    },
+    clubType: {
+      fontSize: typography.fontSize12,
+      color: colors.textSecondary,
+    },
+    clubDescription: {
+      fontSize: typography.fontSize12,
+      color: colors.textSecondary,
+      lineHeight: typography.lineHeight16,
+    },
+    studyGroupCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.gray200,
+      gap: spacing.md,
+    },
+    studyGroupIcon: {
+      width: 50,
+      height: 50,
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.gray100,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    studyGroupInfo: {
+      flex: 1,
+      gap: spacing.xs,
+    },
+    studyGroupName: {
+      fontSize: typography.fontSize16,
+      fontWeight: typography.fontWeightSemiBold,
+      color: colors.textPrimary,
+    },
+    studyGroupType: {
+      fontSize: typography.fontSize12,
+      color: colors.textSecondary,
+    },
+    studyGroupMembers: {
+      fontSize: typography.fontSize12,
+      color: colors.primary,
+      fontWeight: typography.fontWeightMedium,
+    },
+  });
+
   if (loading) {
     return (
       <View style={[commonStyles.container, commonStyles.centerContent]}>
@@ -299,160 +461,3 @@ export default function GroupsScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  contentContainer: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxxl,
-  },
-  section: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.xl,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
-    ...shadows.small,
-  },
-  sectionTitle: {
-    fontSize: typography.fontSize20,
-    fontWeight: typography.fontWeightBold,
-    color: colors.textPrimary,
-    marginBottom: spacing.md,
-  },
-  sectionContent: {
-    gap: spacing.xs,
-  },
-  listItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  listIcon: {
-    marginRight: spacing.md,
-    marginTop: 2,
-  },
-  listItemText: {
-    flex: 1,
-    fontSize: typography.fontSize14,
-    color: colors.textPrimary,
-    lineHeight: typography.lineHeight24,
-  },
-  groupTextContainer: {
-    flex: 1,
-  },
-  groupNameText: {
-    fontSize: typography.fontSize14,
-    fontWeight: typography.fontWeightSemiBold,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-  },
-  nextEventText: {
-    fontSize: typography.fontSize12,
-    color: colors.textSecondary,
-    lineHeight: typography.lineHeight20,
-  },
-  emptyText: {
-    fontSize: typography.fontSize14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    paddingVertical: spacing.lg,
-  },
-  logoContainer: {
-    alignItems: 'center',
-    paddingVertical: spacing.xl,
-    marginTop: spacing.lg,
-  },
-  logo: {
-    width: 200,
-    height: 100,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  toggleText: {
-    fontSize: typography.fontSize14,
-    color: colors.primary,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  clubCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-    gap: spacing.md,
-  },
-  clubImageContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: borderRadius.md,
-    overflow: 'hidden',
-    backgroundColor: colors.gray100,
-  },
-  clubImage: {
-    width: '100%',
-    height: '100%',
-  },
-  clubInfo: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  clubName: {
-    fontSize: typography.fontSize16,
-    fontWeight: typography.fontWeightSemiBold,
-    color: colors.textPrimary,
-  },
-  clubType: {
-    fontSize: typography.fontSize12,
-    color: colors.textSecondary,
-  },
-  clubDescription: {
-    fontSize: typography.fontSize12,
-    color: colors.textSecondary,
-    lineHeight: typography.lineHeight16,
-  },
-  studyGroupCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-    gap: spacing.md,
-  },
-  studyGroupIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.gray100,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  studyGroupInfo: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  studyGroupName: {
-    fontSize: typography.fontSize16,
-    fontWeight: typography.fontWeightSemiBold,
-    color: colors.textPrimary,
-  },
-  studyGroupType: {
-    fontSize: typography.fontSize12,
-    color: colors.textSecondary,
-  },
-  studyGroupMembers: {
-    fontSize: typography.fontSize12,
-    color: colors.primary,
-    fontWeight: typography.fontWeightMedium,
-  },
-});

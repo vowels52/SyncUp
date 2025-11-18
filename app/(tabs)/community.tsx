@@ -12,8 +12,9 @@ import {
   Modal,
   Image
 } from 'react-native';
-import { colors, spacing, borderRadius, shadows, typography } from '@/constants/theme';
-import { textStyles, commonStyles } from '@/constants/styles';
+import { spacing, borderRadius, shadows, typography } from '@/constants/theme';
+import { useThemedColors } from '@/hooks/useThemedColors';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, useAlert } from '@/template';
@@ -26,7 +27,7 @@ interface ForumPost {
   author: {
     id: string;
     name: string;
-    avatar?: string;
+    avatar?: string | null;
   };
   tags: string[];
   created_at: string;
@@ -40,7 +41,7 @@ interface Comment {
   author: {
     id: string;
     name: string;
-    avatar?: string;
+    avatar?: string | null;
   };
   created_at: string;
 }
@@ -70,10 +71,461 @@ export default function CommunityScreen() {
     category: 'courses' as FilterType,
   });
 
+  const colors = useThemedColors();
+  const { commonStyles, textStyles } = useThemedStyles();
+
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { showAlert } = useAlert();
   const supabase = getSupabaseClient();
+
+  // Styles defined inside component to use themed colors
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.md,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.gray200,
+    },
+    headerTitle: {
+      ...textStyles.h2,
+    },
+    searchContainer: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+      backgroundColor: colors.surface,
+    },
+    searchBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.gray100,
+      borderRadius: borderRadius.lg,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      gap: spacing.sm,
+    },
+    searchInput: {
+      flex: 1,
+      ...textStyles.body1,
+      color: colors.text,
+      padding: 0,
+    },
+    clearButton: {
+      padding: spacing.xs,
+    },
+    filterContainer: {
+      backgroundColor: colors.surface,
+      paddingBottom: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.gray200,
+    },
+    filterContent: {
+      paddingHorizontal: spacing.md,
+      gap: spacing.sm,
+    },
+    filterButton: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.gray100,
+      marginRight: spacing.sm,
+    },
+    filterButtonActive: {
+      backgroundColor: colors.primary,
+    },
+    filterButtonText: {
+      ...textStyles.body2,
+      fontWeight: typography.fontWeightSemiBold,
+      color: colors.textPrimary,
+    },
+    filterButtonTextActive: {
+      color: colors.white,
+    },
+    listContent: {
+      padding: spacing.md,
+    },
+    postCard: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      marginBottom: spacing.md,
+      ...shadows.small,
+    },
+    postContent: {
+      gap: spacing.sm,
+    },
+    postTitle: {
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
+      color: colors.text,
+      lineHeight: 22,
+    },
+    postTags: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.xs,
+    },
+    tag: {
+      backgroundColor: colors.gray100,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: borderRadius.xs,
+    },
+    tagText: {
+      ...textStyles.caption,
+      color: colors.textSecondary,
+      fontSize: 11,
+    },
+    postFooter: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: spacing.xs,
+    },
+    authorInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    avatar: {
+      width: 24,
+      height: 24,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.gray200,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    authorName: {
+      ...textStyles.caption,
+      color: colors.textSecondary,
+      fontSize: 12,
+    },
+    postMeta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    metaItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+    },
+    metaText: {
+      ...textStyles.caption,
+      color: colors.gray500,
+      fontSize: 11,
+    },
+    timeText: {
+      ...textStyles.caption,
+      color: colors.gray500,
+      fontSize: 11,
+    },
+    emptyState: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: spacing.xxxl,
+    },
+    emptyStateText: {
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
+      marginTop: spacing.md,
+      color: colors.textSecondary,
+    },
+    emptyStateSubtext: {
+      ...textStyles.caption,
+      color: colors.gray500,
+      textAlign: 'center',
+      marginTop: spacing.xs,
+      paddingHorizontal: spacing.xl,
+    },
+    clearSearchButton: {
+      marginTop: spacing.md,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm,
+      backgroundColor: colors.primary,
+      borderRadius: borderRadius.md,
+    },
+    clearSearchButtonText: {
+      ...textStyles.body2,
+      color: colors.white,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    fab: {
+      position: 'absolute',
+      right: spacing.lg,
+      width: 56,
+      height: 56,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...shadows.large,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'flex-end',
+    },
+    modalContent: {
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: borderRadius.lg,
+      borderTopRightRadius: borderRadius.lg,
+      maxHeight: '85%',
+      ...shadows.large,
+      flexDirection: 'column',
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.gray200,
+    },
+    modalTitle: {
+      ...textStyles.h2,
+    },
+    modalHeaderActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    deleteButton: {
+      padding: spacing.xs,
+    },
+    modalForm: {
+      padding: spacing.lg,
+    },
+    inputLabel: {
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
+      marginBottom: spacing.sm,
+      marginTop: spacing.md,
+    },
+    input: {
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.gray300,
+      borderRadius: borderRadius.sm,
+      padding: spacing.md,
+      ...textStyles.body1,
+    },
+    textArea: {
+      height: 120,
+      textAlignVertical: 'top',
+    },
+    categoryButtons: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    categoryButton: {
+      flex: 1,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderRadius: borderRadius.sm,
+      backgroundColor: colors.gray100,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.gray200,
+    },
+    categoryButtonActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    categoryButtonText: {
+      ...textStyles.body2,
+      fontWeight: typography.fontWeightSemiBold,
+      color: colors.text,
+    },
+    categoryButtonTextActive: {
+      color: colors.white,
+    },
+    createButton: {
+      backgroundColor: colors.primary,
+      padding: spacing.md,
+      borderRadius: borderRadius.sm,
+      alignItems: 'center',
+      marginTop: spacing.xl,
+      marginBottom: spacing.lg,
+    },
+    createButtonText: {
+      ...textStyles.body1,
+      color: colors.white,
+      fontWeight: typography.fontWeightBold,
+    },
+    detailContent: {
+      flex: 1,
+    },
+    detailContentContainer: {
+      flexGrow: 1,
+    },
+    detailPostHeader: {
+      padding: spacing.lg,
+      backgroundColor: colors.background,
+    },
+    detailAuthorInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    detailAuthorName: {
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    detailTimeText: {
+      ...textStyles.caption,
+      color: colors.gray500,
+      marginTop: 2,
+    },
+    detailPostBody: {
+      padding: spacing.lg,
+      backgroundColor: colors.surface,
+    },
+    detailPostTitle: {
+      ...textStyles.h3,
+      marginBottom: spacing.md,
+    },
+    detailPostContent: {
+      ...textStyles.body1,
+      color: colors.textSecondary,
+      lineHeight: 22,
+      marginTop: spacing.md,
+    },
+    detailPostActions: {
+      flexDirection: 'row',
+      gap: spacing.lg,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+    },
+    likeButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.background,
+    },
+    likeButtonText: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    likeButtonTextActive: {
+      color: colors.error,
+    },
+    statItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    statText: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+    },
+    divider: {
+      height: 8,
+      backgroundColor: colors.background,
+    },
+    commentsSection: {
+      padding: spacing.lg,
+      backgroundColor: colors.surface,
+    },
+    commentsSectionTitle: {
+      ...textStyles.h4,
+      marginBottom: spacing.md,
+    },
+    commentsLoader: {
+      marginVertical: spacing.lg,
+    },
+    emptyComments: {
+      alignItems: 'center',
+      paddingVertical: spacing.xl,
+    },
+    emptyCommentsText: {
+      ...textStyles.body1,
+      color: colors.textSecondary,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    emptyCommentsSubtext: {
+      ...textStyles.caption,
+      color: colors.gray500,
+      marginTop: spacing.xs,
+    },
+    commentCard: {
+      marginBottom: spacing.md,
+      padding: spacing.md,
+      backgroundColor: colors.background,
+      borderRadius: borderRadius.sm,
+    },
+    commentHeader: {
+      marginBottom: spacing.sm,
+    },
+    commentAuthorInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    commentAvatar: {
+      width: 20,
+      height: 20,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.gray200,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    commentAuthorName: {
+      ...textStyles.body2,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    commentTime: {
+      ...textStyles.caption,
+      color: colors.gray500,
+    },
+    commentContent: {
+      ...textStyles.body2,
+      color: colors.text,
+      lineHeight: 20,
+    },
+    commentInputContainer: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      padding: spacing.md,
+      backgroundColor: colors.surface,
+      borderTopWidth: 1,
+      borderTopColor: colors.gray200,
+      gap: spacing.sm,
+    },
+    commentInput: {
+      flex: 1,
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.gray300,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      ...textStyles.body2,
+      maxHeight: 100,
+    },
+    commentSubmitButton: {
+      width: 44,
+      height: 44,
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    commentSubmitButtonDisabled: {
+      backgroundColor: colors.gray300,
+    },
+  });
 
   const fetchPosts = async () => {
     try {
@@ -1008,450 +1460,3 @@ export default function CommunityScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  headerTitle: {
-    ...textStyles.h2,
-  },
-  searchContainer: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.gray100,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    ...textStyles.body1,
-    color: colors.text,
-    padding: 0,
-  },
-  clearButton: {
-    padding: spacing.xs,
-  },
-  filterContainer: {
-    backgroundColor: colors.surface,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  filterContent: {
-    paddingHorizontal: spacing.md,
-    gap: spacing.sm,
-  },
-  filterButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.gray100,
-    marginRight: spacing.sm,
-  },
-  filterButtonActive: {
-    backgroundColor: colors.primary,
-  },
-  filterButtonText: {
-    ...textStyles.body2,
-    fontWeight: typography.fontWeightSemiBold,
-    color: colors.textPrimary,
-  },
-  filterButtonTextActive: {
-    color: colors.white,
-  },
-  listContent: {
-    padding: spacing.md,
-  },
-  postCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    ...shadows.small,
-  },
-  postContent: {
-    gap: spacing.sm,
-  },
-  postTitle: {
-    ...textStyles.body1,
-    fontWeight: typography.fontWeightSemiBold,
-    color: colors.text,
-    lineHeight: 22,
-  },
-  postTags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-  },
-  tag: {
-    backgroundColor: colors.gray100,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.xs,
-  },
-  tagText: {
-    ...textStyles.caption,
-    color: colors.textSecondary,
-    fontSize: 11,
-  },
-  postFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: spacing.xs,
-  },
-  authorInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  avatar: {
-    width: 24,
-    height: 24,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.gray200,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  authorName: {
-    ...textStyles.caption,
-    color: colors.textSecondary,
-    fontSize: 12,
-  },
-  postMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  metaText: {
-    ...textStyles.caption,
-    color: colors.gray500,
-    fontSize: 11,
-  },
-  timeText: {
-    ...textStyles.caption,
-    color: colors.gray500,
-    fontSize: 11,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.xxxl,
-  },
-  emptyStateText: {
-    ...textStyles.body1,
-    fontWeight: typography.fontWeightSemiBold,
-    marginTop: spacing.md,
-    color: colors.textSecondary,
-  },
-  emptyStateSubtext: {
-    ...textStyles.caption,
-    color: colors.gray500,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-    paddingHorizontal: spacing.xl,
-  },
-  clearSearchButton: {
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.md,
-  },
-  clearSearchButtonText: {
-    ...textStyles.body2,
-    color: colors.white,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  fab: {
-    position: 'absolute',
-    right: spacing.lg,
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...shadows.large,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: borderRadius.lg,
-    borderTopRightRadius: borderRadius.lg,
-    maxHeight: '85%',
-    ...shadows.large,
-    flexDirection: 'column',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  modalTitle: {
-    ...textStyles.h2,
-  },
-  modalHeaderActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  deleteButton: {
-    padding: spacing.xs,
-  },
-  modalForm: {
-    padding: spacing.lg,
-  },
-  inputLabel: {
-    ...textStyles.body1,
-    fontWeight: typography.fontWeightSemiBold,
-    marginBottom: spacing.sm,
-    marginTop: spacing.md,
-  },
-  input: {
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: borderRadius.sm,
-    padding: spacing.md,
-    ...textStyles.body1,
-  },
-  textArea: {
-    height: 120,
-    textAlignVertical: 'top',
-  },
-  categoryButtons: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  categoryButton: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.gray100,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.gray200,
-  },
-  categoryButtonActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  categoryButtonText: {
-    ...textStyles.body2,
-    fontWeight: typography.fontWeightSemiBold,
-    color: colors.text,
-  },
-  categoryButtonTextActive: {
-    color: colors.white,
-  },
-  createButton: {
-    backgroundColor: colors.primary,
-    padding: spacing.md,
-    borderRadius: borderRadius.sm,
-    alignItems: 'center',
-    marginTop: spacing.xl,
-    marginBottom: spacing.lg,
-  },
-  createButtonText: {
-    ...textStyles.body1,
-    color: colors.white,
-    fontWeight: typography.fontWeightBold,
-  },
-  detailContent: {
-    flex: 1,
-  },
-  detailContentContainer: {
-    flexGrow: 1,
-  },
-  detailPostHeader: {
-    padding: spacing.lg,
-    backgroundColor: colors.background,
-  },
-  detailAuthorInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  detailAuthorName: {
-    ...textStyles.body1,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  detailTimeText: {
-    ...textStyles.caption,
-    color: colors.gray500,
-    marginTop: 2,
-  },
-  detailPostBody: {
-    padding: spacing.lg,
-    backgroundColor: colors.surface,
-  },
-  detailPostTitle: {
-    ...textStyles.h3,
-    marginBottom: spacing.md,
-  },
-  detailPostContent: {
-    ...textStyles.body1,
-    color: colors.textSecondary,
-    lineHeight: 22,
-    marginTop: spacing.md,
-  },
-  detailPostActions: {
-    flexDirection: 'row',
-    gap: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-  },
-  likeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.background,
-  },
-  likeButtonText: {
-    ...textStyles.body2,
-    color: colors.textSecondary,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  likeButtonTextActive: {
-    color: colors.error,
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  statText: {
-    ...textStyles.body2,
-    color: colors.textSecondary,
-  },
-  divider: {
-    height: 8,
-    backgroundColor: colors.background,
-  },
-  commentsSection: {
-    padding: spacing.lg,
-    backgroundColor: colors.surface,
-  },
-  commentsSectionTitle: {
-    ...textStyles.h4,
-    marginBottom: spacing.md,
-  },
-  commentsLoader: {
-    marginVertical: spacing.lg,
-  },
-  emptyComments: {
-    alignItems: 'center',
-    paddingVertical: spacing.xl,
-  },
-  emptyCommentsText: {
-    ...textStyles.body1,
-    color: colors.textSecondary,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  emptyCommentsSubtext: {
-    ...textStyles.caption,
-    color: colors.gray500,
-    marginTop: spacing.xs,
-  },
-  commentCard: {
-    marginBottom: spacing.md,
-    padding: spacing.md,
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.sm,
-  },
-  commentHeader: {
-    marginBottom: spacing.sm,
-  },
-  commentAuthorInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  commentAvatar: {
-    width: 20,
-    height: 20,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.gray200,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  commentAuthorName: {
-    ...textStyles.body2,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  commentTime: {
-    ...textStyles.caption,
-    color: colors.gray500,
-  },
-  commentContent: {
-    ...textStyles.body2,
-    color: colors.text,
-    lineHeight: 20,
-  },
-  commentInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray200,
-    gap: spacing.sm,
-  },
-  commentInput: {
-    flex: 1,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    ...textStyles.body2,
-    maxHeight: 100,
-  },
-  commentSubmitButton: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  commentSubmitButtonDisabled: {
-    backgroundColor: colors.gray300,
-  },
-});

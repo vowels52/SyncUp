@@ -13,10 +13,11 @@ import {
 import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, borderRadius, shadows, typography } from '@/constants/theme';
-import { textStyles, commonStyles } from '@/constants/styles';
+import { spacing, borderRadius, shadows, typography } from '@/constants/theme';
 import { useAuth, useAlert } from '@/template';
 import { getSupabaseClient } from '@/template';
+import { useThemedColors } from '@/hooks/useThemedColors';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 
 interface Message {
   id: string;
@@ -33,6 +34,8 @@ interface OtherUser {
 }
 
 export default function DMConversationScreen() {
+  const colors = useThemedColors();
+  const { commonStyles, textStyles } = useThemedStyles();
   const { conversationId, otherUserId } = useLocalSearchParams<{
     conversationId: string;
     otherUserId: string;
@@ -222,6 +225,141 @@ export default function DMConversationScreen() {
     );
   };
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+      backgroundColor: colors.surface,
+      ...shadows.small,
+    },
+    backButton: {
+      marginRight: spacing.md,
+    },
+    headerContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    headerAvatar: {
+      width: 40,
+      height: 40,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: spacing.sm,
+    },
+    headerInfo: {
+      flex: 1,
+    },
+    headerName: {
+      ...textStyles.body1,
+      color: colors.textPrimary,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    messagesList: {
+      padding: spacing.md,
+      flexGrow: 1,
+    },
+    messageContainer: {
+      marginBottom: spacing.sm,
+      maxWidth: '75%',
+    },
+    myMessageContainer: {
+      alignSelf: 'flex-end',
+    },
+    theirMessageContainer: {
+      alignSelf: 'flex-start',
+    },
+    messageBubble: {
+      padding: spacing.sm,
+      borderRadius: borderRadius.md,
+    },
+    myMessageBubble: {
+      backgroundColor: colors.primary,
+      borderBottomRightRadius: 4,
+    },
+    theirMessageBubble: {
+      backgroundColor: colors.gray200,
+      borderBottomLeftRadius: 4,
+    },
+    messageText: {
+      ...textStyles.body2,
+      marginBottom: spacing.xs,
+    },
+    myMessageText: {
+      color: colors.white,
+    },
+    theirMessageText: {
+      color: colors.textPrimary,
+    },
+    messageTime: {
+      ...textStyles.caption,
+      fontSize: 11,
+    },
+    myMessageTime: {
+      color: colors.white,
+      opacity: 0.8,
+    },
+    theirMessageTime: {
+      color: colors.textSecondary,
+    },
+    inputContainer: {
+      flexDirection: 'row',
+      padding: spacing.md,
+      backgroundColor: colors.surface,
+      borderTopWidth: 1,
+      borderTopColor: colors.gray200,
+      alignItems: 'flex-end',
+    },
+    input: {
+      flex: 1,
+      backgroundColor: colors.gray100,
+      borderRadius: borderRadius.lg,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      marginRight: spacing.sm,
+      maxHeight: 100,
+      ...textStyles.body2,
+      color: colors.textPrimary,
+    },
+    sendButton: {
+      width: 44,
+      height: 44,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    sendButtonDisabled: {
+      backgroundColor: colors.gray400,
+      opacity: 0.5,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingTop: spacing.xxl,
+    },
+    emptyText: {
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
+      marginTop: spacing.md,
+      color: colors.textSecondary,
+    },
+    emptySubtext: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+      marginTop: spacing.xs,
+    },
+  });
+
   if (loading) {
     return (
       <View style={[commonStyles.container, commonStyles.centerContent]}>
@@ -299,137 +437,3 @@ export default function DMConversationScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-    ...shadows.small,
-  },
-  backButton: {
-    marginRight: spacing.md,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  headerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.sm,
-  },
-  headerInfo: {
-    flex: 1,
-  },
-  headerName: {
-    ...textStyles.body1,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  messagesList: {
-    padding: spacing.md,
-    flexGrow: 1,
-  },
-  messageContainer: {
-    marginBottom: spacing.sm,
-    maxWidth: '75%',
-  },
-  myMessageContainer: {
-    alignSelf: 'flex-end',
-  },
-  theirMessageContainer: {
-    alignSelf: 'flex-start',
-  },
-  messageBubble: {
-    padding: spacing.sm,
-    borderRadius: borderRadius.md,
-  },
-  myMessageBubble: {
-    backgroundColor: colors.primary,
-    borderBottomRightRadius: 4,
-  },
-  theirMessageBubble: {
-    backgroundColor: colors.gray200,
-    borderBottomLeftRadius: 4,
-  },
-  messageText: {
-    ...textStyles.body2,
-    marginBottom: spacing.xs,
-  },
-  myMessageText: {
-    color: colors.white,
-  },
-  theirMessageText: {
-    color: colors.text,
-  },
-  messageTime: {
-    ...textStyles.caption,
-    fontSize: 11,
-  },
-  myMessageTime: {
-    color: colors.white,
-    opacity: 0.8,
-  },
-  theirMessageTime: {
-    color: colors.gray500,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray200,
-    alignItems: 'flex-end',
-  },
-  input: {
-    flex: 1,
-    backgroundColor: colors.gray100,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginRight: spacing.sm,
-    maxHeight: 100,
-    ...textStyles.body2,
-    color: colors.text,
-  },
-  sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sendButtonDisabled: {
-    backgroundColor: colors.gray400,
-    opacity: 0.5,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: spacing.xxl,
-  },
-  emptyText: {
-    ...textStyles.body1,
-    fontWeight: typography.fontWeightSemiBold,
-    marginTop: spacing.md,
-    color: colors.gray500,
-  },
-  emptySubtext: {
-    ...textStyles.body2,
-    color: colors.gray400,
-    marginTop: spacing.xs,
-  },
-});

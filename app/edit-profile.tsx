@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors, typography, spacing, borderRadius, shadows } from '@/constants/theme';
-import { textStyles } from '@/constants/styles';
+import { typography, spacing, borderRadius, shadows } from '@/constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, useAlert } from '@/template';
 import { getSupabaseClient } from '@/template';
 import { pickImage } from '@/template/core/imageUpload';
 import { updateProfileImage, removeProfileImage } from '@/template/core/profileImageService';
+import { useThemedColors } from '@/hooks/useThemedColors';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 
 interface UserProfile {
   id: string;
@@ -22,6 +23,8 @@ interface UserProfile {
 }
 
 export default function EditProfileScreen() {
+  const colors = useThemedColors();
+  const { commonStyles, textStyles } = useThemedStyles();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [fullName, setFullName] = useState('');
   const [major, setMajor] = useState('');
@@ -160,6 +163,185 @@ export default function EditProfileScreen() {
     }
   };
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    centerContent: {
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: spacing.md,
+      backgroundColor: colors.surface,
+      ...shadows.small,
+    },
+    backButton: {
+      padding: spacing.xs,
+    },
+    headerTitle: {
+      ...textStyles.h3,
+      color: colors.textPrimary,
+    },
+    content: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: spacing.lg,
+    },
+    title: {
+      ...textStyles.h2,
+      color: colors.textPrimary,
+      marginBottom: spacing.sm,
+    },
+    description: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+      marginBottom: spacing.lg,
+    },
+    form: {
+      gap: spacing.md,
+    },
+    inputGroup: {
+      marginBottom: spacing.md,
+    },
+    label: {
+      ...textStyles.body2,
+      color: colors.textPrimary,
+      fontWeight: typography.fontWeightSemiBold,
+      marginBottom: spacing.xs,
+    },
+    input: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      fontSize: typography.fontSize16,
+      color: colors.textPrimary,
+      borderWidth: 1,
+      borderColor: colors.gray200,
+    },
+    textArea: {
+      minHeight: 100,
+      paddingTop: spacing.md,
+    },
+    yearContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+    },
+    yearButton: {
+      flex: 1,
+      minWidth: '45%',
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.sm,
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.gray200,
+      alignItems: 'center',
+    },
+    yearButtonActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    yearButtonText: {
+      ...textStyles.body2,
+      color: colors.textPrimary,
+    },
+    yearButtonTextActive: {
+      color: colors.white,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    footer: {
+      padding: spacing.md,
+      backgroundColor: colors.surface,
+      ...shadows.medium,
+    },
+    primaryButton: {
+      backgroundColor: colors.primary,
+      borderRadius: borderRadius.md,
+      height: 50,
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...shadows.small,
+    },
+    primaryButtonText: {
+      ...textStyles.button,
+      color: colors.white,
+    },
+    cancelButton: {
+      marginTop: spacing.sm,
+      alignItems: 'center',
+      paddingVertical: spacing.sm,
+    },
+    cancelButtonText: {
+      ...textStyles.body2,
+      color: colors.primary,
+    },
+    profileImageSection: {
+      alignItems: 'center',
+      marginBottom: spacing.xl,
+    },
+    profileImageContainer: {
+      position: 'relative',
+      width: 120,
+      height: 120,
+      marginBottom: spacing.sm,
+    },
+    profileImageTouchable: {
+      width: 120,
+      height: 120,
+      borderRadius: borderRadius.full,
+    },
+    profileImage: {
+      width: 120,
+      height: 120,
+      borderRadius: borderRadius.full,
+    },
+    profileImagePlaceholder: {
+      width: 120,
+      height: 120,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    profileImageOverlay: {
+      position: 'absolute',
+      bottom: 0,
+      right: 0,
+      width: 40,
+      height: 40,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.accent,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 3,
+      borderColor: colors.background,
+    },
+    profileImageLabel: {
+      ...textStyles.caption,
+      color: colors.textSecondary,
+    },
+    removeProfileImageButton: {
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      width: 36,
+      height: 36,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.error,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 3,
+      borderColor: colors.background,
+    },
+  });
+
   if (loading) {
     return (
       <View style={[styles.container, styles.centerContent]}>
@@ -292,179 +474,3 @@ export default function EditProfileScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  centerContent: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-    ...shadows.small,
-  },
-  backButton: {
-    padding: spacing.xs,
-  },
-  headerTitle: {
-    ...textStyles.h3,
-  },
-  content: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: spacing.lg,
-  },
-  title: {
-    ...textStyles.h2,
-    marginBottom: spacing.sm,
-  },
-  description: {
-    ...textStyles.body2,
-    color: colors.textSecondary,
-    marginBottom: spacing.lg,
-  },
-  form: {
-    gap: spacing.md,
-  },
-  inputGroup: {
-    marginBottom: spacing.md,
-  },
-  label: {
-    ...textStyles.body2,
-    fontWeight: typography.fontWeightSemiBold,
-    marginBottom: spacing.xs,
-  },
-  input: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    fontSize: typography.fontSize16,
-    color: colors.textPrimary,
-    borderWidth: 1,
-    borderColor: colors.gray200,
-  },
-  textArea: {
-    minHeight: 100,
-    paddingTop: spacing.md,
-  },
-  yearContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  yearButton: {
-    flex: 1,
-    minWidth: '45%',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.gray200,
-    alignItems: 'center',
-  },
-  yearButtonActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  yearButtonText: {
-    ...textStyles.body2,
-    color: colors.textPrimary,
-  },
-  yearButtonTextActive: {
-    color: colors.white,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  footer: {
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-    ...shadows.medium,
-  },
-  primaryButton: {
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.md,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...shadows.small,
-  },
-  primaryButtonText: {
-    ...textStyles.button,
-    color: colors.white,
-  },
-  cancelButton: {
-    marginTop: spacing.sm,
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  cancelButtonText: {
-    ...textStyles.body2,
-    color: colors.primary,
-  },
-  profileImageSection: {
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-  },
-  profileImageContainer: {
-    position: 'relative',
-    width: 120,
-    height: 120,
-    marginBottom: spacing.sm,
-  },
-  profileImageTouchable: {
-    width: 120,
-    height: 120,
-    borderRadius: borderRadius.full,
-  },
-  profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: borderRadius.full,
-  },
-  profileImagePlaceholder: {
-    width: 120,
-    height: 120,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileImageOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.accent,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: colors.background,
-  },
-  profileImageLabel: {
-    ...textStyles.caption,
-    color: colors.textSecondary,
-  },
-  removeProfileImageButton: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 36,
-    height: 36,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.error,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: colors.background,
-  },
-});
