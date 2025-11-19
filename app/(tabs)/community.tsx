@@ -262,6 +262,7 @@ export default function CommunityScreen() {
     },
     fab: {
       position: 'absolute',
+      bottom: spacing.xl,
       right: spacing.lg,
       width: 56,
       height: 56,
@@ -471,12 +472,21 @@ export default function CommunityScreen() {
       borderRadius: borderRadius.sm,
     },
     commentHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
       marginBottom: spacing.sm,
     },
     commentAuthorInfo: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.sm,
+      flex: 1,
+    },
+    commentDeleteButton: {
+      padding: spacing.xs,
+      borderRadius: borderRadius.sm,
+      backgroundColor: colors.gray100,
     },
     commentAvatar: {
       width: 20,
@@ -870,6 +880,46 @@ export default function CommunityScreen() {
     }
   };
 
+  const handleDeleteComment = async (commentId: string, commentAuthorId: string) => {
+    if (!user) return;
+
+    if (commentAuthorId !== user.id) {
+      showAlert('Error', 'You can only delete your own comments');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('forum_comments')
+        .delete()
+        .eq('id', commentId)
+        .eq('author_id', user.id);
+
+      if (error) throw error;
+
+      showAlert('Success', 'Comment deleted successfully');
+      // Real-time subscription will handle UI update automatically
+    } catch (error: any) {
+      console.error('Error deleting comment:', error);
+      showAlert('Error', error.message || 'Failed to delete comment');
+    }
+  };
+
+  const confirmDeleteComment = (commentId: string, commentAuthorId: string) => {
+    showAlert(
+      'Delete Comment',
+      'Are you sure you want to delete this comment?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => handleDeleteComment(commentId, commentAuthorId)
+        }
+      ]
+    );
+  };
+
   const confirmDeletePost = () => {
     if (!selectedPost) return;
 
@@ -945,22 +995,28 @@ export default function CommunityScreen() {
         'postgres_changes',
         { event: 'DELETE', schema: 'public', table: 'forum_comments' },
         (payload) => {
-          // Update comment count for the affected post
-          const postId = (payload.old as any).post_id;
-          if (!postId) return;
+          const deletedCommentId = (payload.old as any).id;
 
-          setPosts(prev => prev.map(post =>
-            post.id === postId
-              ? { ...post, comments: Math.max(0, post.comments - 1) }
-              : post
-          ));
-
-          // If viewing this post's comments, refetch them
-          setSelectedPost(current => {
-            if (current?.id === postId) {
-              fetchComments(postId);
+          // Remove the deleted comment from the comments list
+          setComments(prev => {
+            const filtered = prev.filter(comment => comment.id !== deletedCommentId);
+            // Only proceed if a comment was actually removed (it was in our list)
+            if (filtered.length < prev.length) {
+              // Update the selected post's comment count
+              setSelectedPost(current => {
+                if (current) {
+                  // Also update the post in the posts list
+                  setPosts(prevPosts => prevPosts.map(post =>
+                    post.id === current.id
+                      ? { ...post, comments: Math.max(0, post.comments - 1) }
+                      : post
+                  ));
+                  return { ...current, comments: Math.max(0, current.comments - 1) };
+                }
+                return current;
+              });
             }
-            return current;
+            return filtered;
           });
         }
       )
@@ -1360,7 +1416,7 @@ export default function CommunityScreen() {
 
       {/* Floating Action Button */}
       <TouchableOpacity
-        style={[styles.fab, { bottom: insets.bottom + 80 }]}
+        style={styles.fab}
         onPress={() => setShowCreateModal(true)}
       >
         <Ionicons name="add" size={28} color={colors.white} />
@@ -1595,7 +1651,15 @@ export default function CommunityScreen() {
                             <Text style={styles.commentTime}>
                               {formatTimeAgo(comment.created_at)}
                             </Text>
-                          </TouchableOpacity>
+                          </View>
+                          {user && comment.author.id === user.id && (
+                            <TouchableOpacity
+                              onPress={() => confirmDeleteComment(comment.id, comment.author.id)}
+                              style={styles.commentDeleteButton}
+                            >
+                              <Ionicons name="trash-outline" size={18} color={colors.error} />
+                            </TouchableOpacity>
+                          )}
                         </View>
                         <Text style={styles.commentContent}>{comment.content}</Text>
                       </View>
