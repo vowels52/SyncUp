@@ -1420,6 +1420,11 @@ CREATE INDEX IF NOT EXISTS idx_events_event_type ON events(event_type);
 -- Add index on external_id for lookups
 CREATE INDEX IF NOT EXISTS idx_events_external_id ON events(external_id);
 
+-- Fix any existing events with NULL is_official_event (set them to false for user-created events)
+UPDATE events
+SET is_official_event = false
+WHERE is_official_event IS NULL;
+
 -- Update RLS policies to allow viewing official events
 -- Official events should be viewable by all authenticated users
 DROP POLICY IF EXISTS "authenticated_select_events" ON events;

@@ -138,6 +138,25 @@ export default function EventDetailScreen() {
     }
   };
 
+  const handleDeleteEvent = async () => {
+    if (!user || !event) return;
+
+    try {
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', event.id)
+        .eq('creator_id', user.id);
+
+      if (error) throw error;
+
+      showAlert('Success', 'Event deleted successfully');
+      handleBack();
+    } catch (error: any) {
+      showAlert('Error', error.message || 'Failed to delete event');
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -320,6 +339,21 @@ export default function EventDetailScreen() {
       color: colors.success,
       fontWeight: typography.fontWeightSemiBold,
     },
+    deleteButton: {
+      backgroundColor: colors.error,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: spacing.md,
+      borderRadius: borderRadius.lg,
+      marginTop: spacing.lg,
+      gap: spacing.sm,
+    },
+    deleteButtonText: {
+      fontSize: typography.fontSize16,
+      fontWeight: typography.fontWeightBold,
+      color: colors.white,
+    },
     errorText: {
       fontSize: typography.fontSize16,
       color: colors.textSecondary,
@@ -465,6 +499,14 @@ export default function EventDetailScreen() {
               <Ionicons name="checkmark-circle" size={16} color={colors.success} />
               <Text style={styles.attendingStatusText}>You are attending this event</Text>
             </View>
+          )}
+
+          {/* Delete Button - Only show if user is the creator and it's not an official event */}
+          {user && event.creator_id === user.id && !event.is_official_event && (
+            <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteEvent}>
+              <Ionicons name="trash-outline" size={20} color={colors.error} />
+              <Text style={styles.deleteButtonText}>Delete Event</Text>
+            </TouchableOpacity>
           )}
         </View>
       </ScrollView>

@@ -56,7 +56,77 @@ export default function GroupsScreen() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+
+    // Real-time subscription for groups changes
+    const groupsChannel = supabase
+      .channel('groups-changes')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'groups',
+      }, (payload) => {
+        const newGroup = payload.new as any;
+        if (newGroup.is_official_club) {
+          loadUWBClubs();
+        } else {
+          loadStudyGroups();
+        }
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'groups',
+      }, (payload) => {
+        const updatedGroup = payload.new as any;
+        if (updatedGroup.is_official_club) {
+          loadUWBClubs();
+        } else {
+          loadStudyGroups();
+        }
+      })
+      .on('postgres_changes', {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'groups',
+      }, (payload) => {
+        // Refetch both lists since we don't know which type it was
+        loadUWBClubs();
+        loadStudyGroups();
+      })
+      .subscribe();
+
+    // Real-time subscription for group members changes
+    const membersChannel = supabase
+      .channel('group-members-changes')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'group_members',
+      }, (payload) => {
+        // Update member counts for study groups
+        loadStudyGroups();
+        // Update user's groups list in case they joined a new group
+        if (user && (payload.new as any).user_id === user.id) {
+          fetchUserGroups();
+        }
+      })
+      .on('postgres_changes', {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'group_members',
+      }, (payload) => {
+        // Update member counts for study groups
+        loadStudyGroups();
+        // Update user's groups list in case they left a group
+        fetchUserGroups();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(groupsChannel);
+      supabase.removeChannel(membersChannel);
+    };
+  }, [user]);
 
   const fetchData = async () => {
     await Promise.all([fetchUserGroups(), loadUWBClubs(), loadStudyGroups()]);
