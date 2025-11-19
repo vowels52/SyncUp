@@ -1420,7 +1420,14 @@ export default function HomeScreen() {
               ) : (
                 searchResults.map((result) => (
                   <View key={result.id} style={styles.searchResultCard}>
-                    <View style={styles.searchResultHeader}>
+                    <TouchableOpacity
+                      style={styles.searchResultHeader}
+                      onPress={() => {
+                        closeSearchModal();
+                        router.push({ pathname: '/user-details', params: { userId: result.id } });
+                      }}
+                      activeOpacity={0.7}
+                    >
                       {result.profile_image_url ? (
                         <Image
                           source={{ uri: result.profile_image_url }}
@@ -1442,7 +1449,7 @@ export default function HomeScreen() {
                         )}
                         <Text style={styles.searchResultEmail}>{result.email}</Text>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                     {result.connectionStatus === 'accepted' ? (
                       <View style={[styles.connectButton, styles.connectedButton]}>
                         <Ionicons name="checkmark-circle" size={16} color={colors.success} />

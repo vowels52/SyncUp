@@ -883,23 +883,32 @@ export default function ProfileScreen() {
                   <View style={styles.modalItem}>
                     {modalType === 'connections' && (
                       <>
-                        {item.profile_image_url ? (
-                          <Image
-                            source={{ uri: item.profile_image_url }}
-                            style={styles.connectionAvatar}
-                          />
-                        ) : (
-                          <View style={styles.connectionAvatar}>
-                            <Ionicons name="person" size={28} color={themedColors.white} />
+                        <TouchableOpacity
+                          style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
+                          onPress={() => {
+                            setModalVisible(false);
+                            router.push({ pathname: '/user-details', params: { userId: item.userId } });
+                          }}
+                          activeOpacity={0.7}
+                        >
+                          {item.profile_image_url ? (
+                            <Image
+                              source={{ uri: item.profile_image_url }}
+                              style={styles.connectionAvatar}
+                            />
+                          ) : (
+                            <View style={styles.connectionAvatar}>
+                              <Ionicons name="person" size={28} color={themedColors.white} />
+                            </View>
+                          )}
+                          <View style={styles.modalItemContent}>
+                            <Text style={styles.modalItemTitle}>{item.name}</Text>
+                            <Text style={styles.modalItemSubtitle}>
+                              {item.major}{item.year ? ` • ${item.year}` : ''}
+                            </Text>
+                            <Text style={styles.modalItemEmail}>{item.email}</Text>
                           </View>
-                        )}
-                        <View style={styles.modalItemContent}>
-                          <Text style={styles.modalItemTitle}>{item.name}</Text>
-                          <Text style={styles.modalItemSubtitle}>
-                            {item.major}{item.year ? ` • ${item.year}` : ''}
-                          </Text>
-                          <Text style={styles.modalItemEmail}>{item.email}</Text>
-                        </View>
+                        </TouchableOpacity>
                         <TouchableOpacity
                           onPress={() => handleDisconnect(item.id)}
                           style={styles.deleteButton}

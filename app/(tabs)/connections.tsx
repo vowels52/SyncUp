@@ -871,7 +871,11 @@ export default function ConnectionsScreen() {
         <View style={styles.content}>
           <View style={styles.cardContainer}>
             <View style={styles.card}>
-              <View style={styles.profileSection}>
+              <TouchableOpacity
+                style={styles.profileSection}
+                onPress={() => router.push({ pathname: '/user-details', params: { userId: currentMatch.id } })}
+                activeOpacity={0.7}
+              >
                 {currentMatch.profile_image_url ? (
                   <Image
                     source={{ uri: currentMatch.profile_image_url }}
@@ -896,7 +900,7 @@ export default function ConnectionsScreen() {
                 {currentMatch.bio && (
                   <Text style={styles.bio}>{currentMatch.bio}</Text>
                 )}
-              </View>
+              </TouchableOpacity>
 
               <View style={styles.statsContainer}>
                 <View style={styles.statItem}>
@@ -962,7 +966,11 @@ export default function ConnectionsScreen() {
             <View style={styles.requestsList}>
               {pendingRequests.map((request) => (
                 <View key={request.id} style={styles.requestCard}>
-                  <View style={styles.requestHeader}>
+                  <TouchableOpacity
+                    style={styles.requestHeader}
+                    onPress={() => router.push({ pathname: '/user-details', params: { userId: request.user_profiles.id } })}
+                    activeOpacity={0.7}
+                  >
                     {request.user_profiles.profile_image_url ? (
                       <Image
                         source={{ uri: request.user_profiles.profile_image_url }}
@@ -988,7 +996,7 @@ export default function ConnectionsScreen() {
                         </Text>
                       )}
                     </View>
-                  </View>
+                  </TouchableOpacity>
 
                   <View style={styles.requestActions}>
                     <TouchableOpacity
@@ -1026,7 +1034,11 @@ export default function ConnectionsScreen() {
             <View style={styles.requestsList}>
               {acceptedConnections.map((connection) => (
                 <View key={connection.id} style={styles.connectionCard}>
-                  <View style={styles.requestHeader}>
+                  <TouchableOpacity
+                    style={styles.requestHeader}
+                    onPress={() => router.push({ pathname: '/user-details', params: { userId: connection.connected_user.id } })}
+                    activeOpacity={0.7}
+                  >
                     <View style={styles.avatarContainer}>
                       {connection.connected_user.profile_image_url ? (
                         <Image
@@ -1066,7 +1078,7 @@ export default function ConnectionsScreen() {
                         </Text>
                       ) : null}
                     </View>
-                  </View>
+                  </TouchableOpacity>
 
                   <TouchableOpacity
                     style={styles.messageButton}

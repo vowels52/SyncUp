@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, useAlert } from '@/template';
 import { getSupabaseClient } from '@/template';
+import { useRouter } from 'expo-router';
 
 interface ForumPost {
   id: string;
@@ -80,6 +81,7 @@ export default function CommunityScreen() {
   const { user } = useAuth();
   const { showAlert } = useAlert();
   const supabase = getSupabaseClient();
+  const router = useRouter();
 
   // Styles defined inside component to use themed colors
   const styles = StyleSheet.create({
@@ -658,6 +660,12 @@ export default function CommunityScreen() {
   };
 
   const fetchComments = async (postId: string) => {
+    if (!postId) {
+      console.error('fetchComments called with undefined postId');
+      setLoadingComments(false);
+      return;
+    }
+
     setLoadingComments(true);
     try {
       const { data: commentsData, error: commentsError } = await supabase
@@ -708,7 +716,7 @@ export default function CommunityScreen() {
   };
 
   const checkUserLikeStatus = async (postId: string) => {
-    if (!user) {
+    if (!user || !postId) {
       setIsLiked(false);
       return;
     }
@@ -799,6 +807,11 @@ export default function CommunityScreen() {
   };
 
   const handlePostPress = (post: ForumPost) => {
+    if (!post?.id) {
+      console.error('Post clicked without valid ID:', post);
+      return;
+    }
+
     setSelectedPost(post);
     setShowDetailModal(true);
     setLikeCount(post.likes);
@@ -817,7 +830,7 @@ export default function CommunityScreen() {
       return;
     }
 
-    if (!selectedPost) return;
+    if (!selectedPost || !selectedPost.id) return;
 
     try {
       const { error } = await supabase
@@ -961,6 +974,8 @@ export default function CommunityScreen() {
         (payload) => {
           // Update comment count for the affected post
           const postId = (payload.new as any).post_id;
+          if (!postId) return;
+
           setPosts(prev => prev.map(post =>
             post.id === postId
               ? { ...post, comments: post.comments + 1 }
@@ -1019,7 +1034,7 @@ export default function CommunityScreen() {
           const reactionType = (payload.new as any).reaction_type;
 
           // Only process 'like' reactions
-          if (reactionType !== 'like') return;
+          if (reactionType !== 'like' || !postId) return;
 
           setPosts(prev => prev.map(post =>
             post.id === postId
@@ -1271,7 +1286,13 @@ export default function CommunityScreen() {
         </View>
 
         <View style={styles.postFooter}>
-          <View style={styles.authorInfo}>
+          <TouchableOpacity
+            style={styles.authorInfo}
+            onPress={(e) => {
+              e.stopPropagation();
+              router.push({ pathname: '/user-details', params: { userId: item.author.id } });
+            }}
+          >
             {item.author.avatar ? (
               <Image
                 source={{ uri: item.author.avatar }}
@@ -1283,7 +1304,7 @@ export default function CommunityScreen() {
               </View>
             )}
             <Text style={styles.authorName}>{item.author.name}</Text>
-          </View>
+          </TouchableOpacity>
 
           <View style={styles.postMeta}>
             <View style={styles.metaItem}>
@@ -1529,7 +1550,10 @@ export default function CommunityScreen() {
               >
                 {/* Post Header */}
                 <View style={styles.detailPostHeader}>
-                  <View style={styles.detailAuthorInfo}>
+                  <TouchableOpacity
+                    style={styles.detailAuthorInfo}
+                    onPress={() => router.push({ pathname: '/user-details', params: { userId: selectedPost.author.id } })}
+                  >
                     {selectedPost.author.avatar ? (
                       <Image
                         source={{ uri: selectedPost.author.avatar }}
@@ -1546,7 +1570,7 @@ export default function CommunityScreen() {
                         {formatTimeAgo(selectedPost.created_at)}
                       </Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 </View>
 
                 {/* Post Content */}
@@ -1609,7 +1633,10 @@ export default function CommunityScreen() {
                     comments.map((comment) => (
                       <View key={comment.id} style={styles.commentCard}>
                         <View style={styles.commentHeader}>
-                          <View style={styles.commentAuthorInfo}>
+                          <TouchableOpacity
+                            style={styles.commentAuthorInfo}
+                            onPress={() => router.push({ pathname: '/user-details', params: { userId: comment.author.id } })}
+                          >
                             {comment.author.avatar ? (
                               <Image
                                 source={{ uri: comment.author.avatar }}
