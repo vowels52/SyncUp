@@ -650,6 +650,12 @@ export default function CommunityScreen() {
   };
 
   const fetchComments = async (postId: string) => {
+    if (!postId) {
+      console.error('fetchComments called with undefined postId');
+      setLoadingComments(false);
+      return;
+    }
+
     setLoadingComments(true);
     try {
       const { data: commentsData, error: commentsError } = await supabase
@@ -700,7 +706,7 @@ export default function CommunityScreen() {
   };
 
   const checkUserLikeStatus = async (postId: string) => {
-    if (!user) {
+    if (!user || !postId) {
       setIsLiked(false);
       return;
     }
@@ -791,6 +797,11 @@ export default function CommunityScreen() {
   };
 
   const handlePostPress = (post: ForumPost) => {
+    if (!post?.id) {
+      console.error('Post clicked without valid ID:', post);
+      return;
+    }
+
     setSelectedPost(post);
     setShowDetailModal(true);
     setLikeCount(post.likes);
@@ -809,7 +820,7 @@ export default function CommunityScreen() {
       return;
     }
 
-    if (!selectedPost) return;
+    if (!selectedPost || !selectedPost.id) return;
 
     try {
       const { error } = await supabase
@@ -913,6 +924,8 @@ export default function CommunityScreen() {
         (payload) => {
           // Update comment count for the affected post
           const postId = (payload.new as any).post_id;
+          if (!postId) return;
+
           setPosts(prev => prev.map(post =>
             post.id === postId
               ? { ...post, comments: post.comments + 1 }
@@ -934,6 +947,8 @@ export default function CommunityScreen() {
         (payload) => {
           // Update comment count for the affected post
           const postId = (payload.old as any).post_id;
+          if (!postId) return;
+
           setPosts(prev => prev.map(post =>
             post.id === postId
               ? { ...post, comments: Math.max(0, post.comments - 1) }
@@ -963,7 +978,7 @@ export default function CommunityScreen() {
           const reactionType = (payload.new as any).reaction_type;
 
           // Only process 'like' reactions
-          if (reactionType !== 'like') return;
+          if (reactionType !== 'like' || !postId) return;
 
           setPosts(prev => prev.map(post =>
             post.id === postId

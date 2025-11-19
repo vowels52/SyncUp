@@ -166,22 +166,20 @@ export default function UserDetailsScreen() {
       const { data: existingConversation, error: checkError } = await supabase
         .from('conversations')
         .select('id')
-        .or(`and(user1_id.eq.${user.id},user2_id.eq.${userId}),and(user1_id.eq.${userId},user2_id.eq.${user.id})`)
+        .or(`and(participant1_id.eq.${user.id},participant2_id.eq.${userId}),and(participant1_id.eq.${userId},participant2_id.eq.${user.id})`)
         .maybeSingle();
 
-      if (checkError) throw checkError;
+      if (checkError && checkError.code !== 'PGRST116') throw checkError;
 
-      let conversationId;
+      let conversationId = existingConversation?.id;
 
-      if (existingConversation) {
-        conversationId = existingConversation.id;
-      } else {
-        // Create new conversation
+      // If no conversation exists, create one
+      if (!conversationId) {
         const { data: newConversation, error: createError } = await supabase
           .from('conversations')
           .insert({
-            user1_id: user.id,
-            user2_id: userId,
+            participant1_id: user.id,
+            participant2_id: userId,
           })
           .select('id')
           .single();
