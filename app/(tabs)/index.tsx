@@ -568,6 +568,7 @@ export default function HomeScreen() {
       ...textStyles.caption,
       fontWeight: typography.fontWeightSemiBold,
       textAlign: 'center',
+      color: colors.textPrimary,
     },
     section: {
       marginBottom: spacing.lg,
@@ -1085,6 +1086,7 @@ export default function HomeScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Enter event title"
+                placeholderTextColor={colors.textSecondary}
                 value={newEvent.title}
                 onChangeText={(text) => setNewEvent({ ...newEvent, title: text })}
               />
@@ -1093,6 +1095,7 @@ export default function HomeScreen() {
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Enter event description"
+                placeholderTextColor={colors.textSecondary}
                 value={newEvent.description}
                 onChangeText={(text) => setNewEvent({ ...newEvent, description: text })}
                 multiline
@@ -1103,6 +1106,7 @@ export default function HomeScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Enter event location"
+                placeholderTextColor={colors.textSecondary}
                 value={newEvent.location}
                 onChangeText={(text) => setNewEvent({ ...newEvent, location: text })}
               />
@@ -1376,6 +1380,7 @@ export default function HomeScreen() {
                 <TextInput
                   style={styles.searchInput}
                   placeholder="Search by name, email, or major..."
+                  placeholderTextColor={colors.textSecondary}
                   value={searchQuery}
                   onChangeText={(text) => {
                     setSearchQuery(text);
@@ -1486,6 +1491,7 @@ export default function HomeScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Enter group name"
+                placeholderTextColor={colors.textSecondary}
                 value={newGroup.name}
                 onChangeText={(text) => setNewGroup({ ...newGroup, name: text })}
               />
@@ -1494,6 +1500,7 @@ export default function HomeScreen() {
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Enter group description"
+                placeholderTextColor={colors.textSecondary}
                 value={newGroup.description}
                 onChangeText={(text) => setNewGroup({ ...newGroup, description: text })}
                 multiline
@@ -1504,6 +1511,7 @@ export default function HomeScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="e.g., Academic, Social, Sports"
+                placeholderTextColor={colors.textSecondary}
                 value={newGroup.club_type}
                 onChangeText={(text) => setNewGroup({ ...newGroup, club_type: text })}
               />
@@ -1512,6 +1520,7 @@ export default function HomeScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="e.g., Computer Science, Business"
+                placeholderTextColor={colors.textSecondary}
                 value={newGroup.category}
                 onChangeText={(text) => setNewGroup({ ...newGroup, category: text })}
               />
