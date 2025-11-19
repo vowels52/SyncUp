@@ -1,10 +1,11 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors, typography, spacing, borderRadius, shadows } from '@/constants/theme';
-import { textStyles } from '@/constants/styles';
+import { typography, spacing, borderRadius, shadows } from '@/constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAlert } from '@/template';
+import { useThemedColors } from '@/hooks/useThemedColors';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 
 interface HelpItem {
   icon: string;
@@ -19,6 +20,8 @@ interface FAQItem {
 }
 
 export default function HelpScreen() {
+  const colors = useThemedColors();
+  const { commonStyles, textStyles } = useThemedStyles();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { showAlert } = useAlert();
@@ -82,6 +85,147 @@ export default function HelpScreen() {
       answer: 'Go to Profile > Privacy to control who can see your information and interact with you.',
     },
   ];
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: spacing.md,
+      backgroundColor: colors.surface,
+      ...shadows.small,
+    },
+    backButton: {
+      padding: spacing.xs,
+    },
+    headerTitle: {
+      ...textStyles.h3,
+      color: colors.textPrimary,
+    },
+    content: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: spacing.lg,
+    },
+    title: {
+      ...textStyles.h2,
+      color: colors.textPrimary,
+      marginBottom: spacing.sm,
+    },
+    description: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+      marginBottom: spacing.lg,
+    },
+    section: {
+      marginBottom: spacing.xl,
+    },
+    sectionTitle: {
+      ...textStyles.h4,
+      color: colors.textPrimary,
+      marginBottom: spacing.md,
+    },
+    helpItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      marginBottom: spacing.sm,
+      ...shadows.small,
+    },
+    helpItemIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.gray100,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: spacing.md,
+    },
+    helpItemContent: {
+      flex: 1,
+    },
+    helpItemTitle: {
+      ...textStyles.body1,
+      color: colors.textPrimary,
+      fontWeight: typography.fontWeightSemiBold,
+      marginBottom: spacing.xs,
+    },
+    helpItemDescription: {
+      ...textStyles.caption,
+      color: colors.textSecondary,
+    },
+    faqItem: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      marginBottom: spacing.sm,
+      ...shadows.small,
+    },
+    faqQuestion: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
+    faqQuestionText: {
+      ...textStyles.body1,
+      color: colors.textPrimary,
+      fontWeight: typography.fontWeightSemiBold,
+      marginLeft: spacing.sm,
+      flex: 1,
+    },
+    faqAnswer: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+      lineHeight: typography.lineHeight20,
+    },
+    infoCard: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      ...shadows.small,
+    },
+    infoRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: spacing.sm,
+    },
+    infoLabel: {
+      ...textStyles.body1,
+      color: colors.textSecondary,
+    },
+    infoValue: {
+      ...textStyles.body1,
+      color: colors.textPrimary,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    divider: {
+      height: 1,
+      backgroundColor: colors.gray200,
+      marginVertical: spacing.xs,
+    },
+    footerInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.gray100,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      marginTop: spacing.md,
+    },
+    footerText: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+      marginLeft: spacing.md,
+      flex: 1,
+    },
+  });
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -157,138 +301,3 @@ export default function HelpScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-    ...shadows.small,
-  },
-  backButton: {
-    padding: spacing.xs,
-  },
-  headerTitle: {
-    ...textStyles.h3,
-  },
-  content: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: spacing.lg,
-  },
-  title: {
-    ...textStyles.h2,
-    marginBottom: spacing.sm,
-  },
-  description: {
-    ...textStyles.body2,
-    color: colors.textSecondary,
-    marginBottom: spacing.lg,
-  },
-  section: {
-    marginBottom: spacing.xl,
-  },
-  sectionTitle: {
-    ...textStyles.h4,
-    marginBottom: spacing.md,
-  },
-  helpItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    ...shadows.small,
-  },
-  helpItemIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.gray100,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  helpItemContent: {
-    flex: 1,
-  },
-  helpItemTitle: {
-    ...textStyles.body1,
-    fontWeight: typography.fontWeightSemiBold,
-    marginBottom: spacing.xs,
-  },
-  helpItemDescription: {
-    ...textStyles.caption,
-    color: colors.textSecondary,
-  },
-  faqItem: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    ...shadows.small,
-  },
-  faqQuestion: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  faqQuestionText: {
-    ...textStyles.body1,
-    fontWeight: typography.fontWeightSemiBold,
-    marginLeft: spacing.sm,
-    flex: 1,
-  },
-  faqAnswer: {
-    ...textStyles.body2,
-    color: colors.textSecondary,
-    lineHeight: typography.lineHeight20,
-  },
-  infoCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    ...shadows.small,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  infoLabel: {
-    ...textStyles.body1,
-    color: colors.textSecondary,
-  },
-  infoValue: {
-    ...textStyles.body1,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.gray200,
-    marginVertical: spacing.xs,
-  },
-  footerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.gray100,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginTop: spacing.md,
-  },
-  footerText: {
-    ...textStyles.body2,
-    color: colors.textSecondary,
-    marginLeft: spacing.md,
-    flex: 1,
-  },
-});

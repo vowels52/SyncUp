@@ -1420,6 +1420,11 @@ CREATE INDEX IF NOT EXISTS idx_events_event_type ON events(event_type);
 -- Add index on external_id for lookups
 CREATE INDEX IF NOT EXISTS idx_events_external_id ON events(external_id);
 
+-- Fix any existing events with NULL is_official_event (set them to false for user-created events)
+UPDATE events
+SET is_official_event = false
+WHERE is_official_event IS NULL;
+
 -- Update RLS policies to allow viewing official events
 -- Official events should be viewable by all authenticated users
 DROP POLICY IF EXISTS "authenticated_select_events" ON events;
@@ -5996,3 +6001,158 @@ COMMENT ON POLICY "Authenticated users can upload profile images" ON storage.obj
 COMMENT ON POLICY "Users can update their own profile images" ON storage.objects IS 'Users can only update images in their own folder';
 COMMENT ON POLICY "Users can delete their own profile images" ON storage.objects IS 'Users can only delete images in their own folder';
 
+-- =====================================================
+-- TABLE: conversations
+-- Description: Tracks DM conversations between connected users
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS conversations (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    participant1_id uuid NOT NULL,
+    participant2_id uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    last_message_at timestamp with time zone DEFAULT now(),
+    UNIQUE(participant1_id, participant2_id),
+    CONSTRAINT conversations_participant1_fkey FOREIGN KEY (participant1_id) REFERENCES user_profiles(id) ON DELETE CASCADE,
+    CONSTRAINT conversations_participant2_fkey FOREIGN KEY (participant2_id) REFERENCES user_profiles(id) ON DELETE CASCADE,
+    CONSTRAINT conversations_no_self_conversation CHECK (participant1_id != participant2_id)
+);
+
+-- Indexes for better query performance
+CREATE INDEX IF NOT EXISTS idx_conversations_participant1 ON conversations(participant1_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_participant2 ON conversations(participant2_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_last_message ON conversations(last_message_at DESC);
+
+-- Enable RLS
+ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for conversations
+CREATE POLICY "Users can view their own conversations" ON conversations
+    FOR SELECT
+    TO authenticated
+    USING (participant1_id = auth.uid() OR participant2_id = auth.uid());
+
+CREATE POLICY "Users can create conversations with connections" ON conversations
+    FOR INSERT
+    TO authenticated
+    WITH CHECK (
+        participant1_id = auth.uid() AND
+        EXISTS (
+            SELECT 1 FROM connections
+            WHERE status = 'accepted' AND (
+                (user_id = participant1_id AND connected_user_id = participant2_id) OR
+                (user_id = participant2_id AND connected_user_id = participant1_id)
+            )
+        )
+    );
+
+CREATE POLICY "Users can update their own conversations" ON conversations
+    FOR UPDATE
+    TO authenticated
+    USING (participant1_id = auth.uid() OR participant2_id = auth.uid());
+
+-- =====================================================
+-- TABLE: direct_messages
+-- Description: Stores direct messages between users
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS direct_messages (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    conversation_id uuid NOT NULL,
+    sender_id uuid NOT NULL,
+    receiver_id uuid NOT NULL,
+    content text NOT NULL,
+    is_read boolean DEFAULT false,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT direct_messages_conversation_fkey FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+    CONSTRAINT direct_messages_sender_fkey FOREIGN KEY (sender_id) REFERENCES user_profiles(id) ON DELETE CASCADE,
+    CONSTRAINT direct_messages_receiver_fkey FOREIGN KEY (receiver_id) REFERENCES user_profiles(id) ON DELETE CASCADE
+);
+
+-- Indexes for better query performance
+CREATE INDEX IF NOT EXISTS idx_direct_messages_conversation ON direct_messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_direct_messages_sender ON direct_messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_direct_messages_receiver ON direct_messages(receiver_id);
+CREATE INDEX IF NOT EXISTS idx_direct_messages_created ON direct_messages(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_direct_messages_is_read ON direct_messages(is_read);
+
+-- Enable RLS
+ALTER TABLE direct_messages ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for direct_messages
+CREATE POLICY "Users can view their own messages" ON direct_messages
+    FOR SELECT
+    TO authenticated
+    USING (sender_id = auth.uid() OR receiver_id = auth.uid());
+
+CREATE POLICY "Users can send messages in their conversations" ON direct_messages
+    FOR INSERT
+    TO authenticated
+    WITH CHECK (
+        sender_id = auth.uid() AND
+        EXISTS (
+            SELECT 1 FROM conversations
+            WHERE id = conversation_id AND (
+                participant1_id = auth.uid() OR participant2_id = auth.uid()
+            )
+        )
+    );
+
+CREATE POLICY "Users can update their own messages" ON direct_messages
+    FOR UPDATE
+    TO authenticated
+    USING (sender_id = auth.uid() OR receiver_id = auth.uid());
+
+CREATE POLICY "Users can delete their own messages" ON direct_messages
+    FOR DELETE
+    TO authenticated
+    USING (sender_id = auth.uid());
+
+-- =====================================================
+-- FUNCTIONS AND TRIGGERS
+-- =====================================================
+
+-- Function to update conversation's last_message_at timestamp
+CREATE OR REPLACE FUNCTION update_conversation_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE conversations
+    SET
+        last_message_at = NEW.created_at,
+        updated_at = NEW.created_at
+    WHERE id = NEW.conversation_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to update conversation timestamp when a new message is sent
+DROP TRIGGER IF EXISTS trigger_update_conversation_timestamp ON direct_messages;
+CREATE TRIGGER trigger_update_conversation_timestamp
+    AFTER INSERT ON direct_messages
+    FOR EACH ROW
+    EXECUTE FUNCTION update_conversation_timestamp();
+
+-- Function to update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Triggers to update updated_at for conversations
+DROP TRIGGER IF EXISTS trigger_conversations_updated_at ON conversations;
+CREATE TRIGGER trigger_conversations_updated_at
+    BEFORE UPDATE ON conversations
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Triggers to update updated_at for direct_messages
+DROP TRIGGER IF EXISTS trigger_direct_messages_updated_at ON direct_messages;
+CREATE TRIGGER trigger_direct_messages_updated_at
+    BEFORE UPDATE ON direct_messages
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();

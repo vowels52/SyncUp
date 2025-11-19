@@ -9,10 +9,12 @@ import {
   ActivityIndicator,
   TextInput,
   FlatList,
-  Modal
+  Modal,
+  Image
 } from 'react-native';
-import { colors, spacing, borderRadius, shadows, typography } from '@/constants/theme';
-import { textStyles, commonStyles } from '@/constants/styles';
+import { spacing, borderRadius, shadows, typography } from '@/constants/theme';
+import { useThemedColors } from '@/hooks/useThemedColors';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, useAlert } from '@/template';
@@ -25,7 +27,7 @@ interface ForumPost {
   author: {
     id: string;
     name: string;
-    avatar?: string;
+    avatar?: string | null;
   };
   tags: string[];
   created_at: string;
@@ -39,6 +41,7 @@ interface Comment {
   author: {
     id: string;
     name: string;
+    avatar?: string | null;
   };
   created_at: string;
 }
@@ -68,10 +71,461 @@ export default function CommunityScreen() {
     category: 'courses' as FilterType,
   });
 
+  const colors = useThemedColors();
+  const { commonStyles, textStyles } = useThemedStyles();
+
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { showAlert } = useAlert();
   const supabase = getSupabaseClient();
+
+  // Styles defined inside component to use themed colors
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.md,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.gray200,
+    },
+    headerTitle: {
+      ...textStyles.h2,
+    },
+    searchContainer: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+      backgroundColor: colors.surface,
+    },
+    searchBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.gray100,
+      borderRadius: borderRadius.lg,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      gap: spacing.sm,
+    },
+    searchInput: {
+      flex: 1,
+      ...textStyles.body1,
+      color: colors.text,
+      padding: 0,
+    },
+    clearButton: {
+      padding: spacing.xs,
+    },
+    filterContainer: {
+      backgroundColor: colors.surface,
+      paddingBottom: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.gray200,
+    },
+    filterContent: {
+      paddingHorizontal: spacing.md,
+      gap: spacing.sm,
+    },
+    filterButton: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.gray100,
+      marginRight: spacing.sm,
+    },
+    filterButtonActive: {
+      backgroundColor: colors.primary,
+    },
+    filterButtonText: {
+      ...textStyles.body2,
+      fontWeight: typography.fontWeightSemiBold,
+      color: colors.textPrimary,
+    },
+    filterButtonTextActive: {
+      color: colors.white,
+    },
+    listContent: {
+      padding: spacing.md,
+    },
+    postCard: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      marginBottom: spacing.md,
+      ...shadows.small,
+    },
+    postContent: {
+      gap: spacing.sm,
+    },
+    postTitle: {
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
+      color: colors.text,
+      lineHeight: 22,
+    },
+    postTags: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.xs,
+    },
+    tag: {
+      backgroundColor: colors.gray100,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: borderRadius.xs,
+    },
+    tagText: {
+      ...textStyles.caption,
+      color: colors.textSecondary,
+      fontSize: 11,
+    },
+    postFooter: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: spacing.xs,
+    },
+    authorInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    avatar: {
+      width: 24,
+      height: 24,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.gray200,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    authorName: {
+      ...textStyles.caption,
+      color: colors.textSecondary,
+      fontSize: 12,
+    },
+    postMeta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    metaItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+    },
+    metaText: {
+      ...textStyles.caption,
+      color: colors.gray500,
+      fontSize: 11,
+    },
+    timeText: {
+      ...textStyles.caption,
+      color: colors.gray500,
+      fontSize: 11,
+    },
+    emptyState: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: spacing.xxxl,
+    },
+    emptyStateText: {
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
+      marginTop: spacing.md,
+      color: colors.textSecondary,
+    },
+    emptyStateSubtext: {
+      ...textStyles.caption,
+      color: colors.gray500,
+      textAlign: 'center',
+      marginTop: spacing.xs,
+      paddingHorizontal: spacing.xl,
+    },
+    clearSearchButton: {
+      marginTop: spacing.md,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm,
+      backgroundColor: colors.primary,
+      borderRadius: borderRadius.md,
+    },
+    clearSearchButtonText: {
+      ...textStyles.body2,
+      color: colors.white,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    fab: {
+      position: 'absolute',
+      right: spacing.lg,
+      width: 56,
+      height: 56,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...shadows.large,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'flex-end',
+    },
+    modalContent: {
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: borderRadius.lg,
+      borderTopRightRadius: borderRadius.lg,
+      maxHeight: '85%',
+      ...shadows.large,
+      flexDirection: 'column',
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.gray200,
+    },
+    modalTitle: {
+      ...textStyles.h2,
+    },
+    modalHeaderActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    deleteButton: {
+      padding: spacing.xs,
+    },
+    modalForm: {
+      padding: spacing.lg,
+    },
+    inputLabel: {
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
+      marginBottom: spacing.sm,
+      marginTop: spacing.md,
+    },
+    input: {
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.gray300,
+      borderRadius: borderRadius.sm,
+      padding: spacing.md,
+      ...textStyles.body1,
+    },
+    textArea: {
+      height: 120,
+      textAlignVertical: 'top',
+    },
+    categoryButtons: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    categoryButton: {
+      flex: 1,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderRadius: borderRadius.sm,
+      backgroundColor: colors.gray100,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.gray200,
+    },
+    categoryButtonActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    categoryButtonText: {
+      ...textStyles.body2,
+      fontWeight: typography.fontWeightSemiBold,
+      color: colors.text,
+    },
+    categoryButtonTextActive: {
+      color: colors.white,
+    },
+    createButton: {
+      backgroundColor: colors.primary,
+      padding: spacing.md,
+      borderRadius: borderRadius.sm,
+      alignItems: 'center',
+      marginTop: spacing.xl,
+      marginBottom: spacing.lg,
+    },
+    createButtonText: {
+      ...textStyles.body1,
+      color: colors.white,
+      fontWeight: typography.fontWeightBold,
+    },
+    detailContent: {
+      flex: 1,
+    },
+    detailContentContainer: {
+      flexGrow: 1,
+    },
+    detailPostHeader: {
+      padding: spacing.lg,
+      backgroundColor: colors.background,
+    },
+    detailAuthorInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    detailAuthorName: {
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    detailTimeText: {
+      ...textStyles.caption,
+      color: colors.gray500,
+      marginTop: 2,
+    },
+    detailPostBody: {
+      padding: spacing.lg,
+      backgroundColor: colors.surface,
+    },
+    detailPostTitle: {
+      ...textStyles.h3,
+      marginBottom: spacing.md,
+    },
+    detailPostContent: {
+      ...textStyles.body1,
+      color: colors.textSecondary,
+      lineHeight: 22,
+      marginTop: spacing.md,
+    },
+    detailPostActions: {
+      flexDirection: 'row',
+      gap: spacing.lg,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+    },
+    likeButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.background,
+    },
+    likeButtonText: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    likeButtonTextActive: {
+      color: colors.error,
+    },
+    statItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    statText: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+    },
+    divider: {
+      height: 8,
+      backgroundColor: colors.background,
+    },
+    commentsSection: {
+      padding: spacing.lg,
+      backgroundColor: colors.surface,
+    },
+    commentsSectionTitle: {
+      ...textStyles.h4,
+      marginBottom: spacing.md,
+    },
+    commentsLoader: {
+      marginVertical: spacing.lg,
+    },
+    emptyComments: {
+      alignItems: 'center',
+      paddingVertical: spacing.xl,
+    },
+    emptyCommentsText: {
+      ...textStyles.body1,
+      color: colors.textSecondary,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    emptyCommentsSubtext: {
+      ...textStyles.caption,
+      color: colors.gray500,
+      marginTop: spacing.xs,
+    },
+    commentCard: {
+      marginBottom: spacing.md,
+      padding: spacing.md,
+      backgroundColor: colors.background,
+      borderRadius: borderRadius.sm,
+    },
+    commentHeader: {
+      marginBottom: spacing.sm,
+    },
+    commentAuthorInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    commentAvatar: {
+      width: 20,
+      height: 20,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.gray200,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    commentAuthorName: {
+      ...textStyles.body2,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    commentTime: {
+      ...textStyles.caption,
+      color: colors.gray500,
+    },
+    commentContent: {
+      ...textStyles.body2,
+      color: colors.text,
+      lineHeight: 20,
+    },
+    commentInputContainer: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      padding: spacing.md,
+      backgroundColor: colors.surface,
+      borderTopWidth: 1,
+      borderTopColor: colors.gray200,
+      gap: spacing.sm,
+    },
+    commentInput: {
+      flex: 1,
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.gray300,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      ...textStyles.body2,
+      maxHeight: 100,
+    },
+    commentSubmitButton: {
+      width: 44,
+      height: 44,
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    commentSubmitButtonDisabled: {
+      backgroundColor: colors.gray300,
+    },
+  });
 
   const fetchPosts = async () => {
     try {
@@ -91,7 +545,7 @@ export default function CommunityScreen() {
         const authorIds = [...new Set(postsData.map(p => p.author_id))];
         const { data: authorsData, error: authorsError } = await supabase
           .from('user_profiles')
-          .select('id, full_name')
+          .select('id, full_name, profile_image_url')
           .in('id', authorIds);
 
         if (authorsError) {
@@ -99,9 +553,12 @@ export default function CommunityScreen() {
         }
 
         // Create authors map
-        const authorsMap: { [key: string]: string } = {};
+        const authorsMap: { [key: string]: { name: string; profile_image_url: string | null } } = {};
         authorsData?.forEach(author => {
-          authorsMap[author.id] = author.full_name || 'Anonymous';
+          authorsMap[author.id] = {
+            name: author.full_name || 'Anonymous',
+            profile_image_url: author.profile_image_url || null,
+          };
         });
 
         // Fetch tags for all posts
@@ -163,7 +620,8 @@ export default function CommunityScreen() {
           content: post.content,
           author: {
             id: post.author_id,
-            name: authorsMap[post.author_id] || 'Anonymous',
+            name: authorsMap[post.author_id]?.name || 'Anonymous',
+            avatar: authorsMap[post.author_id]?.profile_image_url,
           },
           tags: tagsMap[post.id] || [],
           created_at: post.created_at,
@@ -203,12 +661,15 @@ export default function CommunityScreen() {
         const authorIds = [...new Set(commentsData.map(c => c.author_id))];
         const { data: authorsData } = await supabase
           .from('user_profiles')
-          .select('id, full_name')
+          .select('id, full_name, profile_image_url')
           .in('id', authorIds);
 
-        const authorsMap: { [key: string]: string } = {};
+        const authorsMap: { [key: string]: { name: string; profile_image_url: string | null } } = {};
         authorsData?.forEach(author => {
-          authorsMap[author.id] = author.full_name || 'Anonymous';
+          authorsMap[author.id] = {
+            name: author.full_name || 'Anonymous',
+            profile_image_url: author.profile_image_url || null,
+          };
         });
 
         const transformedComments: Comment[] = commentsData.map(comment => ({
@@ -216,7 +677,8 @@ export default function CommunityScreen() {
           content: comment.content,
           author: {
             id: comment.author_id,
-            name: authorsMap[comment.author_id] || 'Anonymous',
+            name: authorsMap[comment.author_id]?.name || 'Anonymous',
+            avatar: authorsMap[comment.author_id]?.profile_image_url,
           },
           created_at: comment.created_at,
         }));
@@ -283,20 +745,30 @@ export default function CommunityScreen() {
     if (!selectedPost) return;
 
     try {
-      if (isLiked) {
-        // Unlike the post
+      // First check current database state to avoid conflicts
+      const { data: existingLike, error: checkError } = await supabase
+        .from('post_reactions')
+        .select('id')
+        .eq('post_id', selectedPost.id)
+        .eq('user_id', user.id)
+        .eq('reaction_type', 'like')
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+
+      if (existingLike) {
+        // Like exists, so delete it
         const { error } = await supabase
           .from('post_reactions')
           .delete()
           .eq('post_id', selectedPost.id)
-          .eq('user_id', user.id);
+          .eq('user_id', user.id)
+          .eq('reaction_type', 'like');
 
         if (error) throw error;
-
-        setIsLiked(false);
-        setLikeCount(prev => Math.max(0, prev - 1));
+        // Real-time subscription will update the UI
       } else {
-        // Like the post
+        // Like doesn't exist, so insert it
         const { error } = await supabase
           .from('post_reactions')
           .insert({
@@ -306,13 +778,8 @@ export default function CommunityScreen() {
           });
 
         if (error) throw error;
-
-        setIsLiked(true);
-        setLikeCount(prev => prev + 1);
+        // Real-time subscription will update the UI
       }
-
-      // Refresh the posts list to update the like count in the feed
-      fetchPosts();
     } catch (error: any) {
       console.error('Error toggling like:', error);
       showAlert('Error', error.message || 'Failed to update like');
@@ -412,11 +879,142 @@ export default function CommunityScreen() {
 
   useEffect(() => {
     fetchPosts();
+
+    // Set up real-time subscriptions
+    const postsChannel = supabase
+      .channel('forum-posts-changes')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'forum_posts' },
+        (payload) => {
+          // When a new post is created, refetch all posts to get complete data
+          fetchPosts();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'forum_posts' },
+        (payload) => {
+          // Remove the deleted post from state
+          setPosts(prev => prev.filter(p => p.id !== payload.old.id));
+        }
+      )
+      .subscribe();
+
+    const commentsChannel = supabase
+      .channel('forum-comments-changes')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'forum_comments' },
+        (payload) => {
+          // Update comment count for the affected post
+          const postId = (payload.new as any).post_id;
+          setPosts(prev => prev.map(post =>
+            post.id === postId
+              ? { ...post, comments: post.comments + 1 }
+              : post
+          ));
+
+          // If viewing this post's comments, add the new comment
+          setSelectedPost(current => {
+            if (current?.id === postId) {
+              fetchComments(postId);
+            }
+            return current;
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'forum_comments' },
+        (payload) => {
+          // Update comment count for the affected post
+          const postId = (payload.old as any).post_id;
+          setPosts(prev => prev.map(post =>
+            post.id === postId
+              ? { ...post, comments: Math.max(0, post.comments - 1) }
+              : post
+          ));
+
+          // If viewing this post's comments, refetch them
+          setSelectedPost(current => {
+            if (current?.id === postId) {
+              fetchComments(postId);
+            }
+            return current;
+          });
+        }
+      )
+      .subscribe();
+
+    const reactionsChannel = supabase
+      .channel('post-reactions-changes')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'post_reactions' },
+        (payload) => {
+          // Update like count for the affected post
+          const postId = (payload.new as any).post_id;
+          const userId = (payload.new as any).user_id;
+          const reactionType = (payload.new as any).reaction_type;
+
+          // Only process 'like' reactions
+          if (reactionType !== 'like') return;
+
+          setPosts(prev => prev.map(post =>
+            post.id === postId
+              ? { ...post, likes: post.likes + 1 }
+              : post
+          ));
+
+          // If viewing this post in detail, update isLiked status
+          // Note: likeCount will be updated by the useEffect that watches posts array
+          setSelectedPost(current => {
+            if (current?.id === postId && user && userId === user.id) {
+              setIsLiked(true);
+            }
+            return current;
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'post_reactions' },
+        (payload) => {
+          // Since Supabase doesn't send old row data for DELETE,
+          // we need to refetch posts to get accurate like counts
+          fetchPosts();
+
+          // If viewing a post in detail, refresh the like status
+          if (selectedPost && user) {
+            checkUserLikeStatus(selectedPost.id);
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      supabase.removeChannel(postsChannel);
+      supabase.removeChannel(commentsChannel);
+      supabase.removeChannel(reactionsChannel);
+    };
   }, []);
 
   useEffect(() => {
     filterPosts();
   }, [searchQuery, activeFilter, posts]);
+
+  // Update selectedPost when posts array changes (for real-time updates)
+  useEffect(() => {
+    if (selectedPost) {
+      const updatedPost = posts.find(p => p.id === selectedPost.id);
+      if (updatedPost) {
+        setSelectedPost(updatedPost);
+        setLikeCount(updatedPost.likes);
+      }
+    }
+  }, [posts]);
 
   const filterPosts = () => {
     let filtered = [...posts];
@@ -529,14 +1127,24 @@ export default function CommunityScreen() {
 
         // Add category as a tag
         if (newPost.category && newPost.category !== 'all') {
-          tags.push(newPost.category.replace('-', ' '));
+          const categoryTag = newPost.category.replace('-', ' ');
+          // Capitalize each word (e.g., "study tips" -> "Study Tips")
+          const capitalizedCategory = categoryTag
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+          tags.push(capitalizedCategory);
         }
 
         // Extract common keywords
         const keywords = ['study', 'tips', 'exam', 'essay', 'professor', 'algorithm', 'writing'];
         keywords.forEach(keyword => {
           if (newPost.title.toLowerCase().includes(keyword)) {
-            tags.push(keyword.charAt(0).toUpperCase() + keyword.slice(1));
+            const capitalizedKeyword = keyword.charAt(0).toUpperCase() + keyword.slice(1);
+            // Only add if not already in tags (avoid duplicates)
+            if (!tags.some(tag => tag.toLowerCase() === capitalizedKeyword.toLowerCase())) {
+              tags.push(capitalizedKeyword);
+            }
           }
         });
 
@@ -604,9 +1212,16 @@ export default function CommunityScreen() {
 
         <View style={styles.postFooter}>
           <View style={styles.authorInfo}>
-            <View style={styles.avatar}>
-              <Ionicons name="person" size={16} color={colors.gray600} />
-            </View>
+            {item.author.avatar ? (
+              <Image
+                source={{ uri: item.author.avatar }}
+                style={styles.avatar}
+              />
+            ) : (
+              <View style={styles.avatar}>
+                <Ionicons name="person" size={16} color={colors.gray600} />
+              </View>
+            )}
             <Text style={styles.authorName}>{item.author.name}</Text>
           </View>
 
@@ -849,9 +1464,16 @@ export default function CommunityScreen() {
                 {/* Post Header */}
                 <View style={styles.detailPostHeader}>
                   <View style={styles.detailAuthorInfo}>
-                    <View style={styles.avatar}>
-                      <Ionicons name="person" size={20} color={colors.gray600} />
-                    </View>
+                    {selectedPost.author.avatar ? (
+                      <Image
+                        source={{ uri: selectedPost.author.avatar }}
+                        style={styles.avatar}
+                      />
+                    ) : (
+                      <View style={styles.avatar}>
+                        <Ionicons name="person" size={20} color={colors.gray600} />
+                      </View>
+                    )}
                     <View>
                       <Text style={styles.detailAuthorName}>{selectedPost.author.name}</Text>
                       <Text style={styles.detailTimeText}>
@@ -922,9 +1544,16 @@ export default function CommunityScreen() {
                       <View key={comment.id} style={styles.commentCard}>
                         <View style={styles.commentHeader}>
                           <View style={styles.commentAuthorInfo}>
-                            <View style={styles.commentAvatar}>
-                              <Ionicons name="person" size={14} color={colors.gray600} />
-                            </View>
+                            {comment.author.avatar ? (
+                              <Image
+                                source={{ uri: comment.author.avatar }}
+                                style={styles.commentAvatar}
+                              />
+                            ) : (
+                              <View style={styles.commentAvatar}>
+                                <Ionicons name="person" size={14} color={colors.gray600} />
+                              </View>
+                            )}
                             <Text style={styles.commentAuthorName}>{comment.author.name}</Text>
                             <Text style={styles.commentTime}>
                               {formatTimeAgo(comment.created_at)}
@@ -967,450 +1596,3 @@ export default function CommunityScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  headerTitle: {
-    ...textStyles.h2,
-  },
-  searchContainer: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.gray100,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    ...textStyles.body1,
-    color: colors.text,
-    padding: 0,
-  },
-  clearButton: {
-    padding: spacing.xs,
-  },
-  filterContainer: {
-    backgroundColor: colors.surface,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  filterContent: {
-    paddingHorizontal: spacing.md,
-    gap: spacing.sm,
-  },
-  filterButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.gray100,
-    marginRight: spacing.sm,
-  },
-  filterButtonActive: {
-    backgroundColor: colors.primary,
-  },
-  filterButtonText: {
-    ...textStyles.body2,
-    fontWeight: typography.fontWeightSemiBold,
-    color: colors.textPrimary,
-  },
-  filterButtonTextActive: {
-    color: colors.white,
-  },
-  listContent: {
-    padding: spacing.md,
-  },
-  postCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    ...shadows.small,
-  },
-  postContent: {
-    gap: spacing.sm,
-  },
-  postTitle: {
-    ...textStyles.body1,
-    fontWeight: typography.fontWeightSemiBold,
-    color: colors.text,
-    lineHeight: 22,
-  },
-  postTags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-  },
-  tag: {
-    backgroundColor: colors.gray100,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.xs,
-  },
-  tagText: {
-    ...textStyles.caption,
-    color: colors.textSecondary,
-    fontSize: 11,
-  },
-  postFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: spacing.xs,
-  },
-  authorInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  avatar: {
-    width: 24,
-    height: 24,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.gray200,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  authorName: {
-    ...textStyles.caption,
-    color: colors.textSecondary,
-    fontSize: 12,
-  },
-  postMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  metaText: {
-    ...textStyles.caption,
-    color: colors.gray500,
-    fontSize: 11,
-  },
-  timeText: {
-    ...textStyles.caption,
-    color: colors.gray500,
-    fontSize: 11,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.xxxl,
-  },
-  emptyStateText: {
-    ...textStyles.body1,
-    fontWeight: typography.fontWeightSemiBold,
-    marginTop: spacing.md,
-    color: colors.textSecondary,
-  },
-  emptyStateSubtext: {
-    ...textStyles.caption,
-    color: colors.gray500,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-    paddingHorizontal: spacing.xl,
-  },
-  clearSearchButton: {
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.md,
-  },
-  clearSearchButtonText: {
-    ...textStyles.body2,
-    color: colors.white,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  fab: {
-    position: 'absolute',
-    right: spacing.lg,
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...shadows.large,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: borderRadius.lg,
-    borderTopRightRadius: borderRadius.lg,
-    maxHeight: '85%',
-    ...shadows.large,
-    flexDirection: 'column',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  modalTitle: {
-    ...textStyles.h2,
-  },
-  modalHeaderActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  deleteButton: {
-    padding: spacing.xs,
-  },
-  modalForm: {
-    padding: spacing.lg,
-  },
-  inputLabel: {
-    ...textStyles.body1,
-    fontWeight: typography.fontWeightSemiBold,
-    marginBottom: spacing.sm,
-    marginTop: spacing.md,
-  },
-  input: {
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: borderRadius.sm,
-    padding: spacing.md,
-    ...textStyles.body1,
-  },
-  textArea: {
-    height: 120,
-    textAlignVertical: 'top',
-  },
-  categoryButtons: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  categoryButton: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.gray100,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.gray200,
-  },
-  categoryButtonActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  categoryButtonText: {
-    ...textStyles.body2,
-    fontWeight: typography.fontWeightSemiBold,
-    color: colors.text,
-  },
-  categoryButtonTextActive: {
-    color: colors.white,
-  },
-  createButton: {
-    backgroundColor: colors.primary,
-    padding: spacing.md,
-    borderRadius: borderRadius.sm,
-    alignItems: 'center',
-    marginTop: spacing.xl,
-    marginBottom: spacing.lg,
-  },
-  createButtonText: {
-    ...textStyles.body1,
-    color: colors.white,
-    fontWeight: typography.fontWeightBold,
-  },
-  detailContent: {
-    flex: 1,
-  },
-  detailContentContainer: {
-    flexGrow: 1,
-  },
-  detailPostHeader: {
-    padding: spacing.lg,
-    backgroundColor: colors.background,
-  },
-  detailAuthorInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  detailAuthorName: {
-    ...textStyles.body1,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  detailTimeText: {
-    ...textStyles.caption,
-    color: colors.gray500,
-    marginTop: 2,
-  },
-  detailPostBody: {
-    padding: spacing.lg,
-    backgroundColor: colors.surface,
-  },
-  detailPostTitle: {
-    ...textStyles.h3,
-    marginBottom: spacing.md,
-  },
-  detailPostContent: {
-    ...textStyles.body1,
-    color: colors.textSecondary,
-    lineHeight: 22,
-    marginTop: spacing.md,
-  },
-  detailPostActions: {
-    flexDirection: 'row',
-    gap: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-  },
-  likeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.background,
-  },
-  likeButtonText: {
-    ...textStyles.body2,
-    color: colors.textSecondary,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  likeButtonTextActive: {
-    color: colors.error,
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  statText: {
-    ...textStyles.body2,
-    color: colors.textSecondary,
-  },
-  divider: {
-    height: 8,
-    backgroundColor: colors.background,
-  },
-  commentsSection: {
-    padding: spacing.lg,
-    backgroundColor: colors.surface,
-  },
-  commentsSectionTitle: {
-    ...textStyles.h4,
-    marginBottom: spacing.md,
-  },
-  commentsLoader: {
-    marginVertical: spacing.lg,
-  },
-  emptyComments: {
-    alignItems: 'center',
-    paddingVertical: spacing.xl,
-  },
-  emptyCommentsText: {
-    ...textStyles.body1,
-    color: colors.textSecondary,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  emptyCommentsSubtext: {
-    ...textStyles.caption,
-    color: colors.gray500,
-    marginTop: spacing.xs,
-  },
-  commentCard: {
-    marginBottom: spacing.md,
-    padding: spacing.md,
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.sm,
-  },
-  commentHeader: {
-    marginBottom: spacing.sm,
-  },
-  commentAuthorInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  commentAvatar: {
-    width: 20,
-    height: 20,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.gray200,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  commentAuthorName: {
-    ...textStyles.body2,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  commentTime: {
-    ...textStyles.caption,
-    color: colors.gray500,
-  },
-  commentContent: {
-    ...textStyles.body2,
-    color: colors.text,
-    lineHeight: 20,
-  },
-  commentInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray200,
-    gap: spacing.sm,
-  },
-  commentInput: {
-    flex: 1,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    ...textStyles.body2,
-    maxHeight: 100,
-  },
-  commentSubmitButton: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  commentSubmitButtonDisabled: {
-    backgroundColor: colors.gray300,
-  },
-});

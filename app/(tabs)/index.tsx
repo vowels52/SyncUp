@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator, Modal, TextInput, Platform, KeyboardAvoidingView } from 'react-native';
-import { colors, spacing, borderRadius, shadows, typography } from '@/constants/theme';
-import { textStyles, commonStyles } from '@/constants/styles';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator, Modal, TextInput, Platform, KeyboardAvoidingView, Image } from 'react-native';
+import { spacing, borderRadius, shadows, typography } from '@/constants/theme';
+import { useThemedColors } from '@/hooks/useThemedColors';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth, useAlert } from '@/template';
+import { useAuth, useAlert, useTheme } from '@/template';
 import { getSupabaseClient } from '@/template';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,6 +16,7 @@ interface UserProfile {
   full_name: string | null;
   major: string | null;
   year: string | null;
+  profile_image_url: string | null;
 }
 
 interface Event {
@@ -43,6 +45,7 @@ interface SearchResult {
   year: string | null;
   bio: string | null;
   email: string;
+  profile_image_url: string | null;
   connectionStatus?: 'none' | 'pending' | 'accepted' | 'rejected';
 }
 
@@ -85,6 +88,10 @@ export default function HomeScreen() {
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
 
+  const colors = useThemedColors();
+  const { commonStyles, textStyles } = useThemedStyles();
+  const { isDarkMode } = useTheme();
+
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { showAlert } = useAlert();
@@ -98,7 +105,7 @@ export default function HomeScreen() {
       // Fetch user profile
       const { data: profileData } = await supabase
         .from('user_profiles')
-        .select('id, full_name, major, year')
+        .select('id, full_name, major, year, profile_image_url')
         .eq('id', user.id)
         .single();
 
@@ -205,6 +212,7 @@ export default function HomeScreen() {
           start_time: newEvent.start_time.toISOString(),
           end_time: newEvent.end_time.toISOString(),
           creator_id: user.id,
+          is_official_event: false,
         });
 
       if (error) throw error;
@@ -383,7 +391,7 @@ export default function HomeScreen() {
       // First, get all user search results
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('id, full_name, major, year, bio, email')
+        .select('id, full_name, major, year, bio, email, profile_image_url')
         .neq('id', user.id)
         .not('full_name', 'is', null);
 
@@ -483,6 +491,395 @@ export default function HomeScreen() {
     setSearchResults([]);
   };
 
+  // Define styles inside component to use themed colors
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.lg,
+    },
+    headerContent: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    greeting: {
+      ...textStyles.body2,
+      color: colors.white,
+      opacity: 0.9,
+    },
+    userName: {
+      ...textStyles.h3,
+      color: colors.white,
+      marginTop: spacing.xs,
+    },
+    userInfo: {
+      ...textStyles.caption,
+      color: colors.white,
+      opacity: 0.8,
+      marginTop: spacing.xs,
+    },
+    avatar: {
+      width: 56,
+      height: 56,
+      borderRadius: borderRadius.full,
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      overflow: 'hidden',
+    },
+    avatarImage: {
+      width: 56,
+      height: 56,
+    },
+    content: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: spacing.md,
+    },
+    quickActions: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: spacing.lg,
+    },
+    actionCard: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      marginHorizontal: spacing.xs,
+      alignItems: 'center',
+      ...shadows.small,
+    },
+    actionIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: borderRadius.md,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
+    actionText: {
+      ...textStyles.caption,
+      fontWeight: typography.fontWeightSemiBold,
+      textAlign: 'center',
+      color: colors.textPrimary,
+    },
+    section: {
+      marginBottom: spacing.lg,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+    },
+    sectionTitle: {
+      ...textStyles.h4,
+    },
+    seeAllText: {
+      ...textStyles.body2,
+      color: colors.primary,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    eventCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      marginBottom: spacing.sm,
+      ...shadows.small,
+    },
+    eventIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: borderRadius.sm,
+      backgroundColor: colors.gray100,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: spacing.md,
+    },
+    eventInfo: {
+      flex: 1,
+    },
+    eventTitle: {
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
+      marginBottom: spacing.xs,
+    },
+    eventDetails: {
+      ...textStyles.caption,
+      color: colors.textSecondary,
+    },
+    groupCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      marginBottom: spacing.sm,
+      ...shadows.small,
+    },
+    groupIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: borderRadius.sm,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: spacing.md,
+    },
+    groupInfo: {
+      flex: 1,
+    },
+    groupName: {
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
+      marginBottom: spacing.xs,
+    },
+    groupDescription: {
+      ...textStyles.caption,
+      color: colors.textSecondary,
+    },
+    emptyState: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.xl,
+      alignItems: 'center',
+      ...shadows.small,
+    },
+    emptyStateText: {
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
+      marginTop: spacing.md,
+    },
+    emptyStateSubtext: {
+      ...textStyles.caption,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginTop: spacing.xs,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'flex-end',
+    },
+    modalContent: {
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: borderRadius.lg,
+      borderTopRightRadius: borderRadius.lg,
+      maxHeight: '80%',
+      ...shadows.large,
+    },
+    searchModalContent: {
+      height: '90%',
+      maxHeight: '90%',
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.gray200,
+    },
+    modalTitle: {
+      ...textStyles.h2,
+    },
+    modalForm: {
+      padding: spacing.lg,
+    },
+    inputLabel: {
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
+      marginBottom: spacing.sm,
+      marginTop: spacing.md,
+    },
+    input: {
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.gray300,
+      borderRadius: borderRadius.sm,
+      padding: spacing.md,
+      ...textStyles.body1,
+      color: colors.text,
+    },
+    textArea: {
+      height: 100,
+      textAlignVertical: 'top',
+    },
+    dateButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.gray300,
+      borderRadius: borderRadius.sm,
+      padding: spacing.md,
+      gap: spacing.sm,
+    },
+    dateButtonText: {
+      ...textStyles.body1,
+      color: colors.text,
+      flex: 1,
+    },
+    pickerContainer: {
+      marginTop: spacing.sm,
+      marginBottom: spacing.md,
+    },
+    doneButton: {
+      backgroundColor: colors.primary,
+      padding: spacing.sm,
+      borderRadius: borderRadius.sm,
+      alignItems: 'center',
+      marginTop: spacing.sm,
+    },
+    doneButtonText: {
+      ...textStyles.body2,
+      color: colors.white,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    createButton: {
+      backgroundColor: colors.primary,
+      padding: spacing.md,
+      borderRadius: borderRadius.sm,
+      alignItems: 'center',
+      marginTop: spacing.xl,
+      marginBottom: spacing.lg,
+    },
+    createButtonText: {
+      ...textStyles.body1,
+      color: colors.white,
+      fontWeight: typography.fontWeightBold,
+    },
+    compactPickerContainer: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.gray300,
+      borderRadius: borderRadius.sm,
+      overflow: 'hidden',
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+    },
+    searchContainer: {
+      padding: spacing.lg,
+    },
+    searchInputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.gray300,
+      borderRadius: borderRadius.sm,
+      paddingHorizontal: spacing.md,
+      gap: spacing.sm,
+    },
+    searchInput: {
+      flex: 1,
+      paddingVertical: spacing.md,
+      ...textStyles.body1,
+      color: colors.text,
+    },
+    searchResults: {
+      flex: 1,
+    },
+    searchResultsContent: {
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.xl,
+    },
+    searchLoadingContainer: {
+      paddingVertical: spacing.xl * 2,
+      alignItems: 'center',
+    },
+    searchEmptyContainer: {
+      paddingVertical: spacing.xl * 2,
+      alignItems: 'center',
+    },
+    searchEmptyText: {
+      ...textStyles.h4,
+      marginTop: spacing.lg,
+      marginBottom: spacing.sm,
+    },
+    searchEmptySubtext: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      paddingHorizontal: spacing.xl,
+    },
+    searchResultCard: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      marginBottom: spacing.md,
+      ...shadows.small,
+    },
+    searchResultHeader: {
+      flexDirection: 'row',
+      marginBottom: spacing.md,
+    },
+    searchResultAvatar: {
+      width: 48,
+      height: 48,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: spacing.md,
+    },
+    searchResultInfo: {
+      flex: 1,
+    },
+    searchResultName: {
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
+      marginBottom: spacing.xs,
+    },
+    searchResultDetails: {
+      ...textStyles.caption,
+      color: colors.textSecondary,
+      marginBottom: spacing.xs,
+    },
+    searchResultEmail: {
+      ...textStyles.caption,
+      color: colors.textSecondary,
+    },
+    connectButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.primary,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderRadius: borderRadius.sm,
+      gap: spacing.xs,
+    },
+    connectButtonText: {
+      ...textStyles.body2,
+      fontWeight: typography.fontWeightSemiBold,
+      color: colors.white,
+    },
+    connectedButton: {
+      backgroundColor: colors.gray100,
+      borderWidth: 1,
+      borderColor: colors.gray300,
+    },
+    connectedButtonText: {
+      ...textStyles.body2,
+      fontWeight: typography.fontWeightSemiBold,
+      color: colors.textSecondary,
+    },
+    modalFooter: {
+      padding: spacing.lg,
+      borderTopWidth: 1,
+      borderTopColor: colors.gray200,
+    },
+  });
+
   if (loading) {
     return (
       <View style={[commonStyles.container, commonStyles.centerContent]}>
@@ -506,7 +903,11 @@ export default function HomeScreen() {
             </Text>
           </View>
           <TouchableOpacity style={styles.avatar} onPress={() => router.push('/profile')}>
-            <Ionicons name="person" size={32} color={colors.white} />
+            {profile?.profile_image_url ? (
+              <Image source={{ uri: profile.profile_image_url }} style={styles.avatarImage} />
+            ) : (
+              <Ionicons name="person" size={32} color={colors.white} />
+            )}
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -685,6 +1086,7 @@ export default function HomeScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Enter event title"
+                placeholderTextColor={colors.textSecondary}
                 value={newEvent.title}
                 onChangeText={(text) => setNewEvent({ ...newEvent, title: text })}
               />
@@ -693,6 +1095,7 @@ export default function HomeScreen() {
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Enter event description"
+                placeholderTextColor={colors.textSecondary}
                 value={newEvent.description}
                 onChangeText={(text) => setNewEvent({ ...newEvent, description: text })}
                 multiline
@@ -703,6 +1106,7 @@ export default function HomeScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Enter event location"
+                placeholderTextColor={colors.textSecondary}
                 value={newEvent.location}
                 onChangeText={(text) => setNewEvent({ ...newEvent, location: text })}
               />
@@ -722,6 +1126,7 @@ export default function HomeScreen() {
                     fontSize: 16,
                     fontFamily: 'inherit',
                     width: '100%',
+                    color: colors.textPrimary,
                   }}
                 />
               ) : Platform.OS === 'ios' ? (
@@ -735,7 +1140,7 @@ export default function HomeScreen() {
                         handleStartDateConfirm(selectedDate);
                       }
                     }}
-                    themeVariant="light"
+                    themeVariant={isDarkMode ? "dark" : "light"}
                   />
                 </View>
               ) : (
@@ -744,7 +1149,7 @@ export default function HomeScreen() {
                     style={styles.dateButton}
                     onPress={() => setShowStartDatePicker(true)}
                   >
-                    <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+                    <Ionicons name="calendar-outline" size={20} color={colors.white} />
                     <Text style={styles.dateButtonText}>
                       {newEvent.start_time.toLocaleDateString()}
                     </Text>
@@ -780,6 +1185,7 @@ export default function HomeScreen() {
                     fontSize: 16,
                     fontFamily: 'inherit',
                     width: '100%',
+                    color: colors.textPrimary,
                   }}
                 />
               ) : Platform.OS === 'ios' ? (
@@ -793,7 +1199,7 @@ export default function HomeScreen() {
                         handleStartTimeConfirm(selectedTime);
                       }
                     }}
-                    themeVariant="light"
+                    themeVariant={isDarkMode ? "dark" : "light"}
                   />
                 </View>
               ) : (
@@ -802,7 +1208,7 @@ export default function HomeScreen() {
                     style={styles.dateButton}
                     onPress={() => setShowStartTimePicker(true)}
                   >
-                    <Ionicons name="time-outline" size={20} color={colors.primary} />
+                    <Ionicons name="time-outline" size={20} color={colors.white} />
                     <Text style={styles.dateButtonText}>
                       {newEvent.start_time.toLocaleTimeString()}
                     </Text>
@@ -838,6 +1244,7 @@ export default function HomeScreen() {
                     fontSize: 16,
                     fontFamily: 'inherit',
                     width: '100%',
+                    color: colors.textPrimary,
                   }}
                 />
               ) : Platform.OS === 'ios' ? (
@@ -851,7 +1258,7 @@ export default function HomeScreen() {
                         handleEndDateConfirm(selectedDate);
                       }
                     }}
-                    themeVariant="light"
+                    themeVariant={isDarkMode ? "dark" : "light"}
                   />
                 </View>
               ) : (
@@ -860,7 +1267,7 @@ export default function HomeScreen() {
                     style={styles.dateButton}
                     onPress={() => setShowEndDatePicker(true)}
                   >
-                    <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+                    <Ionicons name="calendar-outline" size={20} color={colors.white} />
                     <Text style={styles.dateButtonText}>
                       {newEvent.end_time.toLocaleDateString()}
                     </Text>
@@ -896,6 +1303,7 @@ export default function HomeScreen() {
                     fontSize: 16,
                     fontFamily: 'inherit',
                     width: '100%',
+                    color: colors.textPrimary,
                   }}
                 />
               ) : Platform.OS === 'ios' ? (
@@ -909,7 +1317,7 @@ export default function HomeScreen() {
                         handleEndTimeConfirm(selectedTime);
                       }
                     }}
-                    themeVariant="light"
+                    themeVariant={isDarkMode ? "dark" : "light"}
                   />
                 </View>
               ) : (
@@ -918,7 +1326,7 @@ export default function HomeScreen() {
                     style={styles.dateButton}
                     onPress={() => setShowEndTimePicker(true)}
                   >
-                    <Ionicons name="time-outline" size={20} color={colors.primary} />
+                    <Ionicons name="time-outline" size={20} color={colors.white} />
                     <Text style={styles.dateButtonText}>
                       {newEvent.end_time.toLocaleTimeString()}
                     </Text>
@@ -972,6 +1380,7 @@ export default function HomeScreen() {
                 <TextInput
                   style={styles.searchInput}
                   placeholder="Search by name, email, or major..."
+                  placeholderTextColor={colors.textSecondary}
                   value={searchQuery}
                   onChangeText={(text) => {
                     setSearchQuery(text);
@@ -1012,9 +1421,16 @@ export default function HomeScreen() {
                 searchResults.map((result) => (
                   <View key={result.id} style={styles.searchResultCard}>
                     <View style={styles.searchResultHeader}>
-                      <View style={styles.searchResultAvatar}>
-                        <Ionicons name="person" size={24} color={colors.white} />
-                      </View>
+                      {result.profile_image_url ? (
+                        <Image
+                          source={{ uri: result.profile_image_url }}
+                          style={styles.searchResultAvatar}
+                        />
+                      ) : (
+                        <View style={styles.searchResultAvatar}>
+                          <Ionicons name="person" size={24} color={colors.white} />
+                        </View>
+                      )}
                       <View style={styles.searchResultInfo}>
                         <Text style={styles.searchResultName}>
                           {result.full_name || 'Anonymous Student'}
@@ -1075,6 +1491,7 @@ export default function HomeScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Enter group name"
+                placeholderTextColor={colors.textSecondary}
                 value={newGroup.name}
                 onChangeText={(text) => setNewGroup({ ...newGroup, name: text })}
               />
@@ -1083,6 +1500,7 @@ export default function HomeScreen() {
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Enter group description"
+                placeholderTextColor={colors.textSecondary}
                 value={newGroup.description}
                 onChangeText={(text) => setNewGroup({ ...newGroup, description: text })}
                 multiline
@@ -1093,6 +1511,7 @@ export default function HomeScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="e.g., Academic, Social, Sports"
+                placeholderTextColor={colors.textSecondary}
                 value={newGroup.club_type}
                 onChangeText={(text) => setNewGroup({ ...newGroup, club_type: text })}
               />
@@ -1101,6 +1520,7 @@ export default function HomeScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="e.g., Computer Science, Business"
+                placeholderTextColor={colors.textSecondary}
                 value={newGroup.category}
                 onChangeText={(text) => setNewGroup({ ...newGroup, category: text })}
               />
@@ -1117,377 +1537,3 @@ export default function HomeScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  greeting: {
-    ...textStyles.body2,
-    color: colors.white,
-    opacity: 0.9,
-  },
-  userName: {
-    ...textStyles.h3,
-    color: colors.white,
-    marginTop: spacing.xs,
-  },
-  userInfo: {
-    ...textStyles.caption,
-    color: colors.white,
-    opacity: 0.8,
-    marginTop: spacing.xs,
-  },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.full,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  content: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: spacing.md,
-  },
-  quickActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.lg,
-  },
-  actionCard: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginHorizontal: spacing.xs,
-    alignItems: 'center',
-    ...shadows.small,
-  },
-  actionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  actionText: {
-    ...textStyles.caption,
-    fontWeight: typography.fontWeightSemiBold,
-    textAlign: 'center',
-  },
-  section: {
-    marginBottom: spacing.lg,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  sectionTitle: {
-    ...textStyles.h4,
-  },
-  seeAllText: {
-    ...textStyles.body2,
-    color: colors.primary,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  eventCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    ...shadows.small,
-  },
-  eventIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.gray100,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  eventInfo: {
-    flex: 1,
-  },
-  eventTitle: {
-    ...textStyles.body1,
-    fontWeight: typography.fontWeightSemiBold,
-    marginBottom: spacing.xs,
-  },
-  eventDetails: {
-    ...textStyles.caption,
-    color: colors.textSecondary,
-  },
-  groupCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    ...shadows.small,
-  },
-  groupIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  groupInfo: {
-    flex: 1,
-  },
-  groupName: {
-    ...textStyles.body1,
-    fontWeight: typography.fontWeightSemiBold,
-    marginBottom: spacing.xs,
-  },
-  groupDescription: {
-    ...textStyles.caption,
-    color: colors.textSecondary,
-  },
-  emptyState: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.xl,
-    alignItems: 'center',
-    ...shadows.small,
-  },
-  emptyStateText: {
-    ...textStyles.body1,
-    fontWeight: typography.fontWeightSemiBold,
-    marginTop: spacing.md,
-  },
-  emptyStateSubtext: {
-    ...textStyles.caption,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: borderRadius.lg,
-    borderTopRightRadius: borderRadius.lg,
-    maxHeight: '80%',
-    ...shadows.large,
-  },
-  searchModalContent: {
-    height: '90%',
-    maxHeight: '90%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  modalTitle: {
-    ...textStyles.h2,
-  },
-  modalForm: {
-    padding: spacing.lg,
-  },
-  inputLabel: {
-    ...textStyles.body1,
-    fontWeight: typography.fontWeightSemiBold,
-    marginBottom: spacing.sm,
-    marginTop: spacing.md,
-  },
-  input: {
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: borderRadius.sm,
-    padding: spacing.md,
-    ...textStyles.body1,
-  },
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-  dateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: borderRadius.sm,
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  dateButtonText: {
-    ...textStyles.body1,
-    color: colors.text,
-    flex: 1,
-  },
-  pickerContainer: {
-    marginTop: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  doneButton: {
-    backgroundColor: colors.primary,
-    padding: spacing.sm,
-    borderRadius: borderRadius.sm,
-    alignItems: 'center',
-    marginTop: spacing.sm,
-  },
-  doneButtonText: {
-    ...textStyles.body2,
-    color: colors.white,
-    fontWeight: typography.fontWeightSemiBold,
-  },
-  createButton: {
-    backgroundColor: colors.primary,
-    padding: spacing.md,
-    borderRadius: borderRadius.sm,
-    alignItems: 'center',
-    marginTop: spacing.xl,
-    marginBottom: spacing.lg,
-  },
-  createButtonText: {
-    ...textStyles.body1,
-    color: colors.white,
-    fontWeight: typography.fontWeightBold,
-  },
-  compactPickerContainer: {
-    backgroundColor: colors.white || '#FFFFFF',
-    borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: borderRadius.sm,
-    overflow: 'hidden',
-    paddingVertical: spacing.xs,
-  },
-  searchContainer: {
-    padding: spacing.lg,
-  },
-  searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.gray300,
-    borderRadius: borderRadius.sm,
-    paddingHorizontal: spacing.md,
-    gap: spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    ...textStyles.body1,
-  },
-  searchResults: {
-    flex: 1,
-  },
-  searchResultsContent: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
-  },
-  searchLoadingContainer: {
-    paddingVertical: spacing.xl * 2,
-    alignItems: 'center',
-  },
-  searchEmptyContainer: {
-    paddingVertical: spacing.xl * 2,
-    alignItems: 'center',
-  },
-  searchEmptyText: {
-    ...textStyles.h4,
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-  searchEmptySubtext: {
-    ...textStyles.body2,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    paddingHorizontal: spacing.xl,
-  },
-  searchResultCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    ...shadows.small,
-  },
-  searchResultHeader: {
-    flexDirection: 'row',
-    marginBottom: spacing.md,
-  },
-  searchResultAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  searchResultInfo: {
-    flex: 1,
-  },
-  searchResultName: {
-    ...textStyles.body1,
-    fontWeight: typography.fontWeightSemiBold,
-    marginBottom: spacing.xs,
-  },
-  searchResultDetails: {
-    ...textStyles.caption,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  searchResultEmail: {
-    ...textStyles.caption,
-    color: colors.textSecondary,
-  },
-  connectButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.sm,
-    gap: spacing.xs,
-  },
-  connectButtonText: {
-    ...textStyles.body2,
-    fontWeight: typography.fontWeightSemiBold,
-    color: colors.white,
-  },
-  connectedButton: {
-    backgroundColor: colors.gray100,
-    borderWidth: 1,
-    borderColor: colors.gray300,
-  },
-  connectedButtonText: {
-    ...textStyles.body2,
-    fontWeight: typography.fontWeightSemiBold,
-    color: colors.textSecondary,
-  },
-});
