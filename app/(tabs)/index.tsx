@@ -212,6 +212,7 @@ export default function HomeScreen() {
           start_time: newEvent.start_time.toISOString(),
           end_time: newEvent.end_time.toISOString(),
           creator_id: user.id,
+          is_official_event: false,
         });
 
       if (error) throw error;

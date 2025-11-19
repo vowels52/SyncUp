@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Modal, TextInput, ScrollView, Platform } from 'react-native';
 import { spacing, borderRadius, shadows, typography } from '@/constants/theme';
 import { useThemedColors } from '@/hooks/useThemedColors';
@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth, useAlert, useTheme } from '@/template';
 import { getSupabaseClient } from '@/template';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface Event {
   id: string;
@@ -58,9 +59,44 @@ export default function EventsScreen() {
   const { showAlert } = useAlert();
   const supabase = getSupabaseClient();
 
+  // Refetch events when tab comes into focus (handles events created from home page)
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchEvents();
+      fetchUserAttendance();
+    }, [])
+  );
+
   useEffect(() => {
-    fetchEvents();
-    fetchUserAttendance();
+    // Real-time subscription for events changes
+    const eventsChannel = supabase
+      .channel('events-changes')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'events' },
+        (payload) => {
+          fetchEvents();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'events' },
+        (payload) => {
+          fetchEvents();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'events' },
+        (payload) => {
+          fetchEvents();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(eventsChannel);
+    };
   }, []);
 
   const fetchEvents = async () => {
@@ -195,6 +231,7 @@ export default function EventsScreen() {
           start_time: newEvent.start_time.toISOString(),
           end_time: newEvent.end_time.toISOString(),
           creator_id: user.id,
+          is_official_event: false,
         });
 
       if (error) throw error;
