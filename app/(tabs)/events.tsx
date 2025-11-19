@@ -193,6 +193,25 @@ export default function EventsScreen() {
     }
   };
 
+  const handleDeleteEvent = async (eventId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', eventId)
+        .eq('creator_id', user.id);
+
+      if (error) throw error;
+
+      showAlert('Success', 'Event deleted successfully');
+      fetchEvents();
+    } catch (error: any) {
+      showAlert('Error', error.message || 'Failed to delete event');
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -493,6 +512,7 @@ export default function EventsScreen() {
 
   const renderEventItem = ({ item }: { item: Event }) => {
     const isAttending = attendingEventIds.has(item.id);
+    const isCreator = user && item.creator_id === user.id;
 
     return (
       <TouchableOpacity style={styles.eventCard}>
@@ -545,25 +565,36 @@ export default function EventsScreen() {
             </View>
           </View>
 
-          <TouchableOpacity
-            style={[
-              styles.attendButton,
-              isAttending && styles.attendingButton
-            ]}
-            onPress={() => handleAttendEvent(item.id)}
-          >
-            <Ionicons
-              name={isAttending ? "checkmark-circle" : "checkmark-circle-outline"}
-              size={18}
-              color={isAttending ? colors.primary : colors.white}
-            />
-            <Text style={[
-              styles.attendButtonText,
-              isAttending && styles.attendingButtonText
-            ]}>
-              {isAttending ? 'Attending' : 'Attend'}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.eventActions}>
+            <TouchableOpacity
+              style={[
+                styles.attendButton,
+                isAttending && styles.attendingButton
+              ]}
+              onPress={() => handleAttendEvent(item.id)}
+            >
+              <Ionicons
+                name={isAttending ? "checkmark-circle" : "checkmark-circle-outline"}
+                size={18}
+                color={isAttending ? colors.primary : colors.white}
+              />
+              <Text style={[
+                styles.attendButtonText,
+                isAttending && styles.attendingButtonText
+              ]}>
+                {isAttending ? 'Attending' : 'Attend'}
+              </Text>
+            </TouchableOpacity>
+
+            {isCreator && !item.is_official_event && (
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => handleDeleteEvent(item.id)}
+              >
+                <Ionicons name="trash-outline" size={18} color={colors.error} />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -674,10 +705,14 @@ export default function EventsScreen() {
       ...textStyles.caption,
       color: colors.textSecondary,
     },
+    eventActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
     attendButton: {
       flexDirection: 'row',
       alignItems: 'center',
-      alignSelf: 'flex-start',
       backgroundColor: colors.primary,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
@@ -696,6 +731,14 @@ export default function EventsScreen() {
     },
     attendingButtonText: {
       color: colors.primary,
+    },
+    deleteButton: {
+      width: 40,
+      height: 40,
+      borderRadius: borderRadius.sm,
+      backgroundColor: colors.error + '15',
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     fab: {
       position: 'absolute',
@@ -895,6 +938,7 @@ export default function EventsScreen() {
       fontWeight: typography.fontWeightSemiBold,
       marginBottom: spacing.sm,
       marginTop: spacing.md,
+      color: colors.text,
     },
     input: {
       backgroundColor: colors.background,
@@ -903,6 +947,7 @@ export default function EventsScreen() {
       borderRadius: borderRadius.sm,
       padding: spacing.md,
       ...textStyles.body1,
+      color: colors.text,
     },
     textArea: {
       height: 100,
@@ -1320,6 +1365,7 @@ export default function EventsScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Enter event title"
+                placeholderTextColor={colors.textSecondary}
                 value={newEvent.title}
                 onChangeText={(text) => setNewEvent({ ...newEvent, title: text })}
               />
@@ -1328,6 +1374,7 @@ export default function EventsScreen() {
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Enter event description"
+                placeholderTextColor={colors.textSecondary}
                 value={newEvent.description}
                 onChangeText={(text) => setNewEvent({ ...newEvent, description: text })}
                 multiline
@@ -1338,6 +1385,7 @@ export default function EventsScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Enter event location"
+                placeholderTextColor={colors.textSecondary}
                 value={newEvent.location}
                 onChangeText={(text) => setNewEvent({ ...newEvent, location: text })}
               />
