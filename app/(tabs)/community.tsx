@@ -1651,7 +1651,7 @@ export default function CommunityScreen() {
                             <Text style={styles.commentTime}>
                               {formatTimeAgo(comment.created_at)}
                             </Text>
-                          </View>
+                          </TouchableOpacity>
                           {user && comment.author.id === user.id && (
                             <TouchableOpacity
                               onPress={() => confirmDeleteComment(comment.id, comment.author.id)}
