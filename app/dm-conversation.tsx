@@ -382,7 +382,10 @@ export default function DMConversationScreen() {
         >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <View style={styles.headerContent}>
+        <TouchableOpacity
+          style={styles.headerContent}
+          onPress={() => router.push({ pathname: '/user-details', params: { userId: otherUserId } })}
+        >
           <View style={styles.headerAvatar}>
             <Ionicons name="person" size={24} color={colors.white} />
           </View>
@@ -391,7 +394,7 @@ export default function DMConversationScreen() {
               {otherUser?.full_name || 'Anonymous Student'}
             </Text>
           </View>
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* Messages List */}

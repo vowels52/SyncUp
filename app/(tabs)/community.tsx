@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, useAlert } from '@/template';
 import { getSupabaseClient } from '@/template';
+import { useRouter } from 'expo-router';
 
 interface ForumPost {
   id: string;
@@ -80,6 +81,7 @@ export default function CommunityScreen() {
   const { user } = useAuth();
   const { showAlert } = useAlert();
   const supabase = getSupabaseClient();
+  const router = useRouter();
 
   // Styles defined inside component to use themed colors
   const styles = StyleSheet.create({
@@ -1213,7 +1215,13 @@ export default function CommunityScreen() {
         </View>
 
         <View style={styles.postFooter}>
-          <View style={styles.authorInfo}>
+          <TouchableOpacity
+            style={styles.authorInfo}
+            onPress={(e) => {
+              e.stopPropagation();
+              router.push({ pathname: '/user-details', params: { userId: item.author.id } });
+            }}
+          >
             {item.author.avatar ? (
               <Image
                 source={{ uri: item.author.avatar }}
@@ -1225,7 +1233,7 @@ export default function CommunityScreen() {
               </View>
             )}
             <Text style={styles.authorName}>{item.author.name}</Text>
-          </View>
+          </TouchableOpacity>
 
           <View style={styles.postMeta}>
             <View style={styles.metaItem}>
@@ -1471,7 +1479,10 @@ export default function CommunityScreen() {
               >
                 {/* Post Header */}
                 <View style={styles.detailPostHeader}>
-                  <View style={styles.detailAuthorInfo}>
+                  <TouchableOpacity
+                    style={styles.detailAuthorInfo}
+                    onPress={() => router.push({ pathname: '/user-details', params: { userId: selectedPost.author.id } })}
+                  >
                     {selectedPost.author.avatar ? (
                       <Image
                         source={{ uri: selectedPost.author.avatar }}
@@ -1488,7 +1499,7 @@ export default function CommunityScreen() {
                         {formatTimeAgo(selectedPost.created_at)}
                       </Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 </View>
 
                 {/* Post Content */}
@@ -1551,7 +1562,10 @@ export default function CommunityScreen() {
                     comments.map((comment) => (
                       <View key={comment.id} style={styles.commentCard}>
                         <View style={styles.commentHeader}>
-                          <View style={styles.commentAuthorInfo}>
+                          <TouchableOpacity
+                            style={styles.commentAuthorInfo}
+                            onPress={() => router.push({ pathname: '/user-details', params: { userId: comment.author.id } })}
+                          >
                             {comment.author.avatar ? (
                               <Image
                                 source={{ uri: comment.author.avatar }}
@@ -1566,7 +1580,7 @@ export default function CommunityScreen() {
                             <Text style={styles.commentTime}>
                               {formatTimeAgo(comment.created_at)}
                             </Text>
-                          </View>
+                          </TouchableOpacity>
                         </View>
                         <Text style={styles.commentContent}>{comment.content}</Text>
                       </View>
