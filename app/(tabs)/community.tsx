@@ -1446,6 +1446,7 @@ export default function CommunityScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Enter post title"
+                placeholderTextColor={colors.textSecondary}
                 value={newPost.title}
                 onChangeText={(text) => setNewPost({ ...newPost, title: text })}
               />
@@ -1454,6 +1455,7 @@ export default function CommunityScreen() {
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Share your thoughts or questions..."
+                placeholderTextColor={colors.textSecondary}
                 value={newPost.content}
                 onChangeText={(text) => setNewPost({ ...newPost, content: text })}
                 multiline
