@@ -17,6 +17,9 @@ interface UserMatch {
   year: string | null;
   bio: string | null;
   profile_image_url: string | null;
+  courses_count?: number;
+  groups_count?: number;
+  interests_count?: number;
 }
 
 interface ConnectionRequest {
@@ -223,7 +226,38 @@ export default function ConnectionsScreen() {
         const filteredMatches = data.filter(
           (match) => !excludedUserIds.has(match.id)
         );
-        setMatches(filteredMatches.slice(0, 10));
+
+        // Fetch counts for each user
+        const matchesWithCounts = await Promise.all(
+          filteredMatches.slice(0, 10).map(async (match) => {
+            // Get courses count
+            const { count: coursesCount } = await supabase
+              .from('user_courses')
+              .select('*', { count: 'exact', head: true })
+              .eq('user_id', match.id);
+
+            // Get groups count
+            const { count: groupsCount } = await supabase
+              .from('group_members')
+              .select('*', { count: 'exact', head: true })
+              .eq('user_id', match.id);
+
+            // Get interests count
+            const { count: interestsCount } = await supabase
+              .from('user_interests')
+              .select('*', { count: 'exact', head: true })
+              .eq('user_id', match.id);
+
+            return {
+              ...match,
+              courses_count: coursesCount || 0,
+              groups_count: groupsCount || 0,
+              interests_count: interestsCount || 0,
+            };
+          })
+        );
+
+        setMatches(matchesWithCounts);
       }
     } catch (error: any) {
       showAlert('Error', error.message || 'Failed to fetch matches');
@@ -906,7 +940,7 @@ export default function ConnectionsScreen() {
                 <View style={styles.statItem}>
                   <Ionicons name="book-outline" size={24} color={colors.primary} />
                   <Text style={styles.statLabel}>Courses</Text>
-                  <Text style={styles.statValue}>5</Text>
+                  <Text style={styles.statValue}>{currentMatch.courses_count || 0}</Text>
                 </View>
 
                 <View style={styles.statDivider} />
@@ -914,7 +948,7 @@ export default function ConnectionsScreen() {
                 <View style={styles.statItem}>
                   <Ionicons name="people-outline" size={24} color={colors.primary} />
                   <Text style={styles.statLabel}>Groups</Text>
-                  <Text style={styles.statValue}>3</Text>
+                  <Text style={styles.statValue}>{currentMatch.groups_count || 0}</Text>
                 </View>
 
                 <View style={styles.statDivider} />
@@ -922,7 +956,7 @@ export default function ConnectionsScreen() {
                 <View style={styles.statItem}>
                   <Ionicons name="star-outline" size={24} color={colors.primary} />
                   <Text style={styles.statLabel}>Interests</Text>
-                  <Text style={styles.statValue}>8</Text>
+                  <Text style={styles.statValue}>{currentMatch.interests_count || 0}</Text>
                 </View>
               </View>
             </View>
