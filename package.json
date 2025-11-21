@@ -162,7 +162,8 @@
     "typescript": "~5.9.2"
   },
   "overrides": {
-    "ajv": "^8.17.1"
+    "ajv": "^8.17.1",
+    "markdown-it": "^12.3.2"
   },
   "private": true
 }
