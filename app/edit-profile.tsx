@@ -580,6 +580,7 @@ export default function EditProfileScreen() {
             <TextInput
               style={styles.input}
               placeholder="John Doe"
+              placeholderTextColor={colors.textSecondary}
               value={fullName}
               onChangeText={setFullName}
             />
@@ -590,6 +591,7 @@ export default function EditProfileScreen() {
             <TextInput
               style={styles.input}
               placeholder="john@example.com"
+              placeholderTextColor={colors.textSecondary}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -602,6 +604,7 @@ export default function EditProfileScreen() {
             <TextInput
               style={styles.input}
               placeholder="University of Washington"
+              placeholderTextColor={colors.textSecondary}
               value={university}
               onChangeText={setUniversity}
             />
@@ -612,6 +615,7 @@ export default function EditProfileScreen() {
             <TextInput
               style={styles.input}
               placeholder="Computer Science"
+              placeholderTextColor={colors.textSecondary}
               value={major}
               onChangeText={setMajor}
             />
@@ -639,6 +643,7 @@ export default function EditProfileScreen() {
             <TextInput
               style={[styles.input, styles.textArea]}
               placeholder="Tell us a bit about yourself..."
+              placeholderTextColor={colors.textSecondary}
               value={bio}
               onChangeText={setBio}
               multiline
@@ -652,6 +657,7 @@ export default function EditProfileScreen() {
             <TextInput
               style={[styles.input, styles.textArea]}
               placeholder="Describe your study habits and preferences..."
+              placeholderTextColor={colors.textSecondary}
               value={studyHabits}
               onChangeText={setStudyHabits}
               multiline
@@ -665,6 +671,7 @@ export default function EditProfileScreen() {
             <TextInput
               style={[styles.input, styles.textArea]}
               placeholder="List your skills separated by commas (e.g., Python, Java, React)"
+              placeholderTextColor={colors.textSecondary}
               value={skillsText}
               onChangeText={setSkillsText}
               multiline

@@ -404,6 +404,7 @@ export default function MatchPreferencesScreen() {
             <TextInput
               style={[styles.input, styles.textArea]}
               placeholder="e.g., Prefers group study, early morning sessions, library studying..."
+              placeholderTextColor={colors.textSecondary}
               value={preferredStudyHabits}
               onChangeText={setPreferredStudyHabits}
               multiline

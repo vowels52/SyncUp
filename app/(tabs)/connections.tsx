@@ -17,6 +17,9 @@ interface UserMatch {
   year: string | null;
   bio: string | null;
   profile_image_url: string | null;
+  courses_count?: number;
+  groups_count?: number;
+  interests_count?: number;
 }
 
 interface ConnectionRequest {
@@ -175,6 +178,31 @@ export default function ConnectionsScreen() {
     try {
       setLoading(true);
 
+      // Get user's match preferences
+      const { data: userPreferences, error: preferencesError } = await supabase
+        .from('user_match_preferences')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (preferencesError) {
+        console.error('Error fetching preferences:', preferencesError);
+      }
+
+      // Get current user's interests and courses for shared filtering
+      const { data: userInterests } = await supabase
+        .from('user_interests')
+        .select('interest_id')
+        .eq('user_id', user.id);
+
+      const { data: userCourses } = await supabase
+        .from('user_courses')
+        .select('course_id')
+        .eq('user_id', user.id);
+
+      const userInterestIds = new Set(userInterests?.map(i => i.interest_id) || []);
+      const userCourseIds = new Set(userCourses?.map(c => c.course_id) || []);
+
       // Get all existing connections (sent or received)
       const { data: connections, error: connectionsError } = await supabase
         .from('connections')
@@ -208,22 +236,108 @@ export default function ConnectionsScreen() {
         excludedUserIds.add(history.viewed_user_id);
       });
 
-      // Fetch all users except current user and those with existing connections/history
-      const { data, error } = await supabase
+      // Build query for user profiles - fetch more broadly and filter client-side
+      let query = supabase
         .from('user_profiles')
         .select('id, full_name, major, year, bio, profile_image_url')
         .neq('id', user.id)
-        .not('full_name', 'is', null)
-        .limit(50);
+        .not('full_name', 'is', null);
+
+      // Apply year filter if preferences exist (exact match is fine for years)
+      if (userPreferences?.preferred_years && userPreferences.preferred_years.length > 0) {
+        query = query.in('year', userPreferences.preferred_years);
+      }
+
+      const { data, error } = await query.limit(100);
 
       if (error) throw error;
 
       if (data) {
         // Filter out users with existing connections or match history
-        const filteredMatches = data.filter(
+        let filteredMatches = data.filter(
           (match) => !excludedUserIds.has(match.id)
         );
-        setMatches(filteredMatches.slice(0, 10));
+
+        // Apply major filter client-side with partial matching
+        if (userPreferences?.preferred_majors && userPreferences.preferred_majors.length > 0) {
+          filteredMatches = filteredMatches.filter((match) => {
+            if (!match.major) return false;
+            // Check if any preferred major is contained in the user's major
+            return userPreferences.preferred_majors.some((preferredMajor) =>
+              match.major.toLowerCase().includes(preferredMajor.toLowerCase())
+            );
+          });
+        }
+
+        // Fetch counts and calculate shared interests/courses for each user
+        // Slice to 50 max before expensive queries to avoid performance issues
+        const matchesWithCounts = await Promise.all(
+          filteredMatches.slice(0, 50).map(async (match) => {
+            // Get courses count
+            const { count: coursesCount } = await supabase
+              .from('user_courses')
+              .select('*', { count: 'exact', head: true })
+              .eq('user_id', match.id);
+
+            // Get groups count
+            const { count: groupsCount } = await supabase
+              .from('group_members')
+              .select('*', { count: 'exact', head: true })
+              .eq('user_id', match.id);
+
+            // Get interests count
+            const { count: interestsCount } = await supabase
+              .from('user_interests')
+              .select('*', { count: 'exact', head: true })
+              .eq('user_id', match.id);
+
+            // Get match's interests for shared calculation
+            const { data: matchInterests } = await supabase
+              .from('user_interests')
+              .select('interest_id')
+              .eq('user_id', match.id);
+
+            // Get match's courses for shared calculation
+            const { data: matchCourses } = await supabase
+              .from('user_courses')
+              .select('course_id')
+              .eq('user_id', match.id);
+
+            // Calculate shared interests
+            const matchInterestIds = new Set(matchInterests?.map(i => i.interest_id) || []);
+            const sharedInterests = Array.from(userInterestIds).filter(id => matchInterestIds.has(id)).length;
+
+            // Calculate shared courses
+            const matchCourseIds = new Set(matchCourses?.map(c => c.course_id) || []);
+            const sharedCourses = Array.from(userCourseIds).filter(id => matchCourseIds.has(id)).length;
+
+            return {
+              ...match,
+              courses_count: coursesCount || 0,
+              groups_count: groupsCount || 0,
+              interests_count: interestsCount || 0,
+              shared_interests: sharedInterests,
+              shared_courses: sharedCourses,
+            };
+          })
+        );
+
+        // Apply minimum shared interests/courses filters
+        let finalMatches = matchesWithCounts;
+
+        if (userPreferences?.min_shared_interests !== undefined && userPreferences.min_shared_interests > 0) {
+          finalMatches = finalMatches.filter(
+            match => match.shared_interests >= userPreferences.min_shared_interests
+          );
+        }
+
+        if (userPreferences?.min_shared_courses !== undefined && userPreferences.min_shared_courses > 0) {
+          finalMatches = finalMatches.filter(
+            match => match.shared_courses >= userPreferences.min_shared_courses
+          );
+        }
+
+        setMatches(finalMatches.slice(0, 10));
       }
     } catch (error: any) {
       showAlert('Error', error.message || 'Failed to fetch matches');
@@ -906,7 +1020,7 @@ export default function ConnectionsScreen() {
                 <View style={styles.statItem}>
                   <Ionicons name="book-outline" size={24} color={colors.primary} />
                   <Text style={styles.statLabel}>Courses</Text>
-                  <Text style={styles.statValue}>5</Text>
+                  <Text style={styles.statValue}>{currentMatch.courses_count || 0}</Text>
                 </View>
 
                 <View style={styles.statDivider} />
@@ -914,7 +1028,7 @@ export default function ConnectionsScreen() {
                 <View style={styles.statItem}>
                   <Ionicons name="people-outline" size={24} color={colors.primary} />
                   <Text style={styles.statLabel}>Groups</Text>
-                  <Text style={styles.statValue}>3</Text>
+                  <Text style={styles.statValue}>{currentMatch.groups_count || 0}</Text>
                 </View>
 
                 <View style={styles.statDivider} />
@@ -922,7 +1036,7 @@ export default function ConnectionsScreen() {
                 <View style={styles.statItem}>
                   <Ionicons name="star-outline" size={24} color={colors.primary} />
                   <Text style={styles.statLabel}>Interests</Text>
-                  <Text style={styles.statValue}>8</Text>
+                  <Text style={styles.statValue}>{currentMatch.interests_count || 0}</Text>
                 </View>
               </View>
             </View>
