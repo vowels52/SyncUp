@@ -8,6 +8,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "build": "expo export --platform web",
     "lint": "expo lint",
     "update-clubs": "node ./scripts/club-scraper/scrape-clubs.js",
     "generate-clubs-sql": "node ./scripts/club-scraper/generate-sql.js",
