@@ -50,10 +50,21 @@ interface AcceptedConnection {
   unread_count?: number;
 }
 
+interface GroupChat {
+  id: string;
+  name: string | null;
+  created_by: string;
+  last_message_at: string | null;
+  created_at: string;
+  member_count?: number;
+  unread_count?: number;
+}
+
 export default function ConnectionsScreen() {
   const [matches, setMatches] = useState<UserMatch[]>([]);
   const [pendingRequests, setPendingRequests] = useState<ConnectionRequest[]>([]);
   const [acceptedConnections, setAcceptedConnections] = useState<AcceptedConnection[]>([]);
+  const [groupChats, setGroupChats] = useState<GroupChat[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [viewMode, setViewMode] = useState<'matches' | 'requests' | 'connections'>('matches');
@@ -70,6 +81,7 @@ export default function ConnectionsScreen() {
     fetchMatches();
     fetchPendingRequests();
     fetchAcceptedConnections();
+    fetchGroupChats();
 
     // Subscribe to new messages to update unread counts
     if (user) {
@@ -99,6 +111,69 @@ export default function ConnectionsScreen() {
           (payload) => {
             // Refresh when messages are marked as read
             fetchAcceptedConnections();
+          }
+        )
+        .subscribe();
+
+      // Subscribe to group messages
+      const groupMessagesChannel = supabase
+        .channel('group-messages-notifications')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'group_messages',
+          },
+          (payload) => {
+            // Refresh group chats to update unread counts
+            fetchGroupChats();
+          }
+        )
+        .subscribe();
+
+      // Subscribe to group chat changes
+      const groupChatsChannel = supabase
+        .channel('group-chats-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'group_chat_members',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            // Refresh when added to a new group chat
+            fetchGroupChats();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'group_chat_members',
+          },
+          (payload) => {
+            // Check if the deleted member was the current user
+            const deletedMember = payload.old as any;
+            if (deletedMember?.user_id === user.id) {
+              // Refresh when removed from a group chat
+              fetchGroupChats();
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'group_conversations',
+          },
+          (payload) => {
+            // Refresh when a group chat is deleted
+            fetchGroupChats();
           }
         )
         .subscribe();
@@ -158,6 +233,8 @@ export default function ConnectionsScreen() {
 
       return () => {
         supabase.removeChannel(dmChannel);
+        supabase.removeChannel(groupMessagesChannel);
+        supabase.removeChannel(groupChatsChannel);
         supabase.removeChannel(connectionsChannel);
       };
     }
@@ -166,6 +243,8 @@ export default function ConnectionsScreen() {
   // Refresh connections when screen comes into focus
   useFocusEffect(
     useCallback(() => {
+      // Always refresh group chats when screen comes into focus
+      fetchGroupChats();
       if (viewMode === 'connections') {
         fetchAcceptedConnections();
       }
@@ -581,6 +660,77 @@ export default function ConnectionsScreen() {
     }
   };
 
+  const fetchGroupChats = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('group_chat_members')
+        .select(`
+          group_conversation_id,
+          last_read_at,
+          group_conversations!inner(
+            id,
+            name,
+            created_by,
+            last_message_at,
+            created_at
+          )
+        `)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      if (data) {
+        const groupChatsWithCounts = await Promise.all(
+          data.map(async (item: any) => {
+            const groupConv = item.group_conversations;
+
+            // Get member count
+            const { count: memberCount } = await supabase
+              .from('group_chat_members')
+              .select('*', { count: 'exact', head: true })
+              .eq('group_conversation_id', groupConv.id);
+
+            // Get unread count (messages after last_read_at)
+            let unreadCount = 0;
+            if (item.last_read_at) {
+              const { count } = await supabase
+                .from('group_messages')
+                .select('*', { count: 'exact', head: true })
+                .eq('group_conversation_id', groupConv.id)
+                .gt('created_at', item.last_read_at)
+                .neq('sender_id', user.id);
+              unreadCount = count || 0;
+            } else {
+              // If never read, count all messages except own
+              const { count } = await supabase
+                .from('group_messages')
+                .select('*', { count: 'exact', head: true })
+                .eq('group_conversation_id', groupConv.id)
+                .neq('sender_id', user.id);
+              unreadCount = count || 0;
+            }
+
+            return {
+              id: groupConv.id,
+              name: groupConv.name,
+              created_by: groupConv.created_by,
+              last_message_at: groupConv.last_message_at,
+              created_at: groupConv.created_at,
+              member_count: memberCount || 0,
+              unread_count: unreadCount,
+            };
+          })
+        );
+
+        setGroupChats(groupChatsWithCounts);
+      }
+    } catch (error: any) {
+      console.error('Error fetching group chats:', error);
+    }
+  };
+
   const handleStartDM = async (connectedUserId: string) => {
     if (!user) return;
 
@@ -622,6 +772,15 @@ export default function ConnectionsScreen() {
     } catch (error: any) {
       showAlert('Error', error.message || 'Failed to start conversation');
     }
+  };
+
+  const handleOpenGroupChat = (groupConversationId: string) => {
+    router.push({
+      pathname: '/group-chat-conversation',
+      params: {
+        groupConversationId,
+      },
+    });
   };
 
   // Define styles inside component to use themed colors
@@ -919,6 +1078,39 @@ export default function ConnectionsScreen() {
       borderRadius: borderRadius.full,
       backgroundColor: colors.error,
     },
+    createGroupButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      marginBottom: spacing.lg,
+      ...shadows.small,
+    },
+    createGroupIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: spacing.md,
+    },
+    createGroupText: {
+      flex: 1,
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
+      color: colors.text,
+    },
+    sectionHeader: {
+      ...textStyles.body2,
+      fontWeight: typography.fontWeightSemiBold,
+      color: colors.textSecondary,
+      marginTop: spacing.md,
+      marginBottom: spacing.sm,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
   });
 
   if (loading) {
@@ -1136,7 +1328,7 @@ export default function ConnectionsScreen() {
       ) : (
         /* My Connections View */
         <ScrollView style={styles.requestsContainer} showsVerticalScrollIndicator={false}>
-          {acceptedConnections.length === 0 ? (
+          {acceptedConnections.length === 0 && groupChats.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="chatbubbles-outline" size={80} color={colors.gray400} />
               <Text style={styles.emptyTitle}>No connections yet</Text>
@@ -1146,7 +1338,67 @@ export default function ConnectionsScreen() {
             </View>
           ) : (
             <View style={styles.requestsList}>
-              {acceptedConnections.map((connection) => (
+              {/* Create Group Chat Button */}
+              {acceptedConnections.length >= 1 && (
+                <TouchableOpacity
+                  style={styles.createGroupButton}
+                  onPress={() => router.push('/create-group-chat')}
+                >
+                  <View style={styles.createGroupIcon}>
+                    <Ionicons name="people" size={24} color={colors.white} />
+                  </View>
+                  <Text style={styles.createGroupText}>Create Group Chat</Text>
+                  <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+                </TouchableOpacity>
+              )}
+
+              {/* Group Chats Section */}
+              {groupChats.length > 0 && (
+                <>
+                  <Text style={styles.sectionHeader}>Group Chats</Text>
+                  {groupChats.map((groupChat) => (
+                    <TouchableOpacity
+                      key={groupChat.id}
+                      style={styles.connectionCard}
+                      onPress={() => handleOpenGroupChat(groupChat.id)}
+                    >
+                      <View style={styles.requestHeader}>
+                        <View style={styles.avatarContainer}>
+                          <View style={[styles.requestAvatar, { backgroundColor: colors.primary }]}>
+                            <Ionicons name="people" size={32} color={colors.white} />
+                          </View>
+                          {(groupChat.unread_count ?? 0) > 0 && (
+                            <View style={styles.unreadBadge}>
+                              <Text style={styles.unreadBadgeText}>
+                                {groupChat.unread_count! > 9 ? '9+' : String(groupChat.unread_count)}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                        <View style={styles.requestInfo}>
+                          <View style={styles.nameRow}>
+                            <Text style={styles.requestName}>
+                              {groupChat.name || 'Group Chat'}
+                            </Text>
+                            {(groupChat.unread_count ?? 0) > 0 && (
+                              <View style={styles.unreadDot} />
+                            )}
+                          </View>
+                          <Text style={styles.requestDetails}>
+                            {groupChat.member_count} members
+                          </Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </>
+              )}
+
+              {/* Direct Messages Section */}
+              {acceptedConnections.length > 0 && (
+                <>
+                  <Text style={styles.sectionHeader}>Direct Messages</Text>
+                  {acceptedConnections.map((connection) => (
                 <View key={connection.id} style={styles.connectionCard}>
                   <TouchableOpacity
                     style={styles.requestHeader}
@@ -1203,6 +1455,8 @@ export default function ConnectionsScreen() {
                   </TouchableOpacity>
                 </View>
               ))}
+                </>
+              )}
             </View>
           )}
         </ScrollView>
