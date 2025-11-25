@@ -1,6 +1,7 @@
 import { getSupabaseClient } from '@/template';
 import { readAsStringAsync } from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
+import { Platform } from 'react-native';
 
 const PROFILE_IMAGES_BUCKET = 'profile-images';
 
@@ -12,6 +13,39 @@ export interface UploadProfileImageParams {
 export interface UploadProfileImageResult {
   imageUrl: string;
 }
+
+/**
+ * Convert URI to base64 - Platform specific implementation
+ */
+const uriToBase64 = async (uri: string): Promise<string> => {
+  if (Platform.OS === 'web') {
+    // On web, the URI is already a data URL with base64
+    // Format: data:image/jpeg;base64,/9j/4AAQSkZJRg...
+    if (uri.startsWith('data:')) {
+      const base64 = uri.split(',')[1];
+      return base64;
+    }
+
+    // If it's a blob URL, fetch it
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const dataUrl = reader.result as string;
+        const base64 = dataUrl.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } else {
+    // On native, use expo-file-system
+    return await readAsStringAsync(uri, {
+      encoding: 'base64',
+    });
+  }
+};
 
 /**
  * Upload a profile image to Supabase Storage and update user profile
@@ -28,10 +62,8 @@ export const uploadProfileImage = async ({
     const fileName = `${userId}_${Date.now()}.${fileExt}`;
     const filePath = `${userId}/${fileName}`;
 
-    // Read the file as base64 using expo-file-system
-    const base64 = await readAsStringAsync(imageUri, {
-      encoding: 'base64',
-    });
+    // Read the file as base64 (platform-specific)
+    const base64 = await uriToBase64(imageUri);
 
     // Convert base64 to ArrayBuffer for Supabase
     const arrayBuffer = decode(base64);
