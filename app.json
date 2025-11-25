@@ -4,7 +4,7 @@
     "slug": "syncup",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/SyncUp_Logo_Idea_2_Black_Text.png",
+    "icon": "./assets/images/SyncUp_logo2.png",
     "scheme": "syncup",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -13,7 +13,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/SyncUp_Logo_Idea_2_Black_Text.png",
+        "foregroundImage": "./assets/images/SyncUp_logo2.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true
@@ -21,14 +21,14 @@
     "web": {
       "bundler": "metro",
       "output": "single",
-      "favicon": "./assets/images/SyncUp_Logo_Idea_2_Black_Text.png"
+      "favicon": "./assets/images/SyncUp_logo2.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/SyncUp_Logo_Idea_2_Black_Text.png",
+          "image": "./assets/images/SyncUp_logo2.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
