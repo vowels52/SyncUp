@@ -243,9 +243,10 @@ export default function ConnectionsScreen() {
   // Refresh connections when screen comes into focus
   useFocusEffect(
     useCallback(() => {
+      // Always refresh group chats when screen comes into focus
+      fetchGroupChats();
       if (viewMode === 'connections') {
         fetchAcceptedConnections();
-        fetchGroupChats();
       }
     }, [viewMode])
   );

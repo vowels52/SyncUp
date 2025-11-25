@@ -334,8 +334,12 @@ export default function GroupChatConversationScreen() {
 
       if (error) throw error;
 
+      // Navigate back first, then show alert so the list refreshes
       router.back();
-      showAlert('Success', 'You have left the group chat');
+      // Small delay to ensure navigation completes before showing alert
+      setTimeout(() => {
+        showAlert('Success', 'You have left the group chat');
+      }, 100);
     } catch (error: any) {
       console.error('Error leaving group:', error);
       showAlert('Error', 'Failed to leave group chat: ' + error.message);
