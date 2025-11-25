@@ -6156,3 +6156,209 @@ CREATE TRIGGER trigger_direct_messages_updated_at
     BEFORE UPDATE ON direct_messages
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================
+-- GROUP CHAT TABLES
+-- =====================================================
+-- Description: Private group chat functionality
+-- This allows users to create group chats with their connections
+
+-- Table: group_conversations
+-- Description: Stores private group chat conversations
+CREATE TABLE IF NOT EXISTS group_conversations (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    name text,
+    created_by uuid NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    last_message_at timestamp with time zone
+);
+
+-- Indexes for group_conversations
+CREATE INDEX IF NOT EXISTS idx_group_conversations_created_by ON group_conversations(created_by);
+CREATE INDEX IF NOT EXISTS idx_group_conversations_last_message ON group_conversations(last_message_at DESC);
+
+-- Table: group_chat_members
+-- Description: Maps users to group conversations they're part of
+CREATE TABLE IF NOT EXISTS group_chat_members (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    group_conversation_id uuid NOT NULL REFERENCES group_conversations(id) ON DELETE CASCADE,
+    user_id uuid NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+    joined_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    last_read_at timestamp with time zone,
+    UNIQUE(group_conversation_id, user_id)
+);
+
+-- Indexes for group_chat_members
+CREATE INDEX IF NOT EXISTS idx_group_chat_members_conversation ON group_chat_members(group_conversation_id);
+CREATE INDEX IF NOT EXISTS idx_group_chat_members_user ON group_chat_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_group_chat_members_user_conversation ON group_chat_members(user_id, group_conversation_id);
+
+-- Table: group_messages
+-- Description: Stores messages in group conversations
+CREATE TABLE IF NOT EXISTS group_messages (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    group_conversation_id uuid NOT NULL REFERENCES group_conversations(id) ON DELETE CASCADE,
+    sender_id uuid NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+    content text NOT NULL,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Indexes for group_messages
+CREATE INDEX IF NOT EXISTS idx_group_messages_conversation ON group_messages(group_conversation_id);
+CREATE INDEX IF NOT EXISTS idx_group_messages_sender ON group_messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_group_messages_created ON group_messages(created_at DESC);
+
+-- =====================================================
+-- RLS POLICIES FOR GROUP CONVERSATIONS
+-- =====================================================
+
+ALTER TABLE group_conversations ENABLE ROW LEVEL SECURITY;
+
+-- Allow users to view group conversations they created OR are members of
+CREATE POLICY "Users can view their group conversations" ON group_conversations
+    FOR SELECT
+    TO authenticated
+    USING (
+        created_by = auth.uid()
+        OR id IN (
+            SELECT group_conversation_id
+            FROM group_chat_members
+            WHERE user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can create group conversations" ON group_conversations
+    FOR INSERT
+    TO authenticated
+    WITH CHECK (created_by = auth.uid());
+
+CREATE POLICY "Group creators can update their group conversations" ON group_conversations
+    FOR UPDATE
+    TO authenticated
+    USING (created_by = auth.uid());
+
+CREATE POLICY "Group creators can delete their group conversations" ON group_conversations
+    FOR DELETE
+    TO authenticated
+    USING (created_by = auth.uid());
+
+-- =====================================================
+-- RLS POLICIES FOR GROUP CHAT MEMBERS
+-- =====================================================
+
+ALTER TABLE group_chat_members ENABLE ROW LEVEL SECURITY;
+
+-- Allow viewing all members of a group (simpler policy to avoid recursion)
+CREATE POLICY "Users can view group members" ON group_chat_members
+    FOR SELECT
+    TO authenticated
+    USING (true);
+
+-- Allow creators and the user themselves to add members
+CREATE POLICY "Add group members" ON group_chat_members
+    FOR INSERT
+    TO authenticated
+    WITH CHECK (
+        user_id = auth.uid()
+        OR EXISTS (
+            SELECT 1 FROM group_conversations
+            WHERE group_conversations.id = group_chat_members.group_conversation_id
+            AND group_conversations.created_by = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can update their own membership" ON group_chat_members
+    FOR UPDATE
+    TO authenticated
+    USING (user_id = auth.uid());
+
+CREATE POLICY "Users can remove themselves from group chats" ON group_chat_members
+    FOR DELETE
+    TO authenticated
+    USING (
+        user_id = auth.uid()
+        OR EXISTS (
+            SELECT 1 FROM group_conversations
+            WHERE group_conversations.id = group_chat_members.group_conversation_id
+            AND group_conversations.created_by = auth.uid()
+        )
+    );
+
+-- =====================================================
+-- RLS POLICIES FOR GROUP MESSAGES
+-- =====================================================
+
+ALTER TABLE group_messages ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view messages in their group conversations" ON group_messages
+    FOR SELECT
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM group_chat_members
+            WHERE group_chat_members.group_conversation_id = group_messages.group_conversation_id
+            AND group_chat_members.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Group members can send messages" ON group_messages
+    FOR INSERT
+    TO authenticated
+    WITH CHECK (
+        sender_id = auth.uid()
+        AND EXISTS (
+            SELECT 1 FROM group_chat_members
+            WHERE group_chat_members.group_conversation_id = group_messages.group_conversation_id
+            AND group_chat_members.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can update their own messages" ON group_messages
+    FOR UPDATE
+    TO authenticated
+    USING (sender_id = auth.uid());
+
+CREATE POLICY "Users can delete their own messages" ON group_messages
+    FOR DELETE
+    TO authenticated
+    USING (sender_id = auth.uid());
+
+-- =====================================================
+-- FUNCTIONS AND TRIGGERS FOR GROUP CHATS
+-- =====================================================
+
+-- Function to update group conversation's last_message_at timestamp
+CREATE OR REPLACE FUNCTION update_group_conversation_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE group_conversations
+    SET
+        last_message_at = NEW.created_at,
+        updated_at = NEW.created_at
+    WHERE id = NEW.group_conversation_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to update group conversation timestamp when a new message is sent
+DROP TRIGGER IF EXISTS trigger_update_group_conversation_timestamp ON group_messages;
+CREATE TRIGGER trigger_update_group_conversation_timestamp
+    AFTER INSERT ON group_messages
+    FOR EACH ROW
+    EXECUTE FUNCTION update_group_conversation_timestamp();
+
+-- Triggers to update updated_at for group_conversations
+DROP TRIGGER IF EXISTS trigger_group_conversations_updated_at ON group_conversations;
+CREATE TRIGGER trigger_group_conversations_updated_at
+    BEFORE UPDATE ON group_conversations
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Triggers to update updated_at for group_messages
+DROP TRIGGER IF EXISTS trigger_group_messages_updated_at ON group_messages;
+CREATE TRIGGER trigger_group_messages_updated_at
+    BEFORE UPDATE ON group_messages
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();

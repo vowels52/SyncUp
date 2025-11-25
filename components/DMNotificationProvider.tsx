@@ -13,6 +13,9 @@ interface DMNotification {
   senderId: string;
   message: string;
   conversationId: string;
+  isGroupMessage?: boolean;
+  groupConversationId?: string;
+  groupName?: string;
 }
 
 interface DMNotificationContextType {
@@ -40,8 +43,8 @@ export const DMNotificationProvider: React.FC<{ children: React.ReactNode }> = (
   useEffect(() => {
     if (!user) return;
 
-    // Subscribe to new messages
-    const channel = supabase
+    // Subscribe to new DM messages
+    const dmChannel = supabase
       .channel('dm-notifications-global')
       .on(
         'postgres_changes',
@@ -79,8 +82,74 @@ export const DMNotificationProvider: React.FC<{ children: React.ReactNode }> = (
       )
       .subscribe();
 
+    // Subscribe to group messages
+    const groupChannel = supabase
+      .channel('group-messages-notifications-global')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'group_messages',
+        },
+        async (payload) => {
+          const newMessage = payload.new as any;
+
+          // Skip if this is our own message
+          if (newMessage.sender_id === user.id) {
+            return;
+          }
+
+          // Check if user is a member of this group
+          const { data: membership } = await supabase
+            .from('group_chat_members')
+            .select('group_conversation_id')
+            .eq('group_conversation_id', newMessage.group_conversation_id)
+            .eq('user_id', user.id)
+            .single();
+
+          if (!membership) {
+            return; // User is not a member of this group
+          }
+
+          // Don't show notification if user is viewing this group conversation
+          const isViewingGroupConversation = pathname.includes('group-chat-conversation');
+
+          if (isViewingGroupConversation) {
+            return;
+          }
+
+          // Fetch sender info
+          const { data: senderData } = await supabase
+            .from('user_profiles')
+            .select('full_name')
+            .eq('id', newMessage.sender_id)
+            .single();
+
+          // Fetch group info
+          const { data: groupData } = await supabase
+            .from('group_conversations')
+            .select('name')
+            .eq('id', newMessage.group_conversation_id)
+            .single();
+
+          showNotification({
+            id: newMessage.id,
+            senderName: senderData?.full_name || 'Someone',
+            senderId: newMessage.sender_id,
+            message: newMessage.content,
+            conversationId: '', // Not used for group messages
+            isGroupMessage: true,
+            groupConversationId: newMessage.group_conversation_id,
+            groupName: groupData?.name || 'Group Chat',
+          });
+        }
+      )
+      .subscribe();
+
     return () => {
-      channel.unsubscribe();
+      dmChannel.unsubscribe();
+      groupChannel.unsubscribe();
     };
   }, [user, pathname]);
 
@@ -118,13 +187,22 @@ export const DMNotificationProvider: React.FC<{ children: React.ReactNode }> = (
   const handleNotificationPress = () => {
     if (notification) {
       hideNotification();
-      router.push({
-        pathname: '/dm-conversation',
-        params: {
-          conversationId: notification.conversationId,
-          otherUserId: notification.senderId,
-        },
-      });
+      if (notification.isGroupMessage) {
+        router.push({
+          pathname: '/group-chat-conversation',
+          params: {
+            groupConversationId: notification.groupConversationId!,
+          },
+        });
+      } else {
+        router.push({
+          pathname: '/dm-conversation',
+          params: {
+            conversationId: notification.conversationId,
+            otherUserId: notification.senderId,
+          },
+        });
+      }
     }
   };
 
@@ -150,7 +228,9 @@ export const DMNotificationProvider: React.FC<{ children: React.ReactNode }> = (
             </View>
             <View style={styles.textContainer}>
               <Text style={styles.senderName} numberOfLines={1}>
-                {notification.senderName}
+                {notification.isGroupMessage
+                  ? `${notification.groupName}: ${notification.senderName}`
+                  : notification.senderName}
               </Text>
               <Text style={styles.messageText} numberOfLines={2}>
                 {notification.message}

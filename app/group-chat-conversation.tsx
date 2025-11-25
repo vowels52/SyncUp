@@ -1,0 +1,652 @@
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  Image,
+  Alert,
+  Modal,
+} from 'react-native';
+import { useLocalSearchParams, router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { spacing, borderRadius, shadows, typography } from '@/constants/theme';
+import { useAuth, useAlert } from '@/template';
+import { getSupabaseClient } from '@/template';
+import { useThemedColors } from '@/hooks/useThemedColors';
+
+interface GroupMessage {
+  id: string;
+  sender_id: string;
+  content: string;
+  created_at: string;
+  sender?: {
+    id: string;
+    full_name: string | null;
+    profile_image_url: string | null;
+  };
+}
+
+interface GroupConversation {
+  id: string;
+  name: string | null;
+  created_by: string;
+}
+
+interface GroupMember {
+  user_id: string;
+  user_profiles: {
+    id: string;
+    full_name: string | null;
+    profile_image_url: string | null;
+  };
+}
+
+export default function GroupChatConversationScreen() {
+  const colors = useThemedColors();
+  const { groupConversationId } = useLocalSearchParams<{
+    groupConversationId: string;
+  }>();
+
+  const [messages, setMessages] = useState<GroupMessage[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [groupInfo, setGroupInfo] = useState<GroupConversation | null>(null);
+  const [members, setMembers] = useState<GroupMember[]>([]);
+  const [showMenu, setShowMenu] = useState(false);
+  const flatListRef = useRef<FlatList>(null);
+
+  const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const { showAlert } = useAlert();
+  const supabase = getSupabaseClient();
+
+  useEffect(() => {
+    if (user && groupConversationId) {
+      fetchGroupInfo();
+      fetchMembers();
+      fetchMessages();
+      const cleanup = subscribeToMessages();
+      return cleanup;
+    }
+  }, [groupConversationId, user]);
+
+  const fetchGroupInfo = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('group_conversations')
+        .select('id, name, created_by')
+        .eq('id', groupConversationId)
+        .single();
+
+      if (error) throw error;
+      if (data) setGroupInfo(data);
+    } catch (error: any) {
+      console.error('Error fetching group info:', error);
+    }
+  };
+
+  const fetchMembers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('group_chat_members')
+        .select(`
+          user_id,
+          user_profiles(id, full_name, profile_image_url)
+        `)
+        .eq('group_conversation_id', groupConversationId);
+
+      if (error) throw error;
+      if (data) setMembers(data as any);
+    } catch (error: any) {
+      console.error('Error fetching members:', error);
+    }
+  };
+
+  const fetchMessages = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('group_messages')
+        .select(`
+          id,
+          sender_id,
+          content,
+          created_at,
+          sender:user_profiles!group_messages_sender_id_fkey(
+            id,
+            full_name,
+            profile_image_url
+          )
+        `)
+        .eq('group_conversation_id', groupConversationId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      if (data) {
+        setMessages(data as any);
+        // Update last read timestamp
+        setTimeout(() => {
+          updateLastRead();
+        }, 500);
+      }
+    } catch (error: any) {
+      showAlert('Error', error.message || 'Failed to fetch messages');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateLastRead = async () => {
+    try {
+      await supabase
+        .from('group_chat_members')
+        .update({ last_read_at: new Date().toISOString() })
+        .eq('group_conversation_id', groupConversationId)
+        .eq('user_id', user?.id);
+    } catch (error) {
+      console.error('Error updating last read:', error);
+    }
+  };
+
+  const subscribeToMessages = () => {
+    const channel = supabase
+      .channel(`group-messages-${groupConversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'group_messages',
+          filter: `group_conversation_id=eq.${groupConversationId}`,
+        },
+        async (payload) => {
+          const newMsg = payload.new as GroupMessage;
+
+          // Fetch sender info for the new message
+          const { data: senderData } = await supabase
+            .from('user_profiles')
+            .select('id, full_name, profile_image_url')
+            .eq('id', newMsg.sender_id)
+            .single();
+
+          const messageWithSender = {
+            ...newMsg,
+            sender: senderData,
+          };
+
+          setMessages((prev) => [...prev, messageWithSender]);
+
+          // Auto-scroll to bottom
+          setTimeout(() => {
+            flatListRef.current?.scrollToEnd({ animated: true });
+          }, 100);
+
+          // Update last read if message is from someone else
+          if (newMsg.sender_id !== user?.id) {
+            updateLastRead();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || sending) return;
+
+    const messageContent = newMessage.trim();
+    setNewMessage('');
+    setSending(true);
+
+    try {
+      const { error } = await supabase.from('group_messages').insert({
+        group_conversation_id: groupConversationId,
+        sender_id: user?.id,
+        content: messageContent,
+      });
+
+      if (error) throw error;
+    } catch (error: any) {
+      showAlert('Error', error.message || 'Failed to send message');
+      setNewMessage(messageContent);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleDeleteGroup = async () => {
+    setShowMenu(false);
+
+    // Use browser's confirm dialog on web, Alert.alert on mobile
+    const confirmed = Platform.OS === 'web'
+      ? window.confirm('Are you sure you want to delete this group chat? This action cannot be undone and all messages will be deleted.')
+      : await new Promise((resolve) => {
+          Alert.alert(
+            'Delete Group Chat',
+            'Are you sure you want to delete this group chat? This action cannot be undone and all messages will be deleted.',
+            [
+              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Delete', style: 'destructive', onPress: () => resolve(true) },
+            ]
+          );
+        });
+
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from('group_conversations')
+        .delete()
+        .eq('id', groupConversationId);
+
+      if (error) throw error;
+
+      router.back();
+      showAlert('Success', 'Group chat deleted successfully');
+    } catch (error: any) {
+      console.error('Error deleting group:', error);
+      showAlert('Error', 'Failed to delete group chat: ' + error.message);
+    }
+  };
+
+  const handleLeaveGroup = async () => {
+    setShowMenu(false);
+
+    // Use browser's confirm dialog on web, Alert.alert on mobile
+    const confirmed = Platform.OS === 'web'
+      ? window.confirm('Are you sure you want to leave this group chat? You will no longer receive messages from this group.')
+      : await new Promise((resolve) => {
+          Alert.alert(
+            'Leave Group Chat',
+            'Are you sure you want to leave this group chat? You will no longer receive messages from this group.',
+            [
+              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Leave', style: 'destructive', onPress: () => resolve(true) },
+            ]
+          );
+        });
+
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from('group_chat_members')
+        .delete()
+        .eq('group_conversation_id', groupConversationId)
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      router.back();
+      showAlert('Success', 'You have left the group chat');
+    } catch (error: any) {
+      console.error('Error leaving group:', error);
+      showAlert('Error', 'Failed to leave group chat: ' + error.message);
+    }
+  };
+
+  const isCreator = groupInfo?.created_by === user?.id;
+
+
+  const renderMessage = ({ item }: { item: GroupMessage }) => {
+    const isMyMessage = item.sender_id === user?.id;
+
+    return (
+      <View
+        style={[
+          styles.messageContainer,
+          isMyMessage ? styles.myMessageContainer : styles.otherMessageContainer,
+        ]}
+      >
+        {!isMyMessage && (
+          <View style={styles.senderInfo}>
+            {item.sender?.profile_image_url ? (
+              <Image
+                source={{ uri: item.sender.profile_image_url }}
+                style={styles.senderAvatar}
+              />
+            ) : (
+              <View
+                style={[
+                  styles.senderAvatar,
+                  styles.avatarPlaceholder,
+                  { backgroundColor: colors.border },
+                ]}
+              >
+                <Ionicons name="person" size={16} color={colors.text} />
+              </View>
+            )}
+          </View>
+        )}
+        <View style={{ flex: 1 }}>
+          {!isMyMessage && (
+            <Text style={[styles.senderName, { color: colors.text + 'CC' }]}>
+              {item.sender?.full_name || 'Unknown'}
+            </Text>
+          )}
+          <View
+            style={[
+              styles.messageBubble,
+              isMyMessage
+                ? { backgroundColor: colors.primary }
+                : { backgroundColor: colors.card },
+            ]}
+          >
+            <Text
+              style={[
+                styles.messageText,
+                { color: isMyMessage ? '#fff' : colors.text },
+              ]}
+            >
+              {item.content}
+            </Text>
+            <Text
+              style={[
+                styles.timestamp,
+                { color: isMyMessage ? '#fff9' : colors.text + '80' },
+              ]}
+            >
+              {new Date(item.created_at).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  return (
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    >
+      <View
+        style={[
+          styles.header,
+          { paddingTop: insets.top + 8, backgroundColor: colors.card },
+        ]}
+      >
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <View style={styles.headerInfo}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>
+            {groupInfo?.name || 'Group Chat'}
+          </Text>
+          <Text style={[styles.headerSubtitle, { color: colors.text + '80' }]}>
+            {members.length} members
+          </Text>
+        </View>
+        <TouchableOpacity style={styles.moreButton} onPress={() => setShowMenu(true)}>
+          <Ionicons name="ellipsis-vertical" size={24} color={colors.text} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Menu Modal */}
+      <Modal
+        visible={showMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowMenu(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowMenu(false)}
+        >
+          <View style={[styles.menuContainer, { backgroundColor: colors.card }]}>
+            {isCreator ? (
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={handleDeleteGroup}
+              >
+                <Ionicons name="trash-outline" size={20} color={colors.error} />
+                <Text style={[styles.menuItemText, { color: colors.error }]}>
+                  Delete Group Chat
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={handleLeaveGroup}
+              >
+                <Ionicons name="exit-outline" size={20} color={colors.error} />
+                <Text style={[styles.menuItemText, { color: colors.error }]}>
+                  Leave Group Chat
+                </Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => setShowMenu(false)}
+            >
+              <Ionicons name="close-outline" size={20} color={colors.text} />
+              <Text style={[styles.menuItemText, { color: colors.text }]}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      <FlatList
+        ref={flatListRef}
+        data={messages}
+        renderItem={renderMessage}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.messagesList}
+        onContentSizeChange={() => {
+          flatListRef.current?.scrollToEnd({ animated: false });
+        }}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={[styles.emptyText, { color: colors.text + '80' }]}>
+              No messages yet. Start the conversation!
+            </Text>
+          </View>
+        }
+      />
+
+      <View
+        style={[
+          styles.inputContainer,
+          {
+            backgroundColor: colors.card,
+            paddingBottom: insets.bottom + 8,
+            borderTopColor: colors.border,
+          },
+        ]}
+      >
+        <TextInput
+          style={[
+            styles.input,
+            {
+              backgroundColor: colors.background,
+              color: colors.text,
+              borderColor: colors.border,
+            },
+          ]}
+          placeholder="Type a message..."
+          placeholderTextColor={colors.text + '80'}
+          value={newMessage}
+          onChangeText={setNewMessage}
+          multiline
+          maxLength={1000}
+        />
+        <TouchableOpacity
+          style={[
+            styles.sendButton,
+            {
+              backgroundColor: newMessage.trim()
+                ? colors.primary
+                : colors.border,
+            },
+          ]}
+          onPress={handleSendMessage}
+          disabled={!newMessage.trim() || sending}
+        >
+          {sending ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Ionicons name="send" size={20} color="#fff" />
+          )}
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+  },
+  backButton: {
+    padding: 4,
+    marginRight: 8,
+  },
+  headerInfo: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    marginTop: 2,
+  },
+  moreButton: {
+    padding: 4,
+  },
+  messagesList: {
+    padding: 16,
+  },
+  messageContainer: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    maxWidth: '80%',
+  },
+  myMessageContainer: {
+    alignSelf: 'flex-end',
+    marginLeft: 'auto',
+  },
+  otherMessageContainer: {
+    alignSelf: 'flex-start',
+  },
+  senderInfo: {
+    marginRight: 4,
+  },
+  senderAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  avatarPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  senderName: {
+    fontSize: 12,
+    marginBottom: 4,
+    marginLeft: 4,
+    fontWeight: '500',
+  },
+  messageBubble: {
+    padding: 8,
+    borderRadius: 16,
+  },
+  messageText: {
+    fontSize: 16,
+    lineHeight: 20,
+  },
+  timestamp: {
+    fontSize: 12,
+    marginTop: 4,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 64,
+  },
+  emptyText: {
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    borderTopWidth: 1,
+  },
+  input: {
+    flex: 1,
+    minHeight: 40,
+    maxHeight: 100,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    fontSize: 16,
+    borderWidth: 1,
+    marginRight: 8,
+  },
+  sendButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 0,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  menuContainer: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: 32,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    gap: 12,
+  },
+  menuItemText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+});
