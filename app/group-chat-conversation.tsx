@@ -73,8 +73,12 @@ export default function GroupChatConversationScreen() {
       fetchGroupInfo();
       fetchMembers();
       fetchMessages();
-      const cleanup = subscribeToMessages();
-      return cleanup;
+      const messagesCleanup = subscribeToMessages();
+      const deletionCleanup = subscribeToGroupDeletion();
+      return () => {
+        messagesCleanup();
+        deletionCleanup();
+      };
     }
   }, [groupConversationId, user]);
 
@@ -193,6 +197,47 @@ export default function GroupChatConversationScreen() {
           // Update last read if message is from someone else
           if (newMsg.sender_id !== user?.id) {
             updateLastRead();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
+
+  const subscribeToGroupDeletion = () => {
+    const channel = supabase
+      .channel(`group-deletion-${groupConversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'group_conversations',
+          filter: `id=eq.${groupConversationId}`,
+        },
+        () => {
+          // Group chat was deleted
+          router.back();
+          showAlert('Group Deleted', 'This group chat has been deleted');
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'group_chat_members',
+          filter: `group_conversation_id=eq.${groupConversationId}`,
+        },
+        async (payload) => {
+          // Check if the deleted member was the current user
+          const deletedMember = payload.old as any;
+          if (deletedMember.user_id === user?.id) {
+            router.back();
+            showAlert('Removed from Group', 'You have been removed from this group chat');
           }
         }
       )

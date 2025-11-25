@@ -154,11 +154,14 @@ export default function ConnectionsScreen() {
             event: 'DELETE',
             schema: 'public',
             table: 'group_chat_members',
-            filter: `user_id=eq.${user.id}`,
           },
           (payload) => {
-            // Refresh when removed from a group chat
-            fetchGroupChats();
+            // Check if the deleted member was the current user
+            const deletedMember = payload.old as any;
+            if (deletedMember?.user_id === user.id) {
+              // Refresh when removed from a group chat
+              fetchGroupChats();
+            }
           }
         )
         .on(
@@ -242,6 +245,7 @@ export default function ConnectionsScreen() {
     useCallback(() => {
       if (viewMode === 'connections') {
         fetchAcceptedConnections();
+        fetchGroupChats();
       }
     }, [viewMode])
   );
