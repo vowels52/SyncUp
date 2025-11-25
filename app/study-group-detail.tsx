@@ -247,7 +247,7 @@ export default function StudyGroupDetailScreen() {
     },
     tagText: {
       fontSize: typography.fontSize12,
-      color: colors.surface,
+      color: colors.white,  // Always use white for better contrast on colored backgrounds
       fontWeight: typography.fontWeightSemiBold,
     },
     memberInfo: {
@@ -303,7 +303,7 @@ export default function StudyGroupDetailScreen() {
     joinButtonText: {
       fontSize: typography.fontSize16,
       fontWeight: typography.fontWeightBold,
-      color: colors.surface,
+      color: colors.white,  // Always use white for better contrast on colored buttons
     },
     memberStatusBadge: {
       flexDirection: 'row',
@@ -435,13 +435,13 @@ export default function StudyGroupDetailScreen() {
               disabled={joining}
             >
               {joining ? (
-                <ActivityIndicator size="small" color={colors.surface} />
+                <ActivityIndicator size="small" color={colors.white} />
               ) : (
                 <>
                   <Ionicons
                     name={isMember ? 'checkmark-circle' : 'add-circle'}
                     size={20}
-                    color={colors.surface}
+                    color={colors.white}
                     style={styles.buttonIcon}
                   />
                   <Text style={styles.joinButtonText}>

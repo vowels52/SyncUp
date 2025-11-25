@@ -533,7 +533,7 @@ export default function EventsScreen() {
             <Text style={styles.eventTitle}>{item.title}</Text>
             {item.is_official_event && (
               <View style={styles.officialBadge}>
-                <Ionicons name="shield-checkmark" size={14} color={colors.primary} />
+                <Ionicons name="shield-checkmark" size={14} color={colors.accent} />
                 <Text style={styles.officialBadgeText}>Official</Text>
               </View>
             )}
@@ -552,13 +552,13 @@ export default function EventsScreen() {
           <View style={styles.eventDetails}>
             {item.location && (
               <View style={styles.eventDetailItem}>
-                <Ionicons name="location-outline" size={16} color={colors.primary} />
+                <Ionicons name="location-outline" size={16} color={colors.textSecondary} />
                 <Text style={styles.eventDetailText}>{item.location}</Text>
               </View>
             )}
 
             <View style={styles.eventDetailItem}>
-              <Ionicons name="time-outline" size={16} color={colors.primary} />
+              <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
               <Text style={styles.eventDetailText}>
                 {formatTime(item.start_time)}
               </Text>
@@ -676,12 +676,12 @@ export default function EventsScreen() {
     },
     officialBadgeText: {
       fontSize: 11,
-      color: colors.primary,
+      color: colors.accent,  // Using accent orange for better visibility
       fontWeight: typography.fontWeightSemiBold,
     },
     eventType: {
       ...textStyles.caption,
-      color: colors.primary,
+      color: colors.accent,  // Using accent orange for better visibility
       fontWeight: typography.fontWeightSemiBold,
       marginBottom: spacing.xs,
     },

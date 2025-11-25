@@ -187,7 +187,7 @@ export default function ClubDetailScreen() {
     },
     tagText: {
       fontSize: typography.fontSize12,
-      color: colors.surface,
+      color: colors.white,  // Always use white for better contrast on colored backgrounds
       fontWeight: typography.fontWeightSemiBold,
     },
     officialBadge: {
@@ -198,7 +198,7 @@ export default function ClubDetailScreen() {
     },
     officialText: {
       fontSize: typography.fontSize14,
-      color: colors.primary,
+      color: colors.accent,  // Using accent orange for better visibility
       fontWeight: typography.fontWeightSemiBold,
     },
     section: {
@@ -233,7 +233,7 @@ export default function ClubDetailScreen() {
     joinButtonText: {
       fontSize: typography.fontSize16,
       fontWeight: typography.fontWeightBold,
-      color: colors.surface,
+      color: colors.white,  // Always use white for better contrast on colored buttons
     },
     errorText: {
       fontSize: typography.fontSize16,
@@ -314,7 +314,7 @@ export default function ClubDetailScreen() {
 
           {club.is_official_club && (
             <View style={styles.officialBadge}>
-              <Ionicons name="shield-checkmark" size={16} color={colors.primary} />
+              <Ionicons name="shield-checkmark" size={16} color={colors.accent} />
               <Text style={styles.officialText}>Official UWB Club</Text>
             </View>
           )}
@@ -335,13 +335,13 @@ export default function ClubDetailScreen() {
               disabled={joining}
             >
               {joining ? (
-                <ActivityIndicator size="small" color={colors.surface} />
+                <ActivityIndicator size="small" color={colors.white} />
               ) : (
                 <>
                   <Ionicons
                     name={isMember ? 'checkmark-circle' : 'add-circle'}
                     size={20}
-                    color={colors.surface}
+                    color={colors.white}
                     style={styles.buttonIcon}
                   />
                   <Text style={styles.joinButtonText}>
