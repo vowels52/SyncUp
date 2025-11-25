@@ -319,8 +319,8 @@ export default function GroupsScreen() {
       marginTop: spacing.lg,
     },
     logo: {
-      width: 200,
-      height: 100,
+      width: 350,
+      height: 175,
     },
     sectionHeader: {
       flexDirection: 'row',
@@ -523,7 +523,7 @@ export default function GroupsScreen() {
       {/* Logo at the bottom */}
       <View style={styles.logoContainer}>
         <Image
-          source={require('@/assets/images/SyncUp_logo2.png')}
+          source={require('@/assets/images/SyncUp_Logo3.png')}
           style={styles.logo}
           resizeMode="contain"
         />
