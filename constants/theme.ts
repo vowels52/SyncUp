@@ -1,89 +1,89 @@
 // Light theme colors
 const lightColors = {
   // Primary Brand Colors
-  primary: '#009688',
-  primaryDark: '#00796B',
-  primaryLight: '#4DB6AC',
+  primary: '#24284b',      // Dark blue from logo
+  primaryDark: '#1a1d35',  // Darker version
+  primaryLight: '#3d4268', // Lighter version
 
   // Accent Colors
-  accent: '#00BCD4',
-  accentLight: '#B2EBF2',
+  accent: '#e19e5f',       // Gray orange from logo
+  accentLight: '#f0c9a3',  // Lighter orange
 
   // Neutral Colors
   white: '#FFFFFF',
   black: '#000000',
-  gray50: '#FAFAFA',
-  gray100: '#F5F5F5',
-  gray200: '#EEEEEE',
-  gray300: '#E0E0E0',
-  gray400: '#BDBDBD',
-  gray500: '#9E9E9E',
-  gray600: '#757575',
-  gray700: '#616161',
-  gray800: '#424242',
-  gray900: '#212121',
+  gray50: '#eeeef0',       // Light gray from logo
+  gray100: '#e5e5e8',
+  gray200: '#d5d5da',
+  gray300: '#c5c5cc',
+  gray400: '#9a9aa5',
+  gray500: '#757582',
+  gray600: '#545671',      // Gray blue from logo
+  gray700: '#846351',      // Darker gray orange from logo
+  gray800: '#5a4438',
+  gray900: '#24284b',      // Dark blue
 
   // Semantic Colors
   success: '#4CAF50',
-  warning: '#FF9800',
+  warning: '#e19e5f',      // Using accent orange for warnings
   error: '#F44336',
-  info: '#2196F3',
+  info: '#545671',         // Using gray blue for info
 
   // Background Colors
-  background: '#FAFAFA',
+  background: '#f5f5f7',   // Slightly lighter gray for better contrast
   surface: '#FFFFFF',
-  overlay: 'rgba(0, 0, 0, 0.5)',
+  overlay: 'rgba(36, 40, 75, 0.5)', // Using dark blue for overlay
 
   // Text Colors
-  text: '#212121', // Added for backward compatibility
-  textPrimary: '#212121',
-  textSecondary: '#757575',
-  textDisabled: '#BDBDBD',
+  text: '#1a1d35',         // Even darker blue for better contrast
+  textPrimary: '#1a1d35',  // Very dark blue for primary text
+  textSecondary: '#3d4268', // Darker gray blue for better visibility
+  textDisabled: '#757582',  // Darker disabled text
   textOnPrimary: '#FFFFFF',
 };
 
 // Dark theme colors
 const darkColors = {
   // Primary Brand Colors
-  primary: '#4DB6AC',
-  primaryDark: '#009688',
-  primaryLight: '#80CBC4',
+  primary: '#3d4268',      // Lighter version of dark blue for dark mode
+  primaryDark: '#24284b',  // Original dark blue
+  primaryLight: '#5a5f8f', // Even lighter
 
   // Accent Colors
-  accent: '#4DD0E1',
-  accentLight: '#26C6DA',
+  accent: '#e19e5f',       // Gray orange from logo (same as light)
+  accentLight: '#f0c9a3',  // Lighter orange
 
   // Neutral Colors
   white: '#FFFFFF',
   black: '#000000',
-  gray50: '#1E1E1E',
-  gray100: '#2C2C2C',
-  gray200: '#3A3A3A',
-  gray300: '#484848',
-  gray400: '#6B6B6B',
-  gray500: '#8E8E8E',
-  gray600: '#B1B1B1',
-  gray700: '#C4C4C4',
-  gray800: '#D7D7D7',
-  gray900: '#EAEAEA',
+  gray50: '#1a1d35',       // Very dark blue
+  gray100: '#24284b',      // Dark blue
+  gray200: '#2f3357',
+  gray300: '#3d4268',
+  gray400: '#545671',      // Gray blue from logo
+  gray500: '#6d7088',
+  gray600: '#9a9aa5',
+  gray700: '#c5c5cc',
+  gray800: '#d5d5da',
+  gray900: '#eeeef0',      // Light gray
 
   // Semantic Colors
   success: '#66BB6A',
-  warning: '#FFA726',
+  warning: '#e19e5f',      // Using accent orange
   error: '#EF5350',
-  info: '#42A5F5',
+  info: '#6d7088',         // Lighter gray blue for dark mode
 
   // Background Colors
-  background: '#121212',
-  surface: '#1E1E1E',
+  background: '#1a1d35',   // Very dark blue
+  surface: '#24284b',      // Dark blue for surfaces
   overlay: 'rgba(0, 0, 0, 0.7)',
 
   // Text Colors
-  text: '#EAEAEA',
-  textPrimary: '#EAEAEA',
-  textSecondary: '#B1B1B1',
-  textDisabled: '#6B6B6B',
-  textOnPrimary: '#000000',
+  text: '#FFFFFF',         // Pure white for better contrast
+  textPrimary: '#FFFFFF',  // Pure white for primary text
+  textSecondary: '#c5c5cc', // Much lighter gray for better visibility
+  textDisabled: '#9a9aa5',  // Lighter disabled text
+  textOnPrimary: '#1a1d35', // Dark text on primary color
 };
 
 // Default export for backward compatibility (light mode)
