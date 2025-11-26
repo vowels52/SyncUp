@@ -100,38 +100,52 @@ export default function CommunityScreen() {
     headerTitle: {
       ...textStyles.h2,
     },
-    searchContainer: {
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.md,
-      backgroundColor: colors.surface,
+    headerSubtitle: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+      marginTop: spacing.xs,
     },
-    searchBar: {
+    searchContainer: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.xl,
+      padding: spacing.md,
+      marginTop: spacing.md,
+      marginBottom: spacing.md,
+      marginHorizontal: spacing.md,
+      ...shadows.small,
+    },
+    searchInputContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.gray100,
-      borderRadius: borderRadius.lg,
+      backgroundColor: colors.background,
+      borderRadius: borderRadius.md,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
-      gap: spacing.sm,
+      borderWidth: 1,
+      borderColor: colors.gray200,
+    },
+    searchIcon: {
+      marginRight: spacing.sm,
     },
     searchInput: {
       flex: 1,
-      ...textStyles.body1,
-      color: colors.text,
-      padding: 0,
+      fontSize: typography.fontSize14,
+      color: colors.textPrimary,
+      paddingVertical: spacing.xs,
     },
     clearButton: {
       padding: spacing.xs,
     },
     filterContainer: {
       backgroundColor: colors.surface,
-      paddingBottom: spacing.md,
+      paddingVertical: spacing.md,
       borderBottomWidth: 1,
       borderBottomColor: colors.gray200,
     },
     filterContent: {
       paddingHorizontal: spacing.md,
       gap: spacing.sm,
+      alignItems: 'center',
     },
     filterButton: {
       paddingHorizontal: spacing.md,
@@ -1338,22 +1352,25 @@ export default function CommunityScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Community</Text>
+        <Text style={styles.headerSubtitle}>Share knowledge and connect with peers</Text>
       </View>
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <Ionicons name="search" size={20} color={colors.gray500} />
+        <View style={styles.searchInputContainer}>
+          <Ionicons name="search" size={20} color={colors.textSecondary} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Find Forums"
-            placeholderTextColor={colors.gray500}
+            placeholder="Search community posts..."
+            placeholderTextColor={colors.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
-              <Ionicons name="close-circle" size={18} color={colors.gray500} />
+              <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
         </View>
