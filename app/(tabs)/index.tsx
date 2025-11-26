@@ -526,6 +526,8 @@ export default function HomeScreen() {
       color: colors.white,
       opacity: 0.8,
       marginTop: spacing.xs,
+      flexWrap: 'wrap',
+      width: '100%',
     },
     avatar: {
       width: 56,
@@ -902,7 +904,7 @@ export default function HomeScreen() {
           <View style={styles.headerTextContainer}>
             <Text style={styles.greeting}>Welcome back,</Text>
             <Text style={styles.userName}>{profile?.full_name || 'Student'}</Text>
-            <Text style={styles.userInfo} numberOfLines={2}>
+            <Text style={styles.userInfo} numberOfLines={2} ellipsizeMode="tail">
               {profile?.major ? `${profile.major} • ${profile.year}` : 'Complete your profile'}
             </Text>
           </View>
