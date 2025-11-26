@@ -912,12 +912,9 @@ export default function ConnectionsScreen() {
     },
     content: {
       flex: 1,
-      padding: spacing.md,
-      paddingTop: spacing.xl,
     },
-    cardContainer: {
-      flex: 1,
-      justifyContent: 'flex-start',
+    scrollContent: {
+      padding: spacing.md,
       paddingTop: spacing.md,
     },
     card: {
@@ -1283,9 +1280,8 @@ export default function ConnectionsScreen() {
           </Text>
         </View>
       ) : (
-        <View style={styles.content}>
-          <View style={styles.cardContainer}>
-            <View style={styles.card}>
+        <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.card}>
               <TouchableOpacity
                 style={styles.profileSection}
                 onPress={() => router.push({ pathname: '/user-details', params: { userId: currentMatch.id } })}
@@ -1341,7 +1337,6 @@ export default function ConnectionsScreen() {
                 </View>
               </View>
             </View>
-          </View>
 
           <View style={styles.actionsContainer}>
             <TouchableOpacity 
@@ -1364,7 +1359,7 @@ export default function ConnectionsScreen() {
               {currentIndex + 1} / {matches.length}
             </Text>
           </View>
-        </View>
+        </ScrollView>
       )
       ) : viewMode === 'requests' ? (
         /* Pending Requests View */
