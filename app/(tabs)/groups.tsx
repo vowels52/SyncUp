@@ -272,6 +272,20 @@ export default function GroupsScreen() {
       flex: 1,
       backgroundColor: colors.background,
     },
+    header: {
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      backgroundColor: colors.surface,
+      ...shadows.small,
+    },
+    headerTitle: {
+      ...textStyles.h3,
+    },
+    headerSubtitle: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+      marginTop: spacing.xs,
+    },
     contentContainer: {
       padding: spacing.lg,
       paddingBottom: spacing.xxxl,
@@ -462,15 +476,22 @@ export default function GroupsScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
-      }
-    >
-      {/* Search Bar */}
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Groups</Text>
+        <Text style={styles.headerSubtitle}>Join clubs and study groups</Text>
+      </View>
+
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+        }
+      >
+        {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
           <Ionicons name="search" size={20} color={colors.textSecondary} style={styles.searchIcon} />
@@ -599,5 +620,6 @@ export default function GroupsScreen() {
         />
       </View>
     </ScrollView>
+    </View>
   );
 }

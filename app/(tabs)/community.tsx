@@ -98,7 +98,7 @@ export default function CommunityScreen() {
       borderBottomColor: colors.gray200,
     },
     headerTitle: {
-      ...textStyles.h2,
+      ...textStyles.h3,
     },
     headerSubtitle: {
       ...textStyles.body2,
