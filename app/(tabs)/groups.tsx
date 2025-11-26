@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Image, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { spacing, borderRadius, shadows, typography } from '@/constants/theme';
 import { useThemedColors } from '@/hooks/useThemedColors';
@@ -44,6 +44,7 @@ export default function GroupsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showAllClubs, setShowAllClubs] = useState(false);
   const [showAllStudyGroups, setShowAllStudyGroups] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const colors = useThemedColors();
   const { commonStyles, textStyles } = useThemedStyles();
@@ -250,6 +251,21 @@ export default function GroupsScreen() {
     router.push(`/study-group-detail?id=${groupId}&from=groups`);
   };
 
+  // Filter clubs and study groups based on search query
+  const filteredUwbClubs = uwbClubs.filter(club =>
+    club.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    club.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    club.club_type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    club.category?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredStudyGroups = studyGroups.filter(group =>
+    group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    group.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    group.club_type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    group.category?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   // Define styles inside component to use themed colors
   const styles = StyleSheet.create({
     container: {
@@ -406,6 +422,35 @@ export default function GroupsScreen() {
       color: colors.primary,
       fontWeight: typography.fontWeightMedium,
     },
+    searchContainer: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.xl,
+      padding: spacing.lg,
+      marginBottom: spacing.lg,
+      ...shadows.small,
+    },
+    searchInputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      borderRadius: borderRadius.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderWidth: 1,
+      borderColor: colors.gray200,
+    },
+    searchIcon: {
+      marginRight: spacing.sm,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: typography.fontSize14,
+      color: colors.textPrimary,
+      paddingVertical: spacing.xs,
+    },
+    clearButton: {
+      padding: spacing.xs,
+    },
   });
 
   if (loading) {
@@ -425,23 +470,46 @@ export default function GroupsScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
       }
     >
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchInputContainer}>
+          <Ionicons name="search" size={20} color={colors.textSecondary} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search clubs and study groups..."
+            placeholderTextColor={colors.textSecondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+              <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
       {/* Study Groups Section */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Study Groups</Text>
-          {studyGroups.length > 5 && (
+          {filteredStudyGroups.length > 5 && (
             <TouchableOpacity onPress={() => setShowAllStudyGroups(!showAllStudyGroups)}>
               <Text style={styles.toggleText}>
-                {showAllStudyGroups ? 'Show Less' : `Show All (${studyGroups.length})`}
+                {showAllStudyGroups ? 'Show Less' : `Show All (${filteredStudyGroups.length})`}
               </Text>
             </TouchableOpacity>
           )}
         </View>
         <View style={styles.sectionContent}>
-          {studyGroups.length === 0 ? (
-            <Text style={styles.emptyText}>No study groups available</Text>
+          {filteredStudyGroups.length === 0 ? (
+            <Text style={styles.emptyText}>
+              {searchQuery ? 'No study groups found' : 'No study groups available'}
+            </Text>
           ) : (
-            (showAllStudyGroups ? studyGroups : studyGroups.slice(0, 5)).map((group) => (
+            (showAllStudyGroups ? filteredStudyGroups : filteredStudyGroups.slice(0, 5)).map((group) => (
               <TouchableOpacity
                 key={group.id}
                 style={styles.studyGroupCard}
@@ -478,15 +546,17 @@ export default function GroupsScreen() {
           <Text style={styles.sectionTitle}>Discover UWB Clubs</Text>
           <TouchableOpacity onPress={() => setShowAllClubs(!showAllClubs)}>
             <Text style={styles.toggleText}>
-              {showAllClubs ? 'Show Less' : `Show All (${uwbClubs.length})`}
+              {showAllClubs ? 'Show Less' : `Show All (${filteredUwbClubs.length})`}
             </Text>
           </TouchableOpacity>
         </View>
         <View style={styles.sectionContent}>
-          {uwbClubs.length === 0 ? (
-            <Text style={styles.emptyText}>No clubs available</Text>
+          {filteredUwbClubs.length === 0 ? (
+            <Text style={styles.emptyText}>
+              {searchQuery ? 'No clubs found' : 'No clubs available'}
+            </Text>
           ) : (
-            (showAllClubs ? uwbClubs : uwbClubs.slice(0, 5)).map((club) => (
+            (showAllClubs ? filteredUwbClubs : filteredUwbClubs.slice(0, 5)).map((club) => (
               <TouchableOpacity
                 key={club.id}
                 style={styles.clubCard}

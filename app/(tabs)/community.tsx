@@ -49,7 +49,7 @@ interface Comment {
   created_at: string;
 }
 
-type FilterType = 'all' | 'courses' | 'study-tips' | 'professors';
+type FilterType = 'all' | 'courses' | 'study-tips' | 'professors' | 'other';
 
 export default function CommunityScreen() {
   const [posts, setPosts] = useState<ForumPost[]>([]);
@@ -1108,6 +1108,9 @@ export default function CommunityScreen() {
         } else if (activeFilter === 'professors') {
           // Match professor related keywords
           return tagString.includes('professor') || tagString.includes('prof');
+        } else if (activeFilter === 'other') {
+          // Match posts with 'other' tag or posts that don't match the other categories
+          return tagString.includes('other');
         }
         return true;
       });
@@ -1367,6 +1370,7 @@ export default function CommunityScreen() {
           {renderFilterButton('courses', 'Courses')}
           {renderFilterButton('study-tips', 'Study Tips')}
           {renderFilterButton('professors', 'Professors')}
+          {renderFilterButton('other', 'Other')}
         </ScrollView>
       </View>
 
@@ -1506,6 +1510,23 @@ export default function CommunityScreen() {
                     newPost.category === 'professors' && styles.categoryButtonTextActive
                   ]}>
                     Professors
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.categoryButtons}>
+                <TouchableOpacity
+                  style={[
+                    styles.categoryButton,
+                    newPost.category === 'other' && styles.categoryButtonActive
+                  ]}
+                  onPress={() => setNewPost({ ...newPost, category: 'other' })}
+                >
+                  <Text style={[
+                    styles.categoryButtonText,
+                    newPost.category === 'other' && styles.categoryButtonTextActive
+                  ]}>
+                    Other
                   </Text>
                 </TouchableOpacity>
               </View>
