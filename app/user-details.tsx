@@ -231,9 +231,6 @@ export default function UserDetailsScreen() {
 
       if (error) throw error;
 
-      console.log('User ID being viewed:', userId);
-      console.log('User connections found:', userConnections);
-
       if (!userConnections || userConnections.length === 0) {
         setConnections([]);
         setConnectionsLoading(false);
@@ -244,8 +241,6 @@ export default function UserDetailsScreen() {
       const connectedUserIds = userConnections.map((conn: any) => {
         return conn.user_id === userId ? conn.connected_user_id : conn.user_id;
       });
-
-      console.log('Connected user IDs:', connectedUserIds);
 
       // Fetch the profiles of all connected users
       const { data: connectedProfiles, error: profilesError } = await supabase
