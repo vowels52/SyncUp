@@ -16,7 +16,8 @@ export default function RootLayout() {
                 name="onboarding"
                 options={{
                   headerShown: false,
-                  presentation: 'modal'
+                  presentation: 'modal',
+                  gestureEnabled: false,
                 }}
               />
               <Stack.Screen

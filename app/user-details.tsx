@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, Modal, FlatList } from 'react-native';
 import { colors, spacing, borderRadius, shadows, typography } from '@/constants/theme';
 import { textStyles, commonStyles } from '@/constants/styles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +20,18 @@ interface UserProfile {
   profile_image_url: string | null;
 }
 
+interface ConnectionWithMutuals {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  major: string | null;
+  year: string | null;
+  bio: string | null;
+  profile_image_url: string | null;
+  mutual_connections: number;
+  mutual_connection_names: string[];
+}
+
 export default function UserDetailsScreen() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -28,6 +40,9 @@ export default function UserDetailsScreen() {
   const [eventsCount, setEventsCount] = useState(0);
   const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'accepted' | 'self'>('none');
   const [actionLoading, setActionLoading] = useState(false);
+  const [showConnectionsModal, setShowConnectionsModal] = useState(false);
+  const [connections, setConnections] = useState<ConnectionWithMutuals[]>([]);
+  const [connectionsLoading, setConnectionsLoading] = useState(false);
 
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -201,6 +216,139 @@ export default function UserDetailsScreen() {
     }
   };
 
+  const fetchConnections = async () => {
+    if (!userId) return;
+
+    try {
+      setConnectionsLoading(true);
+
+      // Fetch the user's connections
+      const { data: userConnections, error } = await supabase
+        .from('connections')
+        .select('id, user_id, connected_user_id')
+        .eq('status', 'accepted')
+        .or(`user_id.eq.${userId},connected_user_id.eq.${userId}`);
+
+      if (error) throw error;
+
+      if (!userConnections || userConnections.length === 0) {
+        setConnections([]);
+        setConnectionsLoading(false);
+        return;
+      }
+
+      // Get the IDs of connected users (the other person in each connection)
+      const connectedUserIds = userConnections.map((conn: any) => {
+        return conn.user_id === userId ? conn.connected_user_id : conn.user_id;
+      });
+
+      // Fetch the profiles of all connected users
+      const { data: connectedProfiles, error: profilesError } = await supabase
+        .from('user_profiles')
+        .select('id, full_name, email, major, year, bio, profile_image_url')
+        .in('id', connectedUserIds);
+
+      if (profilesError) throw profilesError;
+
+      if (!connectedProfiles || connectedProfiles.length === 0) {
+        setConnections([]);
+        setConnectionsLoading(false);
+        return;
+      }
+
+      const connectedUsers = connectedProfiles;
+
+      // For each connection, find mutual connections (friends of friends)
+      const connectionsWithMutuals = await Promise.all(
+        connectedUsers.map(async (connectedUser: any) => {
+          if (!user) {
+            return {
+              ...connectedUser,
+              mutual_connections: 0,
+              mutual_connection_names: [],
+            };
+          }
+
+          // Get mutual connections between the current user and this connected user
+          // A mutual connection is someone who is connected to both the current user AND this connected user
+
+          // First, get all connections of the current logged-in user
+          const { data: currentUserConnections } = await supabase
+            .from('connections')
+            .select('user_id, connected_user_id')
+            .eq('status', 'accepted')
+            .or(`user_id.eq.${user.id},connected_user_id.eq.${user.id}`);
+
+          // Get all connections of this connected user
+          const { data: otherUserConnections } = await supabase
+            .from('connections')
+            .select('user_id, connected_user_id')
+            .eq('status', 'accepted')
+            .or(`user_id.eq.${connectedUser.id},connected_user_id.eq.${connectedUser.id}`);
+
+          if (!currentUserConnections || !otherUserConnections) {
+            return {
+              ...connectedUser,
+              mutual_connections: 0,
+              mutual_connection_names: [],
+            };
+          }
+
+          // Extract user IDs from current user's connections
+          const currentUserConnectionIds = new Set<string>();
+          currentUserConnections.forEach((conn: any) => {
+            const otherId = conn.user_id === user.id ? conn.connected_user_id : conn.user_id;
+            currentUserConnectionIds.add(otherId);
+          });
+
+          // Extract user IDs from connected user's connections
+          const otherUserConnectionIds = new Set<string>();
+          otherUserConnections.forEach((conn: any) => {
+            const otherId = conn.user_id === connectedUser.id ? conn.connected_user_id : conn.user_id;
+            otherUserConnectionIds.add(otherId);
+          });
+
+          // Find mutual connections (intersection of both sets)
+          const mutualIds = Array.from(currentUserConnectionIds).filter(id =>
+            otherUserConnectionIds.has(id) && id !== user.id && id !== connectedUser.id
+          );
+
+          // Fetch names of mutual connections
+          let mutualNames: string[] = [];
+          if (mutualIds.length > 0) {
+            const { data: mutualProfiles } = await supabase
+              .from('user_profiles')
+              .select('full_name')
+              .in('id', mutualIds);
+
+            if (mutualProfiles) {
+              mutualNames = mutualProfiles
+                .map(p => p.full_name)
+                .filter((name): name is string => name !== null);
+            }
+          }
+
+          return {
+            ...connectedUser,
+            mutual_connections: mutualIds.length,
+            mutual_connection_names: mutualNames,
+          };
+        })
+      );
+
+      setConnections(connectionsWithMutuals);
+    } catch (error: any) {
+      showAlert('Error', error.message || 'Failed to fetch connections');
+    } finally {
+      setConnectionsLoading(false);
+    }
+  };
+
+  const handleOpenConnections = () => {
+    setShowConnectionsModal(true);
+    fetchConnections();
+  };
+
   // Generate styles dynamically based on theme
   const styles = StyleSheet.create({
     container: {
@@ -347,6 +495,92 @@ export default function UserDetailsScreen() {
       ...textStyles.button,
       color: themedColors.textPrimary,
     },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'flex-end',
+    },
+    modalContent: {
+      backgroundColor: themedColors.surface,
+      borderTopLeftRadius: borderRadius.xl,
+      borderTopRightRadius: borderRadius.xl,
+      maxHeight: '80%',
+      paddingTop: spacing.md,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: themedColors.gray200,
+    },
+    modalTitle: {
+      ...textStyles.h3,
+      color: themedColors.textPrimary,
+      flex: 1,
+    },
+    closeButton: {
+      padding: spacing.xs,
+    },
+    connectionItem: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: themedColors.gray100,
+    },
+    connectionAvatar: {
+      width: 56,
+      height: 56,
+      borderRadius: borderRadius.full,
+      backgroundColor: themedColors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: spacing.md,
+    },
+    connectionDetails: {
+      flex: 1,
+    },
+    connectionName: {
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
+      color: themedColors.textPrimary,
+      marginBottom: spacing.xs,
+    },
+    connectionMajor: {
+      ...textStyles.caption,
+      color: themedColors.textSecondary,
+      marginBottom: spacing.xs,
+    },
+    mutualConnectionsContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: spacing.xs,
+      gap: spacing.xs,
+    },
+    mutualConnectionsText: {
+      ...textStyles.caption,
+      color: themedColors.primary,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    mutualNames: {
+      ...textStyles.caption,
+      color: themedColors.textSecondary,
+      fontStyle: 'italic',
+      marginTop: 2,
+    },
+    emptyConnectionsContainer: {
+      paddingVertical: spacing.xl * 2,
+      alignItems: 'center',
+    },
+    emptyConnectionsText: {
+      ...textStyles.body2,
+      color: themedColors.textSecondary,
+      marginTop: spacing.md,
+    },
   });
 
   if (loading) {
@@ -420,11 +654,15 @@ export default function UserDetailsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Statistics</Text>
           <View style={styles.statsGrid}>
-            <View style={styles.statCard}>
+            <TouchableOpacity
+              style={styles.statCard}
+              onPress={handleOpenConnections}
+              activeOpacity={0.7}
+            >
               <Ionicons name="people" size={32} color={themedColors.primary} />
               <Text style={styles.statValue}>{connectionsCount}</Text>
               <Text style={styles.statLabel}>Connections</Text>
-            </View>
+            </TouchableOpacity>
 
             <View style={styles.statCard}>
               <Ionicons name="grid" size={32} color={themedColors.accent} />
@@ -478,6 +716,102 @@ export default function UserDetailsScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Connections Modal */}
+      <Modal
+        visible={showConnectionsModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowConnectionsModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowConnectionsModal(false)}
+        >
+          <TouchableOpacity
+            style={styles.modalContent}
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {profile?.full_name ? `${profile.full_name}'s Connections` : 'Connections'}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowConnectionsModal(false)}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color={themedColors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            {connectionsLoading ? (
+              <View style={{ paddingVertical: spacing.xl * 2 }}>
+                <ActivityIndicator size="large" color={themedColors.primary} />
+              </View>
+            ) : connections.length === 0 ? (
+              <View style={styles.emptyConnectionsContainer}>
+                <Ionicons name="people-outline" size={64} color={themedColors.gray400} />
+                <Text style={styles.emptyConnectionsText}>
+                  No connections yet
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={connections}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.connectionItem}
+                    onPress={() => {
+                      setShowConnectionsModal(false);
+                      router.push({ pathname: '/user-details', params: { userId: item.id } });
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    {item.profile_image_url ? (
+                      <Image
+                        source={{ uri: item.profile_image_url }}
+                        style={styles.connectionAvatar}
+                      />
+                    ) : (
+                      <View style={styles.connectionAvatar}>
+                        <Ionicons name="person" size={32} color={themedColors.white} />
+                      </View>
+                    )}
+                    <View style={styles.connectionDetails}>
+                      <Text style={styles.connectionName}>
+                        {item.full_name || 'Anonymous Student'}
+                      </Text>
+                      {item.major && item.year && (
+                        <Text style={styles.connectionMajor}>
+                          {item.major} • {item.year}
+                        </Text>
+                      )}
+                      {item.mutual_connections > 0 && (
+                        <View style={styles.mutualConnectionsContainer}>
+                          <Ionicons name="people" size={14} color={themedColors.primary} />
+                          <Text style={styles.mutualConnectionsText}>
+                            {item.mutual_connections} mutual {item.mutual_connections === 1 ? 'connection' : 'connections'}
+                          </Text>
+                        </View>
+                      )}
+                      {item.mutual_connection_names.length > 0 && (
+                        <Text style={styles.mutualNames} numberOfLines={1}>
+                          {item.mutual_connection_names.slice(0, 3).join(', ')}
+                          {item.mutual_connection_names.length > 3 ? ` +${item.mutual_connection_names.length - 3} more` : ''}
+                        </Text>
+                      )}
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={themedColors.gray400} />
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
