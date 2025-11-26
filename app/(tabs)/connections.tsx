@@ -63,6 +63,7 @@ interface GroupChat {
 export default function ConnectionsScreen() {
   const [matches, setMatches] = useState<UserMatch[]>([]);
   const [pendingRequests, setPendingRequests] = useState<ConnectionRequest[]>([]);
+  const [outgoingRequests, setOutgoingRequests] = useState<ConnectionRequest[]>([]);
   const [acceptedConnections, setAcceptedConnections] = useState<AcceptedConnection[]>([]);
   const [groupChats, setGroupChats] = useState<GroupChat[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,6 +81,7 @@ export default function ConnectionsScreen() {
   useEffect(() => {
     fetchMatches();
     fetchPendingRequests();
+    fetchOutgoingRequests();
     fetchAcceptedConnections();
     fetchGroupChats();
 
@@ -204,15 +206,20 @@ export default function ConnectionsScreen() {
           (payload) => {
             const connection = payload.new as any;
 
-            // If connection was accepted, refresh both requests and connections
-            if (connection.status === 'accepted') {
-              fetchPendingRequests();
-              fetchAcceptedConnections();
-            }
+            // Only refresh if this connection involves the current user
+            if (connection && (connection.user_id === user.id || connection.connected_user_id === user.id)) {
+              // If connection was accepted, refresh both requests and connections
+              if (connection.status === 'accepted') {
+                fetchPendingRequests();
+                fetchOutgoingRequests();
+                fetchAcceptedConnections();
+              }
 
-            // If connection was rejected, refresh requests
-            if (connection.status === 'rejected') {
-              fetchPendingRequests();
+              // If connection was rejected, refresh requests
+              if (connection.status === 'rejected') {
+                fetchPendingRequests();
+                fetchOutgoingRequests();
+              }
             }
           }
         )
@@ -224,9 +231,13 @@ export default function ConnectionsScreen() {
             table: 'connections',
           },
           (payload) => {
-            // Connection was deleted, refresh both lists
-            fetchPendingRequests();
-            fetchAcceptedConnections();
+            // Connection was deleted, only refresh if it involved current user
+            const deletedConnection = payload.old as any;
+            if (deletedConnection && (deletedConnection.user_id === user.id || deletedConnection.connected_user_id === user.id)) {
+              fetchPendingRequests();
+              fetchOutgoingRequests();
+              fetchAcceptedConnections();
+            }
           }
         )
         .subscribe();
@@ -456,6 +467,9 @@ export default function ConnectionsScreen() {
 
       showAlert('Success', 'Connection request sent!');
 
+      // Refresh outgoing requests to show the new request
+      fetchOutgoingRequests();
+
       // Remove the current user from matches and move to next
       const updatedMatches = matches.filter(m => m.id !== matchedUserId);
       setMatches(updatedMatches);
@@ -527,7 +541,7 @@ export default function ConnectionsScreen() {
     if (!user) return;
 
     try {
-      // Fetch connection requests where the current user is the connected_user_id
+      // Fetch connection requests where the current user is the connected_user_id (incoming)
       const { data, error } = await supabase
         .from('connections')
         .select(`
@@ -554,6 +568,47 @@ export default function ConnectionsScreen() {
       }
     } catch (error: any) {
       console.error('Error fetching pending requests:', error);
+    }
+  };
+
+  const fetchOutgoingRequests = async () => {
+    if (!user) return;
+
+    try {
+      // Fetch connection requests where the current user is the user_id (outgoing)
+      const { data, error } = await supabase
+        .from('connections')
+        .select(`
+          id,
+          connected_user_id,
+          created_at,
+          user_profiles:connected_user_id (
+            id,
+            full_name,
+            major,
+            year,
+            bio,
+            profile_image_url
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data) {
+        // Map the data to match ConnectionRequest interface
+        const mappedData = data.map(item => ({
+          id: item.id,
+          user_id: item.connected_user_id,
+          created_at: item.created_at,
+          user_profiles: item.user_profiles
+        }));
+        setOutgoingRequests(mappedData as unknown as ConnectionRequest[]);
+      }
+    } catch (error: any) {
+      console.error('Error fetching outgoing requests:', error);
     }
   };
 
@@ -590,6 +645,58 @@ export default function ConnectionsScreen() {
       fetchPendingRequests();
     } catch (error: any) {
       showAlert('Error', error.message || 'Failed to decline connection');
+    }
+  };
+
+  const handleCancelRequest = async (connectionId: string) => {
+    if (!user) return;
+
+    try {
+      // First, get the connection to find the connected_user_id
+      const { data: connection, error: fetchError } = await supabase
+        .from('connections')
+        .select('connected_user_id')
+        .eq('id', connectionId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const connectedUserId = connection?.connected_user_id;
+
+      if (!connectedUserId) {
+        throw new Error('Could not find connected user');
+      }
+
+      // Delete the outgoing request
+      const { error: deleteError } = await supabase
+        .from('connections')
+        .delete()
+        .eq('id', connectionId)
+        .eq('user_id', user.id);
+
+      if (deleteError) throw deleteError;
+
+      // Also remove ALL entries from match history for this user so they can appear in discover again
+      const { error: historyError } = await supabase
+        .from('match_history')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('viewed_user_id', connectedUserId);
+
+      if (historyError) {
+        console.error('Error removing match history:', historyError);
+        showAlert('Warning', 'Request cancelled but user may not reappear in discover immediately');
+      }
+
+      showAlert('Success', 'Connection request cancelled');
+
+      // Refresh both lists
+      await fetchOutgoingRequests();
+      await fetchMatches();
+    } catch (error: any) {
+      console.error('Cancel request error:', error);
+      showAlert('Error', error.message || 'Failed to cancel request');
     }
   };
 
@@ -1152,7 +1259,7 @@ export default function ConnectionsScreen() {
             onPress={() => setViewMode('requests')}
           >
             <Text style={[styles.toggleText, viewMode === 'requests' && styles.toggleTextActive]}>
-              Requests {pendingRequests.length > 0 && `(${pendingRequests.length})`}
+              Requests{pendingRequests.length > 0 ? ` (${pendingRequests.length})` : ''}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -1199,15 +1306,15 @@ export default function ConnectionsScreen() {
                   {currentMatch.full_name || 'Anonymous Student'}
                 </Text>
 
-                {currentMatch.major && currentMatch.year && (
+                {currentMatch.major && currentMatch.year ? (
                   <Text style={styles.info}>
                     {currentMatch.major} • {currentMatch.year}
                   </Text>
-                )}
+                ) : null}
 
-                {currentMatch.bio && (
+                {currentMatch.bio ? (
                   <Text style={styles.bio}>{currentMatch.bio}</Text>
-                )}
+                ) : null}
               </TouchableOpacity>
 
               <View style={styles.statsContainer}>
@@ -1262,7 +1369,7 @@ export default function ConnectionsScreen() {
       ) : viewMode === 'requests' ? (
         /* Pending Requests View */
         <ScrollView style={styles.requestsContainer} showsVerticalScrollIndicator={false}>
-          {pendingRequests.length === 0 ? (
+          {pendingRequests.length === 0 && outgoingRequests.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="notifications-outline" size={80} color={colors.gray400} />
               <Text style={styles.emptyTitle}>No pending requests</Text>
@@ -1272,7 +1379,11 @@ export default function ConnectionsScreen() {
             </View>
           ) : (
             <View style={styles.requestsList}>
-              {pendingRequests.map((request) => (
+              {/* Incoming Requests Section */}
+              {pendingRequests.length > 0 && (
+                <>
+                  <Text style={styles.sectionHeader}>Incoming Requests</Text>
+                  {pendingRequests.map((request) => (
                 <View key={request.id} style={styles.requestCard}>
                   <TouchableOpacity
                     style={styles.requestHeader}
@@ -1293,16 +1404,16 @@ export default function ConnectionsScreen() {
                       <Text style={styles.requestName}>
                         {request.user_profiles.full_name || 'Anonymous Student'}
                       </Text>
-                      {request.user_profiles.major && request.user_profiles.year && (
+                      {request.user_profiles.major && request.user_profiles.year ? (
                         <Text style={styles.requestDetails}>
                           {request.user_profiles.major} • {request.user_profiles.year}
                         </Text>
-                      )}
-                      {request.user_profiles.bio && (
+                      ) : null}
+                      {request.user_profiles.bio ? (
                         <Text style={styles.requestBio} numberOfLines={2}>
                           {request.user_profiles.bio}
                         </Text>
-                      )}
+                      ) : null}
                     </View>
                   </TouchableOpacity>
 
@@ -1324,6 +1435,58 @@ export default function ConnectionsScreen() {
                   </View>
                 </View>
               ))}
+                </>
+              )}
+
+              {/* Outgoing Requests Section */}
+              {outgoingRequests.length > 0 && (
+                <>
+                  <Text style={styles.sectionHeader}>Outgoing Requests</Text>
+                  {outgoingRequests.map((request) => (
+                    <View key={request.id} style={styles.requestCard}>
+                      <TouchableOpacity
+                        style={styles.requestHeader}
+                        onPress={() => router.push({ pathname: '/user-details', params: { userId: request.user_profiles.id } })}
+                        activeOpacity={0.7}
+                      >
+                        {request.user_profiles.profile_image_url ? (
+                          <Image
+                            source={{ uri: request.user_profiles.profile_image_url }}
+                            style={styles.requestAvatar}
+                          />
+                        ) : (
+                          <View style={styles.requestAvatar}>
+                            <Ionicons name="person" size={32} color={colors.white} />
+                          </View>
+                        )}
+                        <View style={styles.requestInfo}>
+                          <Text style={styles.requestName}>
+                            {request.user_profiles.full_name || 'Anonymous Student'}
+                          </Text>
+                          {request.user_profiles.major && request.user_profiles.year ? (
+                            <Text style={styles.requestDetails}>
+                              {request.user_profiles.major} • {request.user_profiles.year}
+                            </Text>
+                          ) : null}
+                          {request.user_profiles.bio ? (
+                            <Text style={styles.requestBio} numberOfLines={2}>
+                              {request.user_profiles.bio}
+                            </Text>
+                          ) : null}
+                        </View>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.requestButton, styles.declineButton, { flex: undefined, width: '100%' }]}
+                        onPress={() => handleCancelRequest(request.id)}
+                      >
+                        <Ionicons name="close" size={20} color={colors.error} />
+                        <Text style={styles.declineButtonText}>Cancel Request</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </>
+              )}
             </View>
           )}
         </ScrollView>
