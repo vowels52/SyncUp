@@ -28,8 +28,8 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/SyncUp_Logo3.png",
-          "imageWidth": 350,
+          "image": "./assets/images/Penguin2.png",
+          "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }

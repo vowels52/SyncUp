@@ -507,6 +507,10 @@ export default function HomeScreen() {
       justifyContent: 'space-between',
       alignItems: 'center',
     },
+    headerTextContainer: {
+      flex: 1,
+      marginRight: spacing.md,
+    },
     greeting: {
       ...textStyles.body2,
       color: colors.white,
@@ -895,10 +899,10 @@ export default function HomeScreen() {
         style={styles.header}
       >
         <View style={styles.headerContent}>
-          <View>
+          <View style={styles.headerTextContainer}>
             <Text style={styles.greeting}>Welcome back,</Text>
             <Text style={styles.userName}>{profile?.full_name || 'Student'}</Text>
-            <Text style={styles.userInfo}>
+            <Text style={styles.userInfo} numberOfLines={2}>
               {profile?.major ? `${profile.major} • ${profile.year}` : 'Complete your profile'}
             </Text>
           </View>
