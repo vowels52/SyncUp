@@ -809,7 +809,8 @@ export default function ConnectionsScreen() {
     },
     cardContainer: {
       flex: 1,
-      justifyContent: 'center',
+      justifyContent: 'flex-start',
+      paddingTop: spacing.md,
     },
     card: {
       backgroundColor: colors.surface,
