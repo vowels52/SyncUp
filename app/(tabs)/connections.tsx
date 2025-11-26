@@ -806,10 +806,12 @@ export default function ConnectionsScreen() {
     content: {
       flex: 1,
       padding: spacing.md,
+      paddingTop: spacing.xl,
     },
     cardContainer: {
       flex: 1,
       justifyContent: 'center',
+      paddingVertical: spacing.lg,
     },
     card: {
       backgroundColor: colors.surface,

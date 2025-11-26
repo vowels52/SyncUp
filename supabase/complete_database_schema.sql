@@ -340,7 +340,7 @@ CREATE TABLE IF NOT EXISTS forum_posts (
     author_id uuid NOT NULL,
     title text NOT NULL,
     content text,
-    category text CHECK (category IN ('courses', 'study-tips', 'professors', 'all')),
+    category text CHECK (category IN ('courses', 'study-tips', 'professors', 'all', 'other')),
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
     CONSTRAINT forum_posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES user_profiles(id) ON DELETE CASCADE
