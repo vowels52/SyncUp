@@ -192,8 +192,21 @@ export default function ConnectionsScreen() {
             filter: `connected_user_id=eq.${user.id}`,
           },
           (payload) => {
-            // New connection request received
+            // New connection request received (incoming)
             fetchPendingRequests();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'connections',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            // New connection request sent (outgoing)
+            fetchOutgoingRequests();
           }
         )
         .on(
