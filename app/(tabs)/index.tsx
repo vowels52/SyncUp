@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator, Modal, TextInput, Platform, KeyboardAvoidingView, Image } from 'react-native';
 import { spacing, borderRadius, shadows, typography } from '@/constants/theme';
 import { useThemedColors } from '@/hooks/useThemedColors';
@@ -10,6 +10,7 @@ import { getSupabaseClient } from '@/template';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface UserProfile {
   id: string;
@@ -193,44 +194,12 @@ export default function HomeScreen() {
     fetchData();
   }, [user]);
 
-  useEffect(() => {
-    if (!user) return;
-
-    // Real-time subscription for event attendance changes
-    const attendanceChannel = supabase
-      .channel('event-attendance-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'event_attendees',
-          filter: `user_id=eq.${user.id}`
-        },
-        (payload) => {
-          // When user attends an event, refresh upcoming events
-          fetchData();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'event_attendees'
-        },
-        (payload) => {
-          // When any attendance is deleted, refresh upcoming events
-          // fetchData() already filters by current user, so this is safe
-          fetchData();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(attendanceChannel);
-    };
-  }, [user]);
+  // Refetch data when tab comes into focus (handles updates from other pages)
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);

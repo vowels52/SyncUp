@@ -68,37 +68,6 @@ export default function EventsScreen() {
     }, [])
   );
 
-  useEffect(() => {
-    // Real-time subscription for events changes
-    const eventsChannel = supabase
-      .channel('events-changes')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'events' },
-        (payload) => {
-          fetchEvents();
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'events' },
-        (payload) => {
-          fetchEvents();
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'events' },
-        (payload) => {
-          fetchEvents();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(eventsChannel);
-    };
-  }, []);
 
   const fetchEvents = async () => {
     try {

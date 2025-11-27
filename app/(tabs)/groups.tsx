@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Image, TextInput } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Image, TextInput, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { spacing, borderRadius, shadows, typography } from '@/constants/theme';
 import { useThemedColors } from '@/hooks/useThemedColors';
@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, useAlert } from '@/template';
 import { getSupabaseClient } from '@/template';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface UserGroup {
   id: string;
@@ -45,6 +46,14 @@ export default function GroupsScreen() {
   const [showAllClubs, setShowAllClubs] = useState(false);
   const [showAllStudyGroups, setShowAllStudyGroups] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const [newGroup, setNewGroup] = useState({
+    name: '',
+    description: '',
+    club_type: '',
+    category: '',
+  });
+  const [submitting, setSubmitting] = useState(false);
 
   const colors = useThemedColors();
   const { commonStyles, textStyles } = useThemedStyles();
@@ -55,87 +64,8 @@ export default function GroupsScreen() {
   const { showAlert } = useAlert();
   const supabase = getSupabaseClient();
 
-  useEffect(() => {
-    fetchData();
-
-    // Real-time subscription for groups changes
-    const groupsChannel = supabase
-      .channel('groups-changes')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'groups',
-      }, (payload) => {
-        const newGroup = payload.new as any;
-        if (newGroup.is_official_club) {
-          loadUWBClubs();
-        } else {
-          loadStudyGroups();
-        }
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'groups',
-      }, (payload) => {
-        const updatedGroup = payload.new as any;
-        if (updatedGroup.is_official_club) {
-          loadUWBClubs();
-        } else {
-          loadStudyGroups();
-        }
-      })
-      .on('postgres_changes', {
-        event: 'DELETE',
-        schema: 'public',
-        table: 'groups',
-      }, (payload) => {
-        // Refetch both lists since we don't know which type it was
-        loadUWBClubs();
-        loadStudyGroups();
-      })
-      .subscribe();
-
-    // Real-time subscription for group members changes
-    const membersChannel = supabase
-      .channel('group-members-changes')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'group_members',
-      }, (payload) => {
-        // Update member counts for study groups
-        loadStudyGroups();
-        // Update user's groups list in case they joined a new group
-        if (user && (payload.new as any).user_id === user.id) {
-          fetchUserGroups();
-        }
-      })
-      .on('postgres_changes', {
-        event: 'DELETE',
-        schema: 'public',
-        table: 'group_members',
-      }, (payload) => {
-        // Update member counts for study groups
-        loadStudyGroups();
-        // Update user's groups list in case they left a group
-        fetchUserGroups();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(groupsChannel);
-      supabase.removeChannel(membersChannel);
-    };
-  }, [user]);
-
-  const fetchData = async () => {
-    await Promise.all([fetchUserGroups(), loadUWBClubs(), loadStudyGroups()]);
-    setLoading(false);
-    setRefreshing(false);
-  };
-
-  const loadUWBClubs = async () => {
+  // Define callback functions before useEffect
+  const loadUWBClubs = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('groups')
@@ -150,9 +80,9 @@ export default function GroupsScreen() {
     } catch (error) {
       console.error('Error loading UWB clubs:', error);
     }
-  };
+  }, [supabase]);
 
-  const loadStudyGroups = async () => {
+  const loadStudyGroups = useCallback(async () => {
     try {
       // Only get user-created study groups (not official clubs)
       // Filter out any groups that are official clubs OR have no is_official_club set
@@ -188,9 +118,9 @@ export default function GroupsScreen() {
     } catch (error) {
       console.error('Error loading study groups:', error);
     }
-  };
+  }, [supabase]);
 
-  const fetchUserGroups = async () => {
+  const fetchUserGroups = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -236,7 +166,25 @@ export default function GroupsScreen() {
     } catch (error: any) {
       console.error('Error fetching user groups:', error);
     }
-  };
+  }, [user, supabase]);
+
+  const fetchData = useCallback(async () => {
+    await Promise.all([fetchUserGroups(), loadUWBClubs(), loadStudyGroups()]);
+    setLoading(false);
+    setRefreshing(false);
+  }, [fetchUserGroups, loadUWBClubs, loadStudyGroups]);
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Refetch data when tab comes into focus (handles groups created from other pages)
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [fetchData])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -249,6 +197,58 @@ export default function GroupsScreen() {
 
   const openStudyGroupDetail = (groupId: string) => {
     router.push(`/study-group-detail?id=${groupId}&from=groups`);
+  };
+
+  const handleCreateGroup = async () => {
+    if (!user) {
+      showAlert('Error', 'You must be logged in to create groups');
+      return;
+    }
+
+    if (!newGroup.name.trim()) {
+      showAlert('Error', 'Please enter a group name');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // Insert the new group and get the created group's ID
+      const { data: createdGroup, error: groupError } = await supabase
+        .from('groups')
+        .insert({
+          name: newGroup.name,
+          description: newGroup.description || null,
+          club_type: newGroup.club_type || null,
+          category: newGroup.category || null,
+          creator_id: user.id,
+          is_official_club: false,
+        })
+        .select()
+        .single();
+
+      if (groupError) throw groupError;
+
+      // Automatically add the creator as a member of the group
+      const { error: memberError } = await supabase
+        .from('group_members')
+        .insert({
+          group_id: createdGroup.id,
+          user_id: user.id,
+          role: 'admin',
+        });
+
+      if (memberError) throw memberError;
+
+      showAlert('Success', 'Group created successfully!');
+      setShowCreateGroupModal(false);
+      setNewGroup({ name: '', description: '', club_type: '', category: '' });
+      loadStudyGroups();
+    } catch (error: any) {
+      console.error('Error creating group:', error);
+      showAlert('Error', error.message || 'Failed to create group');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // Filter clubs and study groups based on search query
@@ -414,7 +414,7 @@ export default function GroupsScreen() {
       width: 50,
       height: 50,
       borderRadius: borderRadius.md,
-      backgroundColor: colors.gray200,  // Slightly darker for better visibility
+      backgroundColor: colors.primaryLight,
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -433,7 +433,7 @@ export default function GroupsScreen() {
     },
     studyGroupMembers: {
       fontSize: typography.fontSize12,
-      color: colors.primary,
+      color: colors.textSecondary,
       fontWeight: typography.fontWeightMedium,
     },
     searchContainer: {
@@ -464,6 +464,76 @@ export default function GroupsScreen() {
     },
     clearButton: {
       padding: spacing.xs,
+    },
+    fab: {
+      position: 'absolute',
+      bottom: spacing.xl,
+      right: spacing.lg,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...shadows.medium,
+    },
+    modalContainer: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    modalContent: {
+      backgroundColor: colors.background,
+      borderTopLeftRadius: borderRadius.xl,
+      borderTopRightRadius: borderRadius.xl,
+      padding: spacing.lg,
+      maxHeight: '80%',
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+    },
+    modalTitle: {
+      fontSize: typography.fontSize20,
+      fontWeight: typography.fontWeightBold,
+      color: colors.textPrimary,
+    },
+    inputLabel: {
+      fontSize: typography.fontSize14,
+      fontWeight: typography.fontWeightSemiBold,
+      color: colors.textPrimary,
+      marginBottom: spacing.xs,
+      marginTop: spacing.md,
+    },
+    input: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      fontSize: typography.fontSize16,
+      color: colors.textPrimary,
+      borderWidth: 1,
+      borderColor: colors.gray200,
+    },
+    textArea: {
+      minHeight: 100,
+      textAlignVertical: 'top',
+    },
+    submitButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: spacing.md,
+      borderRadius: borderRadius.lg,
+      alignItems: 'center',
+      marginTop: spacing.lg,
+    },
+    submitButtonDisabled: {
+      opacity: 0.5,
+    },
+    submitButtonText: {
+      fontSize: typography.fontSize16,
+      fontWeight: typography.fontWeightBold,
+      color: colors.white,
     },
   });
 
@@ -537,7 +607,7 @@ export default function GroupsScreen() {
                 onPress={() => openStudyGroupDetail(group.id)}
               >
                 <View style={styles.studyGroupIcon}>
-                  <Ionicons name="people" size={24} color={colors.primary} />
+                  <Ionicons name="people" size={24} color={colors.white} />
                 </View>
                 <View style={styles.studyGroupInfo}>
                   <Text style={styles.studyGroupName} numberOfLines={1}>
@@ -620,6 +690,88 @@ export default function GroupsScreen() {
         />
       </View>
     </ScrollView>
+
+    {/* Floating Action Button for Creating Study Groups */}
+    <TouchableOpacity
+      style={styles.fab}
+      onPress={() => setShowCreateGroupModal(true)}
+    >
+      <Ionicons name="add" size={28} color={colors.white} />
+    </TouchableOpacity>
+
+    {/* Create Group Modal */}
+    <Modal
+      visible={showCreateGroupModal}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={() => setShowCreateGroupModal(false)}
+    >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalContainer}
+      >
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Create Study Group</Text>
+            <TouchableOpacity onPress={() => setShowCreateGroupModal(false)}>
+              <Ionicons name="close" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <Text style={styles.inputLabel}>Group Name *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter group name"
+              placeholderTextColor={colors.textSecondary}
+              value={newGroup.name}
+              onChangeText={(text) => setNewGroup({ ...newGroup, name: text })}
+            />
+
+            <Text style={styles.inputLabel}>Description</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Enter group description"
+              placeholderTextColor={colors.textSecondary}
+              value={newGroup.description}
+              onChangeText={(text) => setNewGroup({ ...newGroup, description: text })}
+              multiline
+              numberOfLines={4}
+            />
+
+            <Text style={styles.inputLabel}>Club Type</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g., Academic, Social, Sports"
+              placeholderTextColor={colors.textSecondary}
+              value={newGroup.club_type}
+              onChangeText={(text) => setNewGroup({ ...newGroup, club_type: text })}
+            />
+
+            <Text style={styles.inputLabel}>Category</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g., Computer Science, Business"
+              placeholderTextColor={colors.textSecondary}
+              value={newGroup.category}
+              onChangeText={(text) => setNewGroup({ ...newGroup, category: text })}
+            />
+          </ScrollView>
+
+          <TouchableOpacity
+            style={[styles.submitButton, (!newGroup.name.trim() || submitting) && styles.submitButtonDisabled]}
+            onPress={handleCreateGroup}
+            disabled={!newGroup.name.trim() || submitting}
+          >
+            {submitting ? (
+              <ActivityIndicator size="small" color={colors.white} />
+            ) : (
+              <Text style={styles.submitButtonText}>Create Group</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
     </View>
   );
 }

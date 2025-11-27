@@ -6362,3 +6362,225 @@ CREATE TRIGGER trigger_group_messages_updated_at
     BEFORE UPDATE ON group_messages
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+-- =====================================================
+-- COMPLETE GROUP POSTS FEATURE SCHEMA
+-- Description: Forum-style discussion boards within study groups
+-- Includes: posts, comments, likes, RLS policies, and replica identity
+-- =====================================================
+
+-- =====================================================
+-- TABLE: group_posts
+-- Description: Posts/discussions within study groups
+-- =====================================================
+CREATE TABLE IF NOT EXISTS group_posts (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    group_id uuid NOT NULL,
+    author_id uuid NOT NULL,
+    title text NOT NULL,
+    content text,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT group_posts_group_id_fkey FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
+    CONSTRAINT group_posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES user_profiles(id) ON DELETE CASCADE
+);
+
+-- Indexes for group_posts
+CREATE INDEX IF NOT EXISTS idx_group_posts_group_id ON group_posts(group_id);
+CREATE INDEX IF NOT EXISTS idx_group_posts_author_id ON group_posts(author_id);
+CREATE INDEX IF NOT EXISTS idx_group_posts_created_at ON group_posts(created_at DESC);
+
+-- =====================================================
+-- TABLE: group_post_comments
+-- Description: Comments on group posts
+-- =====================================================
+CREATE TABLE IF NOT EXISTS group_post_comments (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    post_id uuid NOT NULL,
+    author_id uuid NOT NULL,
+    content text NOT NULL,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT group_post_comments_post_id_fkey FOREIGN KEY (post_id) REFERENCES group_posts(id) ON DELETE CASCADE,
+    CONSTRAINT group_post_comments_author_id_fkey FOREIGN KEY (author_id) REFERENCES user_profiles(id) ON DELETE CASCADE
+);
+
+-- Indexes for group_post_comments
+CREATE INDEX IF NOT EXISTS idx_group_post_comments_post_id ON group_post_comments(post_id);
+CREATE INDEX IF NOT EXISTS idx_group_post_comments_author_id ON group_post_comments(author_id);
+CREATE INDEX IF NOT EXISTS idx_group_post_comments_created_at ON group_post_comments(created_at DESC);
+
+-- =====================================================
+-- TABLE: group_post_likes
+-- Description: Likes on group posts
+-- =====================================================
+CREATE TABLE IF NOT EXISTS group_post_likes (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    post_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now(),
+    UNIQUE(post_id, user_id),
+    CONSTRAINT group_post_likes_post_id_fkey FOREIGN KEY (post_id) REFERENCES group_posts(id) ON DELETE CASCADE,
+    CONSTRAINT group_post_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON DELETE CASCADE
+);
+
+-- Indexes for group_post_likes
+CREATE INDEX IF NOT EXISTS idx_group_post_likes_post_id ON group_post_likes(post_id);
+CREATE INDEX IF NOT EXISTS idx_group_post_likes_user_id ON group_post_likes(user_id);
+
+-- =====================================================
+-- ENABLE REPLICA IDENTITY FOR REAL-TIME
+-- =====================================================
+ALTER TABLE group_posts REPLICA IDENTITY FULL;
+ALTER TABLE group_post_comments REPLICA IDENTITY FULL;
+ALTER TABLE group_post_likes REPLICA IDENTITY FULL;
+
+-- =====================================================
+-- RLS POLICIES FOR GROUP POSTS
+-- =====================================================
+
+-- Enable RLS
+ALTER TABLE group_posts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE group_post_comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE group_post_likes ENABLE ROW LEVEL SECURITY;
+
+-- Group Posts Policies
+-- Members can view posts in their groups
+CREATE POLICY "group_members_select_posts" ON group_posts
+    FOR SELECT
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM group_members
+            WHERE group_members.group_id = group_posts.group_id
+            AND group_members.user_id = auth.uid()
+        )
+    );
+
+-- Members can create posts in their groups
+CREATE POLICY "group_members_insert_posts" ON group_posts
+    FOR INSERT
+    TO authenticated
+    WITH CHECK (
+        author_id = auth.uid()
+        AND EXISTS (
+            SELECT 1 FROM group_members
+            WHERE group_members.group_id = group_posts.group_id
+            AND group_members.user_id = auth.uid()
+        )
+    );
+
+-- Authors can update their own posts
+CREATE POLICY "authors_update_own_posts" ON group_posts
+    FOR UPDATE
+    TO authenticated
+    USING (author_id = auth.uid())
+    WITH CHECK (author_id = auth.uid());
+
+-- Authors and group admins can delete posts
+CREATE POLICY "authors_and_admins_delete_posts" ON group_posts
+    FOR DELETE
+    TO authenticated
+    USING (
+        author_id = auth.uid()
+        OR EXISTS (
+            SELECT 1 FROM group_members
+            WHERE group_members.group_id = group_posts.group_id
+            AND group_members.user_id = auth.uid()
+            AND group_members.role = 'admin'
+        )
+        OR EXISTS (
+            SELECT 1 FROM groups
+            WHERE groups.id = group_posts.group_id
+            AND groups.creator_id = auth.uid()
+        )
+    );
+
+-- Group Post Comments Policies
+-- Members can view comments on posts in their groups
+CREATE POLICY "group_members_select_comments" ON group_post_comments
+    FOR SELECT
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM group_posts
+            JOIN group_members ON group_members.group_id = group_posts.group_id
+            WHERE group_posts.id = group_post_comments.post_id
+            AND group_members.user_id = auth.uid()
+        )
+    );
+
+-- Members can create comments on posts in their groups
+CREATE POLICY "group_members_insert_comments" ON group_post_comments
+    FOR INSERT
+    TO authenticated
+    WITH CHECK (
+        author_id = auth.uid()
+        AND EXISTS (
+            SELECT 1 FROM group_posts
+            JOIN group_members ON group_members.group_id = group_posts.group_id
+            WHERE group_posts.id = group_post_comments.post_id
+            AND group_members.user_id = auth.uid()
+        )
+    );
+
+-- Authors can update their own comments
+CREATE POLICY "authors_update_own_comments" ON group_post_comments
+    FOR UPDATE
+    TO authenticated
+    USING (author_id = auth.uid())
+    WITH CHECK (author_id = auth.uid());
+
+-- Authors and group admins/creators can delete comments
+CREATE POLICY "authors_and_admins_delete_comments" ON group_post_comments
+    FOR DELETE
+    TO authenticated
+    USING (
+        author_id = auth.uid()
+        OR EXISTS (
+            SELECT 1 FROM group_posts
+            JOIN group_members ON group_members.group_id = group_posts.group_id
+            WHERE group_posts.id = group_post_comments.post_id
+            AND group_members.user_id = auth.uid()
+            AND group_members.role = 'admin'
+        )
+        OR EXISTS (
+            SELECT 1 FROM group_posts
+            JOIN groups ON groups.id = group_posts.group_id
+            WHERE group_posts.id = group_post_comments.post_id
+            AND groups.creator_id = auth.uid()
+        )
+    );
+
+-- Group Post Likes Policies
+-- Group members can view likes on posts in their groups
+CREATE POLICY "group_members_select_likes" ON group_post_likes
+    FOR SELECT
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM group_posts
+            JOIN group_members ON group_members.group_id = group_posts.group_id
+            WHERE group_posts.id = group_post_likes.post_id
+            AND group_members.user_id = auth.uid()
+        )
+    );
+
+-- Group members can like posts in their groups
+CREATE POLICY "group_members_insert_likes" ON group_post_likes
+    FOR INSERT
+    TO authenticated
+    WITH CHECK (
+        user_id = auth.uid()
+        AND EXISTS (
+            SELECT 1 FROM group_posts
+            JOIN group_members ON group_members.group_id = group_posts.group_id
+            WHERE group_posts.id = group_post_likes.post_id
+            AND group_members.user_id = auth.uid()
+        )
+    );
+
+-- Users can delete their own likes
+CREATE POLICY "users_delete_own_likes" ON group_post_likes
+    FOR DELETE
+    TO authenticated
+    USING (user_id = auth.uid());
