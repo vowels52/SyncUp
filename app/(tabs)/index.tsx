@@ -52,6 +52,7 @@ interface SearchResult {
 export default function HomeScreen() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
+  const [allEvents, setAllEvents] = useState<Event[]>([]);
   const [recentGroups, setRecentGroups] = useState<Group[]>([]);
   const [myClubs, setMyClubs] = useState<Club[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,6 +63,7 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [eventsTab, setEventsTab] = useState<'my' | 'all'>('my');
   const [showAllEvents, setShowAllEvents] = useState(false);
   const [showAllGroups, setShowAllGroups] = useState(false);
   const [showAllClubs, setShowAllClubs] = useState(false);
@@ -135,6 +137,17 @@ export default function HomeScreen() {
         setUpcomingEvents(myEvents);
       }
 
+      // Fetch all upcoming events
+      const { data: allEventsData } = await supabase
+        .from('events')
+        .select('id, title, start_time, location')
+        .gte('start_time', new Date().toISOString())
+        .order('start_time', { ascending: true });
+
+      if (allEventsData) {
+        setAllEvents(allEventsData);
+      }
+
       // Fetch my study groups and clubs (groups I've joined)
       const { data: memberData } = await supabase
         .from('group_members')
@@ -174,6 +187,45 @@ export default function HomeScreen() {
 
   useEffect(() => {
     fetchData();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    // Real-time subscription for event attendance changes
+    const attendanceChannel = supabase
+      .channel('event-attendance-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'event_attendees',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          // When user attends an event, refresh upcoming events
+          fetchData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'event_attendees'
+        },
+        (payload) => {
+          // When any attendance is deleted, refresh upcoming events
+          // fetchData() already filters by current user, so this is safe
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(attendanceChannel);
+    };
   }, [user]);
 
   const onRefresh = () => {
@@ -588,6 +640,34 @@ export default function HomeScreen() {
     sectionTitle: {
       ...textStyles.h4,
     },
+    tabContainer: {
+      flexDirection: 'row',
+      marginBottom: spacing.md,
+      backgroundColor: colors.gray100,
+      borderRadius: borderRadius.md,
+      padding: spacing.xs,
+      gap: spacing.xs,
+    },
+    tab: {
+      flex: 1,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderRadius: borderRadius.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    tabActive: {
+      backgroundColor: colors.primary,
+    },
+    tabText: {
+      ...textStyles.body2,
+      fontSize: 13,
+      fontWeight: typography.fontWeightSemiBold,
+      color: colors.textSecondary,
+    },
+    tabTextActive: {
+      color: colors.white,
+    },
     seeAllText: {
       ...textStyles.body2,
       color: colors.primary,
@@ -951,24 +1031,44 @@ export default function HomeScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>My Events</Text>
-            {upcomingEvents.length > 3 && (
+            <Text style={styles.sectionTitle}>Events</Text>
+            {(eventsTab === 'my' ? upcomingEvents : allEvents).length > 3 && (
               <TouchableOpacity onPress={() => setShowAllEvents(!showAllEvents)}>
                 <Text style={styles.seeAllText}>
-                  {showAllEvents ? 'Show Less' : `See All (${upcomingEvents.length})`}
+                  {showAllEvents ? 'Show Less' : `See All (${(eventsTab === 'my' ? upcomingEvents : allEvents).length})`}
                 </Text>
               </TouchableOpacity>
             )}
           </View>
 
-          {upcomingEvents.length === 0 ? (
+          {/* Tabs */}
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[styles.tab, eventsTab === 'my' && styles.tabActive]}
+              onPress={() => setEventsTab('my')}
+            >
+              <Text style={[styles.tabText, eventsTab === 'my' && styles.tabTextActive]}>
+                My Events
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, eventsTab === 'all' && styles.tabActive]}
+              onPress={() => setEventsTab('all')}
+            >
+              <Text style={[styles.tabText, eventsTab === 'all' && styles.tabTextActive]}>
+                All Events
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {(eventsTab === 'my' ? upcomingEvents : allEvents).length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="calendar-outline" size={48} color={colors.gray400} />
               <Text style={styles.emptyStateText}>No events yet</Text>
               <Text style={styles.emptyStateSubtext}>Attend events from the Events tab to see them here</Text>
             </View>
           ) : (
-            (showAllEvents ? upcomingEvents : upcomingEvents.slice(0, 3)).map((event) => (
+            (showAllEvents ? (eventsTab === 'my' ? upcomingEvents : allEvents) : (eventsTab === 'my' ? upcomingEvents : allEvents).slice(0, 3)).map((event) => (
               <TouchableOpacity
                 key={event.id}
                 style={styles.eventCard}
