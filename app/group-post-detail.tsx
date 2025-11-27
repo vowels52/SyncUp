@@ -660,6 +660,7 @@ export default function GroupPostDetailScreen() {
       alignItems: 'center',
     },
     sendButtonDisabled: {
+      backgroundColor: colors.gray400,
       opacity: 0.5,
     },
   });
