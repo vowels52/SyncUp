@@ -24,6 +24,8 @@ interface Event {
   title: string;
   start_time: string;
   location: string | null;
+  event_type: string | null;
+  is_official_event: boolean;
 }
 
 interface Group {
@@ -118,7 +120,7 @@ export default function HomeScreen() {
       // Fetch my events (events I'm attending)
       const { data: attendingData } = await supabase
         .from('event_attendees')
-        .select('events(id, title, start_time, location)')
+        .select('events(id, title, start_time, location, event_type, is_official_event)')
         .eq('user_id', user.id)
         .eq('status', 'going');
 
@@ -130,6 +132,8 @@ export default function HomeScreen() {
             title: item.events.title,
             start_time: item.events.start_time,
             location: item.events.location,
+            event_type: item.events.event_type,
+            is_official_event: item.events.is_official_event,
           }))
           .filter((event: any) => new Date(event.start_time) >= new Date())
           .sort((a: any, b: any) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
@@ -140,7 +144,7 @@ export default function HomeScreen() {
       // Fetch all upcoming events
       const { data: allEventsData } = await supabase
         .from('events')
-        .select('id, title, start_time, location')
+        .select('id, title, start_time, location, event_type, is_official_event')
         .gte('start_time', new Date().toISOString())
         .order('start_time', { ascending: true });
 
@@ -241,6 +245,47 @@ export default function HomeScreen() {
       hour: 'numeric',
       minute: '2-digit'
     });
+  };
+
+  const getEventColor = (event: Event) => {
+    if (!event.is_official_event) {
+      return colors.gray400; // User events are gray
+    }
+
+    // Color code by event type
+    const eventType = event.event_type?.toLowerCase() || '';
+
+    // Academic events
+    if (eventType.includes('academic')) {
+      return '#3B82F6'; // Blue
+    }
+    // Social events
+    if (eventType.includes('social')) {
+      return '#EC4899'; // Pink
+    }
+    // Career/Application events
+    if (eventType.includes('career') || eventType.includes('application')) {
+      return '#8B5CF6'; // Purple
+    }
+    // Meetings
+    if (eventType.includes('meeting')) {
+      return '#10B981'; // Green
+    }
+    // Cultural events
+    if (eventType.includes('cultural')) {
+      return '#F59E0B'; // Orange
+    }
+    // Sports/Recreational/Athletic
+    if (eventType.includes('sport') || eventType.includes('recreation') || eventType.includes('athletic')) {
+      return '#EF4444'; // Red
+    }
+    // Campus Events (default for official events)
+    if (eventType.includes('campus')) {
+      return '#14B8A6'; // Teal
+    }
+
+    // Default fallback
+    return colors.primary;
   };
 
   const handleCreateEvent = async () => {
@@ -582,17 +627,19 @@ export default function HomeScreen() {
       width: '100%',
     },
     avatar: {
-      width: 56,
-      height: 56,
+      width: 72,
+      height: 72,
       borderRadius: borderRadius.full,
       backgroundColor: 'rgba(255, 255, 255, 0.2)',
       justifyContent: 'center',
       alignItems: 'center',
       overflow: 'hidden',
+      borderWidth: 2.5,
+      borderColor: 'rgba(255, 255, 255, 0.5)',
     },
     avatarImage: {
-      width: 56,
-      height: 56,
+      width: 72,
+      height: 72,
     },
     content: {
       flex: 1,
@@ -686,7 +733,6 @@ export default function HomeScreen() {
       width: 40,
       height: 40,
       borderRadius: borderRadius.sm,
-      backgroundColor: colors.gray100,
       justifyContent: 'center',
       alignItems: 'center',
       marginRight: spacing.md,
@@ -988,11 +1034,15 @@ export default function HomeScreen() {
               {profile?.major ? `${profile.major} • ${profile.year}` : 'Complete your profile'}
             </Text>
           </View>
-          <TouchableOpacity style={styles.avatar} onPress={() => router.push('/profile')}>
+          <TouchableOpacity
+            style={styles.avatar}
+            onPress={() => router.push('/profile')}
+            activeOpacity={0.7}
+          >
             {profile?.profile_image_url ? (
               <Image source={{ uri: profile.profile_image_url }} style={styles.avatarImage} />
             ) : (
-              <Ionicons name="person" size={32} color={colors.white} />
+              <Ionicons name="person" size={40} color={colors.white} />
             )}
           </TouchableOpacity>
         </View>
@@ -1074,8 +1124,8 @@ export default function HomeScreen() {
                 style={styles.eventCard}
                 onPress={() => router.push(`/event-detail?id=${event.id}`)}
               >
-                <View style={styles.eventIcon}>
-                  <Ionicons name="calendar" size={20} color={colors.primary} />
+                <View style={[styles.eventIcon, { backgroundColor: getEventColor(event) }]}>
+                  <Ionicons name="calendar" size={20} color={colors.white} />
                 </View>
                 <View style={styles.eventInfo}>
                   <Text style={styles.eventTitle}>{event.title}</Text>
