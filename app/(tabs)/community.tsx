@@ -66,6 +66,7 @@ export default function CommunityScreen() {
   const [newComment, setNewComment] = useState('');
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  const [postDeleted, setPostDeleted] = useState(false);
 
   // New post form state
   const [newPost, setNewPost] = useState({
@@ -534,13 +535,16 @@ export default function CommunityScreen() {
     },
     commentInput: {
       flex: 1,
-      backgroundColor: colors.background,
-      borderRadius: borderRadius.full,
+      minHeight: 40,
+      maxHeight: 100,
+      borderRadius: borderRadius.md,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
       fontSize: typography.fontSize14,
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.gray200,
       color: colors.textPrimary,
-      maxHeight: 100,
     },
     commentSubmitButton: {
       width: 40,
@@ -777,7 +781,7 @@ export default function CommunityScreen() {
       return;
     }
 
-    if (!selectedPost) return;
+    if (!selectedPost || postDeleted) return;
 
     try {
       // First check current database state to avoid conflicts
@@ -845,9 +849,39 @@ export default function CommunityScreen() {
       return;
     }
 
-    if (!selectedPost || !selectedPost.id) return;
+    if (!selectedPost || !selectedPost.id || postDeleted) {
+      if (postDeleted) {
+        showAlert('Error', 'This post has been deleted');
+      }
+      return;
+    }
 
     try {
+      // First check if the post still exists
+      const { data: postExists, error: postCheckError } = await supabase
+        .from('forum_posts')
+        .select('id')
+        .eq('id', selectedPost.id)
+        .maybeSingle();
+
+      if (postCheckError) throw postCheckError;
+
+      if (!postExists) {
+        // Post was deleted
+        setPostDeleted(true);
+        showAlert('Post Deleted', 'This post has been deleted.', [
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowDetailModal(false);
+              setSelectedPost(null);
+              setPostDeleted(false);
+            },
+          },
+        ]);
+        return;
+      }
+
       const { error } = await supabase
         .from('forum_comments')
         .insert({
@@ -865,7 +899,22 @@ export default function CommunityScreen() {
       fetchPosts();
     } catch (error: any) {
       console.error('Error submitting comment:', error);
-      showAlert('Error', error.message || 'Failed to submit comment');
+      // Check if it's a foreign key constraint error (post was deleted)
+      if (error.code === '23503' || error.message?.includes('violates foreign key constraint') || error.message?.includes('violates row-level security policy')) {
+        setPostDeleted(true);
+        showAlert('Post Deleted', 'This post has been deleted.', [
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowDetailModal(false);
+              setSelectedPost(null);
+              setPostDeleted(false);
+            },
+          },
+        ]);
+      } else {
+        showAlert('Error', error.message || 'Failed to submit comment');
+      }
     }
   };
 
@@ -975,8 +1024,29 @@ export default function CommunityScreen() {
         'postgres_changes',
         { event: 'DELETE', schema: 'public', table: 'forum_posts' },
         (payload) => {
+          const deletedPostId = (payload.old as any).id;
           // Remove the deleted post from state
-          setPosts(prev => prev.filter(p => p.id !== payload.old.id));
+          setPosts(prev => prev.filter(p => p.id !== deletedPostId));
+
+          // Check if the deleted post is currently being viewed
+          setSelectedPost(current => {
+            if (current && current.id === deletedPostId) {
+              // Post is being viewed, mark as deleted and show alert
+              setPostDeleted(true);
+              showAlert('Post Deleted', 'This post has been deleted.', [
+                {
+                  text: 'OK',
+                  onPress: () => {
+                    setShowDetailModal(false);
+                    setSelectedPost(null);
+                    setPostDeleted(false);
+                  },
+                },
+              ]);
+              return current; // Keep it for now, will be cleared when modal closes
+            }
+            return current;
+          });
         }
       )
       .subscribe();
@@ -1720,14 +1790,15 @@ export default function CommunityScreen() {
                 onChangeText={setNewComment}
                 multiline
                 maxLength={500}
+                editable={!postDeleted}
               />
               <TouchableOpacity
                 style={[
                   styles.commentSubmitButton,
-                  !newComment.trim() && styles.commentSubmitButtonDisabled
+                  (!newComment.trim() || postDeleted) && styles.commentSubmitButtonDisabled
                 ]}
                 onPress={handleSubmitComment}
-                disabled={!newComment.trim()}
+                disabled={!newComment.trim() || postDeleted}
               >
                 <Ionicons name="send" size={20} color={colors.white} />
               </TouchableOpacity>
