@@ -34,6 +34,7 @@ export default function EventsScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showDayEventsModal, setShowDayEventsModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Form state
   const [newEvent, setNewEvent] = useState({
@@ -1126,6 +1127,36 @@ export default function EventsScreen() {
       color: colors.white,
       fontWeight: typography.fontWeightSemiBold,
     },
+    searchContainer: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.xl,
+      padding: spacing.lg,
+      margin: spacing.md,
+      marginTop: 0,
+      ...shadows.small,
+    },
+    searchInputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      borderRadius: borderRadius.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderWidth: 1,
+      borderColor: colors.gray200,
+    },
+    searchIcon: {
+      marginRight: spacing.sm,
+    },
+    searchInput: {
+      flex: 1,
+      ...textStyles.body1,
+      color: colors.text,
+      padding: 0,
+    },
+    clearButton: {
+      padding: spacing.xs,
+    },
   });
 
   if (loading) {
@@ -1139,10 +1170,26 @@ export default function EventsScreen() {
   const days = getDaysInMonth(currentMonth);
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-  // Filter events by selected category
-  const filteredEvents = selectedCategory
-    ? events.filter(event => getEventCategory(event) === selectedCategory)
-    : events;
+  // Filter events by selected category and search query
+  const filteredEvents = events.filter(event => {
+    // Filter by category
+    if (selectedCategory && getEventCategory(event) !== selectedCategory) {
+      return false;
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      const matchesTitle = event.title.toLowerCase().includes(query);
+      const matchesDescription = event.description?.toLowerCase().includes(query);
+      const matchesLocation = event.location?.toLowerCase().includes(query);
+      const matchesType = event.event_type?.toLowerCase().includes(query);
+
+      return matchesTitle || matchesDescription || matchesLocation || matchesType;
+    }
+
+    return true;
+  });
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -1209,6 +1256,27 @@ export default function EventsScreen() {
                 ]}>{category}</Text>
               </TouchableOpacity>
             ))}
+          </View>
+        </View>
+
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputContainer}>
+            <Ionicons name="search" size={20} color={colors.textSecondary} style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search events..."
+              placeholderTextColor={colors.textSecondary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+                <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
