@@ -56,12 +56,16 @@ export default function EventDetailScreen() {
       setEvent(data);
 
       // Get attendee count
-      const { count } = await supabase
+      const { data: attendeeData, error: countError } = await supabase
         .from('event_attendees')
-        .select('*', { count: 'exact', head: true })
+        .select('id')
         .eq('event_id', id);
 
-      setAttendeeCount(count || 0);
+      if (countError) {
+        setAttendeeCount(0);
+      } else {
+        setAttendeeCount(attendeeData?.length || 0);
+      }
     } catch (error) {
       console.error('Error fetching event details:', error);
     } finally {
@@ -73,14 +77,18 @@ export default function EventDetailScreen() {
     if (!user) return;
 
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('event_attendees')
         .select('id')
         .eq('event_id', id)
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      setIsAttending(!!data);
+      if (error) {
+        setIsAttending(false);
+      } else {
+        setIsAttending(!!data);
+      }
     } catch (error) {
       setIsAttending(false);
     }
@@ -261,7 +269,7 @@ export default function EventDetailScreen() {
     },
     officialText: {
       fontSize: typography.fontSize14,
-      color: colors.primary,
+      color: colors.accent,
       fontWeight: typography.fontWeightSemiBold,
     },
     typeBadge: {
@@ -273,6 +281,7 @@ export default function EventDetailScreen() {
     },
     typeText: {
       fontSize: typography.fontSize12,
+      color: colors.accent,
       fontWeight: typography.fontWeightSemiBold,
     },
     detailsContainer: {
@@ -316,8 +325,10 @@ export default function EventDetailScreen() {
       borderRadius: borderRadius.lg,
       marginTop: spacing.md,
     },
-    cancelButton: {
-      backgroundColor: colors.error,
+    attendingButton: {
+      backgroundColor: colors.white,
+      borderWidth: 2,
+      borderColor: colors.primary,
     },
     buttonIcon: {
       marginRight: spacing.sm,
@@ -325,7 +336,10 @@ export default function EventDetailScreen() {
     attendButtonText: {
       fontSize: typography.fontSize16,
       fontWeight: typography.fontWeightBold,
-      color: colors.surface,
+      color: colors.white,
+    },
+    attendingButtonText: {
+      color: colors.primary,
     },
     attendingStatusBadge: {
       flexDirection: 'row',
@@ -420,14 +434,14 @@ export default function EventDetailScreen() {
 
           {event.is_official_event && (
             <View style={styles.officialBadge}>
-              <Ionicons name="shield-checkmark" size={16} color={colors.primary} />
+              <Ionicons name="shield-checkmark" size={16} color={colors.accent} />
               <Text style={styles.officialText}>Official UWB Event</Text>
             </View>
           )}
 
           {event.event_type && (
-            <View style={[styles.typeBadge, { backgroundColor: eventColor + '20' }]}>
-              <Text style={[styles.typeText, { color: eventColor }]}>{event.event_type}</Text>
+            <View style={styles.typeBadge}>
+              <Text style={styles.typeText}>{event.event_type}</Text>
             </View>
           )}
 
@@ -472,22 +486,29 @@ export default function EventDetailScreen() {
           {/* Attend Button */}
           {user && (
             <TouchableOpacity
-              style={[styles.attendButton, isAttending && styles.cancelButton]}
+              style={[
+                styles.attendButton,
+                isAttending && styles.attendingButton,
+              ]}
               onPress={handleAttendEvent}
               disabled={updating}
+              accessibilityLabel={isAttending ? 'Attending this event' : 'Attend this event'}
+              accessibilityRole="button"
             >
               {updating ? (
-                <ActivityIndicator size="small" color={colors.surface} />
+                <ActivityIndicator size="small" color={isAttending ? colors.primary : colors.white} />
               ) : (
                 <>
                   <Ionicons
-                    name={isAttending ? 'close-circle' : 'checkmark-circle'}
+                    name={isAttending ? 'checkmark-circle' : 'checkmark-circle-outline'}
                     size={24}
-                    color={colors.surface}
+                    color={isAttending ? colors.primary : colors.white}
                     style={styles.buttonIcon}
+                    accessibilityElementsHidden={true}
+                    importantForAccessibility="no"
                   />
-                  <Text style={styles.attendButtonText}>
-                    {isAttending ? 'Cancel Attendance' : 'Attend Event'}
+                  <Text style={[styles.attendButtonText, isAttending && styles.attendingButtonText]}>
+                    {isAttending ? 'Attending' : 'Attend Event'}
                   </Text>
                 </>
               )}
@@ -496,15 +517,32 @@ export default function EventDetailScreen() {
 
           {isAttending && (
             <View style={styles.attendingStatusBadge}>
-              <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+              <Ionicons
+                name="checkmark-circle"
+                size={16}
+                color={colors.success}
+                accessibilityElementsHidden={true}
+                importantForAccessibility="no"
+              />
               <Text style={styles.attendingStatusText}>You are attending this event</Text>
             </View>
           )}
 
           {/* Delete Button - Only show if user is the creator and it's not an official event */}
           {user && event.creator_id === user.id && !event.is_official_event && (
-            <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteEvent}>
-              <Ionicons name="trash-outline" size={20} color={colors.error} />
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={handleDeleteEvent}
+              accessibilityLabel="Delete event"
+              accessibilityRole="button"
+            >
+              <Ionicons
+                name="trash-outline"
+                size={20}
+                color={colors.error}
+                accessibilityElementsHidden={true}
+                importantForAccessibility="no"
+              />
               <Text style={styles.deleteButtonText}>Delete Event</Text>
             </TouchableOpacity>
           )}

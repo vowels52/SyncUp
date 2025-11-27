@@ -390,7 +390,7 @@ export default function GroupChatConversationScreen() {
               styles.messageBubble,
               isMyMessage
                 ? { backgroundColor: colors.primary }
-                : { backgroundColor: colors.card },
+                : { backgroundColor: colors.gray200 },
             ]}
           >
             <Text
@@ -418,6 +418,168 @@ export default function GroupChatConversationScreen() {
     );
   };
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.md,
+      paddingBottom: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.gray200,
+      backgroundColor: colors.surface,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerInfo: {
+      flex: 1,
+    },
+    headerTitle: {
+      fontSize: typography.fontSize18,
+      fontWeight: typography.fontWeightBold,
+      color: colors.textPrimary,
+    },
+    headerSubtitle: {
+      fontSize: typography.fontSize12,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    moreButton: {
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    messagesList: {
+      padding: spacing.md,
+      backgroundColor: colors.background,
+    },
+    messageContainer: {
+      flexDirection: 'row',
+      marginBottom: spacing.md,
+      width: '100%',
+    },
+    myMessageContainer: {
+      alignSelf: 'flex-end',
+      flexDirection: 'row-reverse',
+    },
+    otherMessageContainer: {
+      alignSelf: 'flex-start',
+    },
+    senderInfo: {
+      marginRight: spacing.xs,
+    },
+    senderAvatar: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.gray200,
+    },
+    avatarPlaceholder: {
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    senderName: {
+      fontSize: typography.fontSize14,
+      marginBottom: spacing.xs,
+      marginLeft: spacing.xs,
+      fontWeight: typography.fontWeightSemiBold,
+      color: colors.textPrimary,
+    },
+    messageBubble: {
+      padding: spacing.md,
+      borderRadius: borderRadius.md,
+      borderWidth: 1,
+      borderColor: colors.gray200,
+      maxWidth: '75%',
+    },
+    messageText: {
+      fontSize: typography.fontSize14,
+      lineHeight: typography.lineHeight20,
+      color: colors.textPrimary,
+    },
+    timestamp: {
+      fontSize: typography.fontSize12,
+      marginTop: spacing.xs,
+      color: colors.textSecondary,
+    },
+    emptyContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: spacing.xxl,
+    },
+    emptyText: {
+      fontSize: typography.fontSize14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginTop: spacing.sm,
+    },
+    inputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      padding: spacing.md,
+      backgroundColor: colors.surface,
+      borderTopWidth: 1,
+      borderTopColor: colors.gray200,
+    },
+    input: {
+      flex: 1,
+      minHeight: 40,
+      maxHeight: 100,
+      borderRadius: borderRadius.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      fontSize: typography.fontSize14,
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.gray200,
+      color: colors.textPrimary,
+    },
+    sendButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.primary,
+    },
+    sendButtonDisabled: {
+      backgroundColor: colors.gray400,
+      opacity: 0.5,
+    },
+    menuModalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'flex-start',
+      alignItems: 'flex-end',
+    },
+    menuModalContent: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.lg,
+      ...shadows.medium,
+      minWidth: 180,
+      overflow: 'hidden',
+    },
+    menuOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+    },
+    menuOptionText: {
+      fontSize: typography.fontSize16,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+  });
+
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -435,22 +597,22 @@ export default function GroupChatConversationScreen() {
       <View
         style={[
           styles.header,
-          { paddingTop: insets.top + 8, backgroundColor: colors.card },
+          { paddingTop: insets.top + spacing.sm },
         ]}
       >
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerInfo}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
+          <Text style={styles.headerTitle}>
             {groupInfo?.name || 'Group Chat'}
           </Text>
-          <Text style={[styles.headerSubtitle, { color: colors.text + '80' }]}>
-            {members.length} members
+          <Text style={styles.headerSubtitle}>
+            {members.length} {members.length === 1 ? 'member' : 'members'}
           </Text>
         </View>
         <TouchableOpacity style={styles.moreButton} onPress={() => setShowMenu(true)}>
-          <Ionicons name="ellipsis-vertical" size={24} color={colors.text} />
+          <Ionicons name="ellipsis-vertical" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
@@ -462,41 +624,32 @@ export default function GroupChatConversationScreen() {
         onRequestClose={() => setShowMenu(false)}
       >
         <TouchableOpacity
-          style={styles.modalOverlay}
+          style={[styles.menuModalOverlay, { paddingTop: insets.top + 50, paddingRight: spacing.md }]}
           activeOpacity={1}
           onPress={() => setShowMenu(false)}
         >
-          <View style={[styles.menuContainer, { backgroundColor: colors.card }]}>
+          <View style={styles.menuModalContent}>
             {isCreator ? (
               <TouchableOpacity
-                style={styles.menuItem}
+                style={styles.menuOption}
                 onPress={handleDeleteGroup}
               >
-                <Ionicons name="trash-outline" size={20} color={colors.error} />
-                <Text style={[styles.menuItemText, { color: colors.error }]}>
+                <Ionicons name="trash-outline" size={24} color={colors.error} />
+                <Text style={[styles.menuOptionText, { color: colors.error }]}>
                   Delete Group Chat
                 </Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
-                style={styles.menuItem}
+                style={styles.menuOption}
                 onPress={handleLeaveGroup}
               >
-                <Ionicons name="exit-outline" size={20} color={colors.error} />
-                <Text style={[styles.menuItemText, { color: colors.error }]}>
+                <Ionicons name="exit-outline" size={24} color={colors.error} />
+                <Text style={[styles.menuOptionText, { color: colors.error }]}>
                   Leave Group Chat
                 </Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => setShowMenu(false)}
-            >
-              <Ionicons name="close-outline" size={20} color={colors.text} />
-              <Text style={[styles.menuItemText, { color: colors.text }]}>
-                Cancel
-              </Text>
-            </TouchableOpacity>
           </View>
         </TouchableOpacity>
       </Modal>
@@ -546,14 +699,7 @@ export default function GroupChatConversationScreen() {
           maxLength={1000}
         />
         <TouchableOpacity
-          style={[
-            styles.sendButton,
-            {
-              backgroundColor: newMessage.trim()
-                ? colors.primary
-                : colors.border,
-            },
-          ]}
+          style={[styles.sendButton, (!newMessage.trim() || sending) && styles.sendButtonDisabled]}
           onPress={handleSendMessage}
           disabled={!newMessage.trim() || sending}
         >
@@ -567,135 +713,3 @@ export default function GroupChatConversationScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: 4,
-    marginRight: 8,
-  },
-  headerInfo: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    marginTop: 2,
-  },
-  moreButton: {
-    padding: 4,
-  },
-  messagesList: {
-    padding: 16,
-  },
-  messageContainer: {
-    flexDirection: 'row',
-    marginBottom: 16,
-    maxWidth: '80%',
-  },
-  myMessageContainer: {
-    alignSelf: 'flex-end',
-    marginLeft: 'auto',
-  },
-  otherMessageContainer: {
-    alignSelf: 'flex-start',
-  },
-  senderInfo: {
-    marginRight: 4,
-  },
-  senderAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-  },
-  avatarPlaceholder: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  senderName: {
-    fontSize: 12,
-    marginBottom: 4,
-    marginLeft: 4,
-    fontWeight: '500',
-  },
-  messageBubble: {
-    padding: 8,
-    borderRadius: 16,
-  },
-  messageText: {
-    fontSize: 16,
-    lineHeight: 20,
-  },
-  timestamp: {
-    fontSize: 12,
-    marginTop: 4,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 64,
-  },
-  emptyText: {
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    borderTopWidth: 1,
-  },
-  input: {
-    flex: 1,
-    minHeight: 40,
-    maxHeight: 100,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    fontSize: 16,
-    borderWidth: 1,
-    marginRight: 8,
-  },
-  sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 0,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  menuContainer: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingBottom: 32,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    gap: 12,
-  },
-  menuItemText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-});

@@ -234,12 +234,16 @@ export default function DMConversationScreen() {
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: spacing.md,
-      paddingVertical: spacing.md,
+      paddingBottom: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.gray200,
       backgroundColor: colors.surface,
-      ...shadows.small,
     },
     backButton: {
-      marginRight: spacing.md,
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     headerContent: {
       flexDirection: 'row',
@@ -259,16 +263,17 @@ export default function DMConversationScreen() {
       flex: 1,
     },
     headerName: {
-      ...textStyles.body1,
+      fontSize: typography.fontSize18,
+      fontWeight: typography.fontWeightBold,
       color: colors.textPrimary,
-      fontWeight: typography.fontWeightSemiBold,
     },
     messagesList: {
       padding: spacing.md,
       flexGrow: 1,
+      backgroundColor: colors.background,
     },
     messageContainer: {
-      marginBottom: spacing.sm,
+      marginBottom: spacing.md,
       maxWidth: '75%',
     },
     myMessageContainer: {
@@ -278,8 +283,10 @@ export default function DMConversationScreen() {
       alignSelf: 'flex-start',
     },
     messageBubble: {
-      padding: spacing.sm,
+      padding: spacing.md,
       borderRadius: borderRadius.md,
+      borderWidth: 1,
+      borderColor: colors.gray200,
     },
     myMessageBubble: {
       backgroundColor: colors.primary,
@@ -290,8 +297,8 @@ export default function DMConversationScreen() {
       borderBottomLeftRadius: 4,
     },
     messageText: {
-      ...textStyles.body2,
-      marginBottom: spacing.xs,
+      fontSize: typography.fontSize14,
+      lineHeight: typography.lineHeight20,
     },
     myMessageText: {
       color: colors.white,
@@ -300,8 +307,8 @@ export default function DMConversationScreen() {
       color: colors.textPrimary,
     },
     messageTime: {
-      ...textStyles.caption,
-      fontSize: 11,
+      fontSize: typography.fontSize12,
+      marginTop: spacing.xs,
     },
     myMessageTime: {
       color: colors.white,
@@ -312,30 +319,33 @@ export default function DMConversationScreen() {
     },
     inputContainer: {
       flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
       padding: spacing.md,
       backgroundColor: colors.surface,
       borderTopWidth: 1,
       borderTopColor: colors.gray200,
-      alignItems: 'flex-end',
     },
     input: {
       flex: 1,
-      backgroundColor: colors.gray100,
-      borderRadius: borderRadius.lg,
+      minHeight: 40,
+      maxHeight: 100,
+      borderRadius: borderRadius.md,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
-      marginRight: spacing.sm,
-      maxHeight: 100,
-      ...textStyles.body2,
+      fontSize: typography.fontSize14,
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.gray200,
       color: colors.textPrimary,
     },
     sendButton: {
-      width: 44,
-      height: 44,
-      borderRadius: borderRadius.full,
-      backgroundColor: colors.primary,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
       justifyContent: 'center',
       alignItems: 'center',
+      backgroundColor: colors.primary,
     },
     sendButtonDisabled: {
       backgroundColor: colors.gray400,
@@ -370,12 +380,12 @@ export default function DMConversationScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { paddingTop: insets.top }]}
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
