@@ -1119,7 +1119,7 @@ export default function EventsScreen() {
     },
     searchInput: {
       flex: 1,
-      ...textStyles.body1,
+      fontSize: typography.fontSize14,
       color: colors.text,
       padding: 0,
     },

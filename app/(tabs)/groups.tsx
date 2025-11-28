@@ -54,11 +54,19 @@ export default function GroupsScreen() {
     category: '',
   });
   const [submitting, setSubmitting] = useState(false);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
   const colors = useThemedColors();
   const { commonStyles, textStyles } = useThemedStyles();
 
   const insets = useSafeAreaInsets();
+
+  // Helper function to check if image URL is valid
+  const isValidImageUrl = (url: string | null | undefined): boolean => {
+    if (!url) return false;
+    // Check if URL starts with http/https and doesn't contain suspicious patterns
+    return url.startsWith('http') && url.length > 10;
+  };
   const router = useRouter();
   const { user } = useAuth();
   const { showAlert } = useAlert();
@@ -75,7 +83,13 @@ export default function GroupsScreen() {
 
       if (error) throw error;
       if (data) {
-        setUwbClubs(data);
+        // Clean up problematic data - filter out single characters and empty values
+        const cleanedData = data.map(club => ({
+          ...club,
+          club_type: club.club_type && club.club_type.trim() && club.club_type.trim().length > 1 ? club.club_type : null,
+          category: club.category && club.category.trim() && club.category.trim().length > 1 ? club.category : null,
+        }));
+        setUwbClubs(cleanedData);
       }
     } catch (error) {
       console.error('Error loading UWB clubs:', error);
@@ -108,6 +122,8 @@ export default function GroupsScreen() {
 
             return {
               ...group,
+              club_type: group.club_type && group.club_type.trim() && group.club_type.trim().length > 1 ? group.club_type : null,
+              category: group.category && group.category.trim() && group.category.trim().length > 1 ? group.category : null,
               member_count: count || 0,
             };
           })
@@ -383,6 +399,13 @@ export default function GroupsScreen() {
       width: '100%',
       height: '100%',
     },
+    defaultClubIcon: {
+      width: '100%',
+      height: '100%',
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.accent,
+    },
     clubInfo: {
       flex: 1,
       gap: spacing.xs,
@@ -613,13 +636,16 @@ export default function GroupsScreen() {
                   <Text style={styles.studyGroupName} numberOfLines={1}>
                     {group.name}
                   </Text>
-                  {(group.club_type || group.category) && (
-                    <Text style={styles.studyGroupType} numberOfLines={1}>
-                      {group.club_type}
-                      {group.club_type && group.category ? ' - ' : ''}
-                      {group.category}
-                    </Text>
-                  )}
+                  {(() => {
+                    const validTypes = [group.club_type, group.category]
+                      .filter(val => val && typeof val === 'string' && val.trim() && val.trim().length > 1 && val.trim() !== '.');
+                    const joinedText = validTypes.join(' - ').trim();
+                    return joinedText.length > 0 ? (
+                      <Text style={styles.studyGroupType} numberOfLines={1}>
+                        {joinedText}
+                      </Text>
+                    ) : null;
+                  })()}
                   <Text style={styles.studyGroupMembers}>
                     {group.member_count} {group.member_count === 1 ? 'member' : 'members'}
                   </Text>
@@ -654,23 +680,39 @@ export default function GroupsScreen() {
                 onPress={() => openClubDetail(club.id)}
               >
                 <View style={styles.clubImageContainer}>
-                  <Image
-                    source={{ uri: club.image_url }}
-                    style={styles.clubImage}
-                    resizeMode="cover"
-                  />
+                  {isValidImageUrl(club.image_url) && !failedImages.has(club.id) ? (
+                    <Image
+                      source={{ uri: club.image_url }}
+                      style={styles.clubImage}
+                      resizeMode="cover"
+                      onError={() => {
+                        console.log('Image failed to load for club:', club.name);
+                        setFailedImages(prev => new Set(prev).add(club.id));
+                      }}
+                    />
+                  ) : (
+                    <View style={styles.defaultClubIcon}>
+                      <Ionicons name="school" size={32} color={colors.white} />
+                    </View>
+                  )}
                 </View>
                 <View style={styles.clubInfo}>
                   <Text style={styles.clubName} numberOfLines={1}>
                     {club.name}
                   </Text>
-                  <Text style={styles.clubType} numberOfLines={1}>
-                    {club.club_type}
-                    {club.category ? ` - ${club.category}` : ''}
-                  </Text>
-                  {club.description && (
+                  {(() => {
+                    const validTypes = [club.club_type, club.category]
+                      .filter(val => val && typeof val === 'string' && val.trim() && val.trim().length > 1 && val.trim() !== '.');
+                    const joinedText = validTypes.join(' - ').trim();
+                    return joinedText.length > 0 ? (
+                      <Text style={styles.clubType} numberOfLines={1}>
+                        {joinedText}
+                      </Text>
+                    ) : null;
+                  })()}
+                  {club.description && club.description.trim() && club.description.trim().length > 1 && (
                     <Text style={styles.clubDescription} numberOfLines={2}>
-                      {club.description}
+                      {club.description.trim()}
                     </Text>
                   )}
                 </View>

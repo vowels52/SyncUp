@@ -213,9 +213,9 @@ export default function CommunityScreen() {
       gap: spacing.sm,
     },
     avatar: {
-      width: 24,
-      height: 24,
-      borderRadius: borderRadius.full,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
       backgroundColor: colors.gray200,
       justifyContent: 'center',
       alignItems: 'center',
@@ -382,9 +382,6 @@ export default function CommunityScreen() {
     detailContent: {
       flex: 1,
     },
-    detailContentContainer: {
-      flexGrow: 1,
-    },
     detailPostHeader: {
       padding: spacing.lg,
       backgroundColor: colors.background,
@@ -474,11 +471,7 @@ export default function CommunityScreen() {
       ...textStyles.body1,
       color: colors.textSecondary,
       fontWeight: typography.fontWeightSemiBold,
-    },
-    emptyCommentsSubtext: {
-      ...textStyles.caption,
-      color: colors.gray500,
-      marginTop: spacing.xs,
+      marginTop: spacing.sm,
     },
     commentCard: {
       marginBottom: spacing.md,
@@ -504,9 +497,9 @@ export default function CommunityScreen() {
       backgroundColor: colors.gray100,
     },
     commentAvatar: {
-      width: 20,
-      height: 20,
-      borderRadius: borderRadius.full,
+      width: 32,
+      height: 32,
+      borderRadius: 16,
       backgroundColor: colors.gray200,
       justifyContent: 'center',
       alignItems: 'center',
@@ -530,8 +523,8 @@ export default function CommunityScreen() {
       gap: spacing.sm,
       padding: spacing.md,
       backgroundColor: colors.surface,
-      borderTopWidth: 1,
-      borderTopColor: colors.gray200,
+      borderTopWidth: 8,
+      borderTopColor: colors.background,
     },
     commentInput: {
       flex: 1,
@@ -1656,14 +1649,17 @@ export default function CommunityScreen() {
             {selectedPost && (
               <ScrollView
                 style={styles.detailContent}
-                contentContainerStyle={styles.detailContentContainer}
                 showsVerticalScrollIndicator={false}
               >
                 {/* Post Header */}
                 <View style={styles.detailPostHeader}>
                   <TouchableOpacity
                     style={styles.detailAuthorInfo}
-                    onPress={() => router.push({ pathname: '/user-details', params: { userId: selectedPost.author.id } })}
+                    onPress={() => {
+                      setShowDetailModal(false);
+                      setSelectedPost(null);
+                      router.push({ pathname: '/user-details', params: { userId: selectedPost.author.id } });
+                    }}
                   >
                     {selectedPost.author.avatar ? (
                       <Image
@@ -1737,8 +1733,8 @@ export default function CommunityScreen() {
                     <ActivityIndicator size="small" color={colors.primary} style={styles.commentsLoader} />
                   ) : comments.length === 0 ? (
                     <View style={styles.emptyComments}>
-                      <Text style={styles.emptyCommentsText}>No comments yet</Text>
-                      <Text style={styles.emptyCommentsSubtext}>Be the first to comment!</Text>
+                      <Ionicons name="chatbubbles-outline" size={48} color={colors.gray400} />
+                      <Text style={styles.emptyCommentsText}>No comments yet. Be the first!</Text>
                     </View>
                   ) : (
                     comments.map((comment) => (
@@ -1746,7 +1742,11 @@ export default function CommunityScreen() {
                         <View style={styles.commentHeader}>
                           <TouchableOpacity
                             style={styles.commentAuthorInfo}
-                            onPress={() => router.push({ pathname: '/user-details', params: { userId: comment.author.id } })}
+                            onPress={() => {
+                              setShowDetailModal(false);
+                              setSelectedPost(null);
+                              router.push({ pathname: '/user-details', params: { userId: comment.author.id } });
+                            }}
                           >
                             {comment.author.avatar ? (
                               <Image
@@ -1755,7 +1755,7 @@ export default function CommunityScreen() {
                               />
                             ) : (
                               <View style={styles.commentAvatar}>
-                                <Ionicons name="person" size={14} color={colors.gray600} />
+                                <Ionicons name="person" size={20} color={colors.gray600} />
                               </View>
                             )}
                             <Text style={styles.commentAuthorName}>{comment.author.name}</Text>

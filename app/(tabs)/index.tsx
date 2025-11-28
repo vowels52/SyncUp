@@ -1175,7 +1175,7 @@ export default function HomeScreen() {
                 onPress={() => router.push(`/club-detail?id=${club.id}&from=home`)}
               >
                 <View style={[styles.groupIcon, { backgroundColor: colors.accent }]}>
-                  <Ionicons name="business" size={20} color={colors.white} />
+                  <Ionicons name="school" size={20} color={colors.white} />
                 </View>
                 <View style={styles.groupInfo}>
                   <Text style={styles.groupName}>{club.name}</Text>
