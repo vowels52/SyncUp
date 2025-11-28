@@ -858,6 +858,10 @@ export default function HomeScreen() {
       color: colors.white,
       fontWeight: typography.fontWeightBold,
     },
+    createButtonDisabled: {
+      backgroundColor: colors.gray400,
+      opacity: 0.5,
+    },
     compactPickerContainer: {
       backgroundColor: colors.surface,
       borderWidth: 1,
@@ -1274,7 +1278,7 @@ export default function HomeScreen() {
                     style={styles.dateButton}
                     onPress={() => setShowStartDatePicker(true)}
                   >
-                    <Ionicons name="calendar-outline" size={20} color={colors.white} />
+                    <Ionicons name="calendar-outline" size={20} color={colors.textPrimary} />
                     <Text style={styles.dateButtonText}>
                       {newEvent.start_time.toLocaleDateString()}
                     </Text>
@@ -1333,7 +1337,7 @@ export default function HomeScreen() {
                     style={styles.dateButton}
                     onPress={() => setShowStartTimePicker(true)}
                   >
-                    <Ionicons name="time-outline" size={20} color={colors.white} />
+                    <Ionicons name="time-outline" size={20} color={colors.textPrimary} />
                     <Text style={styles.dateButtonText}>
                       {newEvent.start_time.toLocaleTimeString()}
                     </Text>
@@ -1392,7 +1396,7 @@ export default function HomeScreen() {
                     style={styles.dateButton}
                     onPress={() => setShowEndDatePicker(true)}
                   >
-                    <Ionicons name="calendar-outline" size={20} color={colors.white} />
+                    <Ionicons name="calendar-outline" size={20} color={colors.textPrimary} />
                     <Text style={styles.dateButtonText}>
                       {newEvent.end_time.toLocaleDateString()}
                     </Text>
@@ -1451,7 +1455,7 @@ export default function HomeScreen() {
                     style={styles.dateButton}
                     onPress={() => setShowEndTimePicker(true)}
                   >
-                    <Ionicons name="time-outline" size={20} color={colors.white} />
+                    <Ionicons name="time-outline" size={20} color={colors.textPrimary} />
                     <Text style={styles.dateButtonText}>
                       {newEvent.end_time.toLocaleTimeString()}
                     </Text>
@@ -1472,7 +1476,11 @@ export default function HomeScreen() {
                 </>
               )}
 
-              <TouchableOpacity style={styles.createButton} onPress={handleCreateEvent}>
+              <TouchableOpacity
+                style={[styles.createButton, !newEvent.title.trim() && styles.createButtonDisabled]}
+                onPress={handleCreateEvent}
+                disabled={!newEvent.title.trim()}
+              >
                 <Text style={styles.createButtonText}>Create Event</Text>
               </TouchableOpacity>
             </ScrollView>
@@ -1659,7 +1667,11 @@ export default function HomeScreen() {
             </ScrollView>
 
             <View style={styles.modalFooter}>
-              <TouchableOpacity style={styles.createButton} onPress={handleCreateGroup}>
+              <TouchableOpacity
+                style={[styles.createButton, !newGroup.name.trim() && styles.createButtonDisabled]}
+                onPress={handleCreateGroup}
+                disabled={!newGroup.name.trim()}
+              >
                 <Text style={styles.createButtonText}>Create Group</Text>
               </TouchableOpacity>
             </View>

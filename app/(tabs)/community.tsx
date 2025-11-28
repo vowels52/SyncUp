@@ -379,6 +379,10 @@ export default function CommunityScreen() {
       color: colors.white,
       fontWeight: typography.fontWeightBold,
     },
+    createButtonDisabled: {
+      backgroundColor: colors.gray400,
+      opacity: 0.5,
+    },
     detailContent: {
       flex: 1,
     },
@@ -401,12 +405,14 @@ export default function CommunityScreen() {
       marginTop: 2,
     },
     detailPostBody: {
-      padding: spacing.lg,
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.sm,
       backgroundColor: colors.surface,
     },
     detailPostTitle: {
       ...textStyles.h3,
-      marginBottom: spacing.md,
+      marginBottom: spacing.sm,
     },
     detailPostContent: {
       ...textStyles.body1,
@@ -1612,7 +1618,11 @@ export default function CommunityScreen() {
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity style={styles.createButton} onPress={handleCreatePost}>
+              <TouchableOpacity
+                style={[styles.createButton, !newPost.title.trim() && styles.createButtonDisabled]}
+                onPress={handleCreatePost}
+                disabled={!newPost.title.trim()}
+              >
                 <Text style={styles.createButtonText}>Create Post</Text>
               </TouchableOpacity>
             </ScrollView>

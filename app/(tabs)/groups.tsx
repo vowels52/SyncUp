@@ -551,6 +551,7 @@ export default function GroupsScreen() {
       marginTop: spacing.lg,
     },
     submitButtonDisabled: {
+      backgroundColor: colors.gray400,
       opacity: 0.5,
     },
     submitButtonText: {

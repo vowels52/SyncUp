@@ -38,6 +38,19 @@ interface GroupPost {
   isLiked?: boolean;
 }
 
+interface Comment {
+  id: string;
+  post_id: string;
+  author_id: string;
+  content: string;
+  created_at: string;
+  author: {
+    id: string;
+    name: string;
+    avatar: string | null;
+  };
+}
+
 export default function StudyGroupDetailScreen() {
   const colors = useThemedColors();
   const { commonStyles, textStyles } = useThemedStyles();
@@ -63,6 +76,15 @@ export default function StudyGroupDetailScreen() {
   const [newPost, setNewPost] = useState({ title: '', content: '' });
   const [submitting, setSubmitting] = useState(false);
   const [showMenuModal, setShowMenuModal] = useState(false);
+
+  // Post detail modal state
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<GroupPost | null>(null);
+  const [comments, setComments] = useState<any[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [likeCount, setLikeCount] = useState(0);
+  const [isLiked, setIsLiked] = useState(false);
 
   useEffect(() => {
     fetchStudyGroupDetails();
@@ -152,14 +174,27 @@ export default function StudyGroupDetailScreen() {
               ? { ...post, comments: post.comments + 1 }
               : post
           ));
+
+          // If viewing this post's comments in the modal, refetch them
+          setSelectedPost(current => {
+            if (current?.id === postId) {
+              fetchComments(postId);
+            }
+            return current;
+          });
         }
       )
       .on(
         'postgres_changes',
         { event: 'DELETE', schema: 'public', table: 'group_post_comments' },
         (payload) => {
-          // Since payload.old doesn't contain post_id, just refetch all posts
-          // This ensures comment counts are accurate
+          const deletedCommentId = (payload.old as any).id;
+
+          // Remove the deleted comment from the modal's comments list
+          setComments(prev => prev.filter(comment => comment.id !== deletedCommentId));
+
+          // Refetch posts to get accurate comment counts for all posts
+          // This is necessary because payload.old doesn't include post_id
           fetchPosts();
         }
       )
@@ -171,43 +206,40 @@ export default function StudyGroupDetailScreen() {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'group_post_likes' },
-        async (payload) => {
+        (payload) => {
+          // Update like count for the affected post
           const postId = (payload.new as any).post_id;
           const userId = (payload.new as any).user_id;
           if (!postId) return;
 
-          // Fetch accurate like count and status from database
-          const { count: likesCount } = await supabase
-            .from('group_post_likes')
-            .select('*', { count: 'exact', head: true })
-            .eq('post_id', postId);
-
-          const { data: userLike } = await supabase
-            .from('group_post_likes')
-            .select('id')
-            .eq('post_id', postId)
-            .eq('user_id', user.id)
-            .maybeSingle();
-
-          // Update the post if it exists in current state
           setPosts(prev => prev.map(post =>
             post.id === postId
-              ? {
-                  ...post,
-                  likes: likesCount || 0,
-                  isLiked: !!userLike
-                }
+              ? { ...post, likes: post.likes + 1 }
               : post
           ));
+
+          // If viewing this post in detail, update isLiked status
+          setSelectedPost(current => {
+            if (current?.id === postId && user && userId === user.id) {
+              setIsLiked(true);
+              setLikeCount(prev => prev + 1);
+            }
+            return current;
+          });
         }
       )
       .on(
         'postgres_changes',
         { event: 'DELETE', schema: 'public', table: 'group_post_likes' },
         (payload) => {
-          // REPLICA IDENTITY FULL doesn't work reliably - payload.old only contains id
-          // So we refetch all posts to get accurate counts
+          // Since Supabase doesn't send old row data for DELETE,
+          // we need to refetch posts to get accurate like counts
           fetchPosts();
+
+          // If viewing a post in detail, refresh the like status
+          if (selectedPost && user) {
+            checkUserLikeStatus(selectedPost.id);
+          }
         }
       )
       .subscribe();
@@ -218,6 +250,17 @@ export default function StudyGroupDetailScreen() {
       supabase.removeChannel(likesChannel);
     };
   }, [user, isMember, id]);
+
+  // Update selectedPost when posts array changes (for real-time updates)
+  useEffect(() => {
+    if (selectedPost) {
+      const updatedPost = posts.find(p => p.id === selectedPost.id);
+      if (updatedPost) {
+        setSelectedPost(updatedPost);
+        setLikeCount(updatedPost.likes);
+      }
+    }
+  }, [posts]);
 
   const fetchStudyGroupDetails = async () => {
     try {
@@ -353,6 +396,293 @@ export default function StudyGroupDetailScreen() {
     } finally {
       setPostsLoading(false);
     }
+  };
+
+  const fetchComments = async (postId: string) => {
+    if (!postId) {
+      console.error('fetchComments called with undefined postId');
+      setLoadingComments(false);
+      return;
+    }
+
+    setLoadingComments(true);
+    try {
+      const { data: commentsData, error: commentsError } = await supabase
+        .from('group_post_comments')
+        .select('*')
+        .eq('post_id', postId)
+        .order('created_at', { ascending: true });
+
+      if (commentsError) throw commentsError;
+
+      if (commentsData && commentsData.length > 0) {
+        // Fetch author information for comments
+        const authorIds = [...new Set(commentsData.map(c => c.author_id))];
+        const { data: authorsData } = await supabase
+          .from('user_profiles')
+          .select('id, full_name, profile_image_url')
+          .in('id', authorIds);
+
+        const authorsMap: { [key: string]: { name: string; profile_image_url: string | null } } = {};
+        authorsData?.forEach(author => {
+          authorsMap[author.id] = {
+            name: author.full_name || 'Anonymous',
+            profile_image_url: author.profile_image_url || null,
+          };
+        });
+
+        const transformedComments: Comment[] = commentsData.map(comment => ({
+          id: comment.id,
+          post_id: comment.post_id,
+          author_id: comment.author_id,
+          content: comment.content,
+          author: {
+            id: comment.author_id,
+            name: authorsMap[comment.author_id]?.name || 'Anonymous',
+            avatar: authorsMap[comment.author_id]?.profile_image_url,
+          },
+          created_at: comment.created_at,
+        }));
+
+        setComments(transformedComments);
+      } else {
+        setComments([]);
+      }
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+      setComments([]);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  const checkUserLikeStatus = async (postId: string) => {
+    if (!user || !postId) {
+      setIsLiked(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('group_post_likes')
+        .select('id')
+        .eq('post_id', postId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error checking like status:', error);
+      }
+
+      setIsLiked(!!data);
+    } catch (error) {
+      console.error('Error in checkUserLikeStatus:', error);
+      setIsLiked(false);
+    }
+  };
+
+  const handleModalToggleLike = async () => {
+    if (!user) {
+      showAlert('Error', 'You must be logged in to like posts');
+      return;
+    }
+
+    if (!selectedPost) return;
+
+    try {
+      const { data: existingLike, error: checkError } = await supabase
+        .from('group_post_likes')
+        .select('id')
+        .eq('post_id', selectedPost.id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+
+      if (existingLike) {
+        const { error } = await supabase
+          .from('group_post_likes')
+          .delete()
+          .eq('post_id', selectedPost.id)
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+        setIsLiked(false);
+        setLikeCount(prev => prev - 1);
+      } else {
+        const { error } = await supabase
+          .from('group_post_likes')
+          .insert({
+            post_id: selectedPost.id,
+            user_id: user.id,
+          });
+
+        if (error) throw error;
+        setIsLiked(true);
+        setLikeCount(prev => prev + 1);
+      }
+    } catch (error: any) {
+      console.error('Error toggling like:', error);
+      showAlert('Error', error.message || 'Failed to update like');
+    }
+  };
+
+  const handlePostPress = (post: GroupPost) => {
+    if (!post?.id) {
+      console.error('Post clicked without valid ID:', post);
+      return;
+    }
+
+    setSelectedPost(post);
+    setShowDetailModal(true);
+    setLikeCount(post.likes);
+    fetchComments(post.id);
+    checkUserLikeStatus(post.id);
+  };
+
+  const handleSubmitComment = async () => {
+    if (!user) {
+      showAlert('Error', 'You must be logged in to comment');
+      return;
+    }
+
+    if (!newComment.trim()) {
+      showAlert('Error', 'Please enter a comment');
+      return;
+    }
+
+    if (!selectedPost || !selectedPost.id) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('group_post_comments')
+        .insert({
+          post_id: selectedPost.id,
+          author_id: user.id,
+          content: newComment.trim(),
+        });
+
+      if (error) throw error;
+
+      setNewComment('');
+      fetchComments(selectedPost.id);
+      fetchPosts();
+    } catch (error: any) {
+      console.error('Error submitting comment:', error);
+      showAlert('Error', error.message || 'Failed to submit comment');
+    }
+  };
+
+  const handleDeletePost = async () => {
+    if (!user || !selectedPost) return;
+
+    if (selectedPost.author_id !== user.id) {
+      showAlert('Error', 'You can only delete your own posts');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('group_posts')
+        .delete()
+        .eq('id', selectedPost.id)
+        .eq('author_id', user.id);
+
+      if (error) throw error;
+
+      showAlert('Success', 'Post deleted successfully');
+      closeDetailModal();
+      fetchPosts();
+    } catch (error: any) {
+      console.error('Error deleting post:', error);
+      showAlert('Error', error.message || 'Failed to delete post');
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string, commentAuthorId: string) => {
+    if (!user) return;
+
+    if (commentAuthorId !== user.id) {
+      showAlert('Error', 'You can only delete your own comments');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('group_post_comments')
+        .delete()
+        .eq('id', commentId)
+        .eq('author_id', user.id);
+
+      if (error) throw error;
+
+      showAlert('Success', 'Comment deleted successfully');
+      if (selectedPost) {
+        fetchComments(selectedPost.id);
+      }
+    } catch (error: any) {
+      console.error('Error deleting comment:', error);
+      showAlert('Error', error.message || 'Failed to delete comment');
+    }
+  };
+
+  const confirmDeleteComment = (commentId: string, commentAuthorId: string) => {
+    showAlert(
+      'Delete Comment',
+      'Are you sure you want to delete this comment?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => handleDeleteComment(commentId, commentAuthorId)
+        }
+      ]
+    );
+  };
+
+  const confirmDeletePost = () => {
+    if (!selectedPost) return;
+
+    showAlert(
+      'Delete Post',
+      'Are you sure you want to delete this post? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: handleDeletePost }
+      ]
+    );
+  };
+
+  const closeDetailModal = () => {
+    setShowDetailModal(false);
+    setSelectedPost(null);
+    setComments([]);
+    setNewComment('');
+    setIsLiked(false);
+    setLikeCount(0);
+  };
+
+  const formatTimeAgo = (dateString: string) => {
+    const now = new Date();
+    const date = new Date(dateString);
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (seconds < 60) return 'just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
+    const weeks = Math.floor(days / 7);
+    if (weeks < 4) return `${weeks}w ago`;
+    const months = Math.floor(days / 30);
+    if (months < 12) return `${months}mo ago`;
+    const years = Math.floor(days / 365);
+    return `${years}y ago`;
   };
 
   const handleJoinGroup = async () => {
@@ -854,47 +1184,261 @@ export default function StudyGroupDetailScreen() {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: spacing.lg,
+      padding: spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.gray200,
     },
     modalTitle: {
-      fontSize: typography.fontSize20,
-      fontWeight: typography.fontWeightBold,
-      color: colors.textPrimary,
+      ...textStyles.h2,
+    },
+    avatar: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.gray200,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalForm: {
+      padding: spacing.lg,
+    },
+    inputLabel: {
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
+      marginBottom: spacing.sm,
+      marginTop: spacing.md,
     },
     titleInput: {
-      backgroundColor: colors.surface,
-      borderRadius: borderRadius.md,
+      backgroundColor: colors.background,
+      borderRadius: borderRadius.sm,
       padding: spacing.md,
-      fontSize: typography.fontSize16,
+      ...textStyles.body1,
       color: colors.textPrimary,
-      marginBottom: spacing.md,
       borderWidth: 1,
-      borderColor: colors.gray200,
+      borderColor: colors.gray300,
     },
     contentInput: {
-      backgroundColor: colors.surface,
-      borderRadius: borderRadius.md,
+      backgroundColor: colors.background,
+      borderRadius: borderRadius.sm,
       padding: spacing.md,
-      fontSize: typography.fontSize14,
+      ...textStyles.body1,
       color: colors.textPrimary,
-      marginBottom: spacing.lg,
-      minHeight: 120,
+      height: 120,
       borderWidth: 1,
-      borderColor: colors.gray200,
+      borderColor: colors.gray300,
+      textAlignVertical: 'top',
     },
     submitButton: {
       backgroundColor: colors.primary,
-      paddingVertical: spacing.md,
-      borderRadius: borderRadius.lg,
+      padding: spacing.md,
+      borderRadius: borderRadius.sm,
       alignItems: 'center',
+      marginTop: spacing.xl,
+      marginBottom: spacing.lg,
     },
     submitButtonDisabled: {
+      backgroundColor: colors.gray400,
       opacity: 0.5,
     },
     submitButtonText: {
       fontSize: typography.fontSize16,
       fontWeight: typography.fontWeightBold,
       color: colors.white,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'flex-end',
+    },
+    modalContent: {
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: borderRadius.lg,
+      borderTopRightRadius: borderRadius.lg,
+      maxHeight: '85%',
+      ...shadows.large,
+      flexDirection: 'column',
+    },
+    modalHeaderActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    deleteButton: {
+      padding: spacing.xs,
+    },
+    detailContent: {
+      flex: 1,
+    },
+    detailPostHeader: {
+      padding: spacing.lg,
+      backgroundColor: colors.background,
+    },
+    detailAuthorInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    detailAuthorName: {
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    detailTimeText: {
+      ...textStyles.caption,
+      color: colors.gray500,
+      marginTop: 2,
+    },
+    detailPostBody: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.sm,
+      backgroundColor: colors.surface,
+    },
+    detailPostTitle: {
+      ...textStyles.h3,
+      marginBottom: spacing.sm,
+    },
+    detailPostContent: {
+      ...textStyles.body1,
+      color: colors.textSecondary,
+      lineHeight: 22,
+      marginTop: spacing.md,
+    },
+    detailPostActions: {
+      flexDirection: 'row',
+      gap: spacing.lg,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+    },
+    likeButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.background,
+    },
+    likeButtonText: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    likeButtonTextActive: {
+      color: colors.error,
+    },
+    statItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    statText: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+    },
+    divider: {
+      height: 8,
+      backgroundColor: colors.background,
+    },
+    commentsSection: {
+      padding: spacing.lg,
+      backgroundColor: colors.surface,
+    },
+    commentsSectionTitle: {
+      ...textStyles.h4,
+      marginBottom: spacing.md,
+    },
+    commentsLoader: {
+      marginVertical: spacing.lg,
+    },
+    emptyComments: {
+      alignItems: 'center',
+      paddingVertical: spacing.xl,
+    },
+    emptyCommentsText: {
+      ...textStyles.body1,
+      color: colors.textSecondary,
+      fontWeight: typography.fontWeightSemiBold,
+      marginTop: spacing.sm,
+    },
+    commentCard: {
+      marginBottom: spacing.md,
+      padding: spacing.md,
+      backgroundColor: colors.background,
+      borderRadius: borderRadius.sm,
+    },
+    commentHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
+    commentAuthorInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      flex: 1,
+    },
+    commentDeleteButton: {
+      padding: spacing.xs,
+      borderRadius: borderRadius.sm,
+      backgroundColor: colors.gray100,
+    },
+    commentAvatar: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: colors.gray200,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    commentAuthorName: {
+      ...textStyles.body2,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    commentTime: {
+      ...textStyles.caption,
+      color: colors.gray500,
+    },
+    commentContent: {
+      ...textStyles.body2,
+      color: colors.text,
+      lineHeight: 20,
+    },
+    commentInputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      padding: spacing.md,
+      backgroundColor: colors.surface,
+      borderTopWidth: 8,
+      borderTopColor: colors.background,
+    },
+    commentInput: {
+      flex: 1,
+      minHeight: 40,
+      maxHeight: 100,
+      borderRadius: borderRadius.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      fontSize: typography.fontSize14,
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.gray200,
+      color: colors.textPrimary,
+    },
+    commentSubmitButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    commentSubmitButtonDisabled: {
+      backgroundColor: colors.gray400,
+      opacity: 0.5,
     },
   });
 
@@ -1030,7 +1574,7 @@ export default function StudyGroupDetailScreen() {
                   <TouchableOpacity
                     key={post.id}
                     style={styles.postCard}
-                    onPress={() => router.push(`/group-post-detail?id=${post.id}&groupId=${id}`)}
+                    onPress={() => handlePostPress(post)}
                     activeOpacity={0.7}
                   >
                     <View style={styles.postHeader}>
@@ -1123,37 +1667,41 @@ export default function StudyGroupDetailScreen() {
               </TouchableOpacity>
             </View>
 
-            <TextInput
-              style={styles.titleInput}
-              placeholder="Title"
-              placeholderTextColor={colors.textSecondary}
-              value={newPost.title}
-              onChangeText={(text) => setNewPost((prev) => ({ ...prev, title: text }))}
-              maxLength={100}
-            />
+            <View style={styles.modalForm}>
+              <Text style={styles.inputLabel}>Title *</Text>
+              <TextInput
+                style={styles.titleInput}
+                placeholder="Enter discussion title"
+                placeholderTextColor={colors.textSecondary}
+                value={newPost.title}
+                onChangeText={(text) => setNewPost((prev) => ({ ...prev, title: text }))}
+                maxLength={100}
+              />
 
-            <TextInput
-              style={styles.contentInput}
-              placeholder="What's on your mind? (optional)"
-              placeholderTextColor={colors.textSecondary}
-              value={newPost.content}
-              onChangeText={(text) => setNewPost((prev) => ({ ...prev, content: text }))}
-              multiline
-              numberOfLines={6}
-              textAlignVertical="top"
-            />
+              <Text style={styles.inputLabel}>Content</Text>
+              <TextInput
+                style={styles.contentInput}
+                placeholder="Share your thoughts or questions..."
+                placeholderTextColor={colors.textSecondary}
+                value={newPost.content}
+                onChangeText={(text) => setNewPost((prev) => ({ ...prev, content: text }))}
+                multiline
+                numberOfLines={6}
+                textAlignVertical="top"
+              />
 
-            <TouchableOpacity
-              style={[styles.submitButton, (!newPost.title.trim() || submitting) && styles.submitButtonDisabled]}
-              onPress={handleCreatePost}
-              disabled={!newPost.title.trim() || submitting}
-            >
+              <TouchableOpacity
+                style={[styles.submitButton, (!newPost.title.trim() || submitting) && styles.submitButtonDisabled]}
+                onPress={handleCreatePost}
+                disabled={!newPost.title.trim() || submitting}
+              >
               {submitting ? (
                 <ActivityIndicator size="small" color={colors.white} />
               ) : (
                 <Text style={styles.submitButtonText}>Post</Text>
               )}
-            </TouchableOpacity>
+              </TouchableOpacity>
+            </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -1190,6 +1738,184 @@ export default function StudyGroupDetailScreen() {
             )}
           </View>
         </TouchableOpacity>
+      </Modal>
+
+      {/* Post Detail Modal with Comments */}
+      <Modal
+        visible={showDetailModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={closeDetailModal}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={[styles.modalContent, { height: '90%' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Post Details</Text>
+              <View style={styles.modalHeaderActions}>
+                {selectedPost && user && selectedPost.author_id === user.id && (
+                  <TouchableOpacity onPress={confirmDeletePost} style={styles.deleteButton}>
+                    <Ionicons name="trash-outline" size={24} color={colors.error} />
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity onPress={closeDetailModal}>
+                  <Ionicons name="close" size={28} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {selectedPost && (
+              <ScrollView
+                style={styles.detailContent}
+                showsVerticalScrollIndicator={false}
+              >
+                {/* Post Header */}
+                <View style={styles.detailPostHeader}>
+                  <TouchableOpacity
+                    style={styles.detailAuthorInfo}
+                    onPress={() => {
+                      setShowDetailModal(false);
+                      setSelectedPost(null);
+                      router.push({ pathname: '/user-details', params: { userId: selectedPost.author_id } });
+                    }}
+                  >
+                    {selectedPost.author.avatar ? (
+                      <Image
+                        source={{ uri: selectedPost.author.avatar }}
+                        style={styles.avatar}
+                      />
+                    ) : (
+                      <View style={styles.avatar}>
+                        <Ionicons name="person" size={20} color={colors.gray600} />
+                      </View>
+                    )}
+                    <View>
+                      <Text style={styles.detailAuthorName}>{selectedPost.author.name}</Text>
+                      <Text style={styles.detailTimeText}>
+                        {formatTimeAgo(selectedPost.created_at)}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Post Content */}
+                <View style={styles.detailPostBody}>
+                  <Text style={styles.detailPostTitle}>{selectedPost.title}</Text>
+
+                  {selectedPost.content && (
+                    <Text style={styles.detailPostContent}>{selectedPost.content}</Text>
+                  )}
+                </View>
+
+                {/* Post Actions */}
+                <View style={styles.detailPostActions}>
+                  <TouchableOpacity
+                    style={styles.likeButton}
+                    onPress={handleModalToggleLike}
+                  >
+                    <Ionicons
+                      name={isLiked ? "heart" : "heart-outline"}
+                      size={24}
+                      color={isLiked ? colors.error : colors.gray500}
+                    />
+                    <Text style={[
+                      styles.likeButtonText,
+                      isLiked && styles.likeButtonTextActive
+                    ]}>
+                      {likeCount} {likeCount === 1 ? 'like' : 'likes'}
+                    </Text>
+                  </TouchableOpacity>
+                  <View style={styles.statItem}>
+                    <Ionicons name="chatbubble-outline" size={20} color={colors.gray500} />
+                    <Text style={styles.statText}>{comments.length} comments</Text>
+                  </View>
+                </View>
+
+                <View style={styles.divider} />
+
+                {/* Comments Section */}
+                <View style={styles.commentsSection}>
+                  <Text style={styles.commentsSectionTitle}>
+                    Comments ({comments.length})
+                  </Text>
+
+                  {loadingComments ? (
+                    <ActivityIndicator size="small" color={colors.primary} style={styles.commentsLoader} />
+                  ) : comments.length === 0 ? (
+                    <View style={styles.emptyComments}>
+                      <Ionicons name="chatbubbles-outline" size={48} color={colors.gray400} />
+                      <Text style={styles.emptyCommentsText}>No comments yet. Be the first!</Text>
+                    </View>
+                  ) : (
+                    comments.map((comment) => (
+                      <View key={comment.id} style={styles.commentCard}>
+                        <View style={styles.commentHeader}>
+                          <TouchableOpacity
+                            style={styles.commentAuthorInfo}
+                            onPress={() => {
+                              setShowDetailModal(false);
+                              setSelectedPost(null);
+                              router.push({ pathname: '/user-details', params: { userId: comment.author.id } });
+                            }}
+                          >
+                            {comment.author.avatar ? (
+                              <Image
+                                source={{ uri: comment.author.avatar }}
+                                style={styles.commentAvatar}
+                              />
+                            ) : (
+                              <View style={styles.commentAvatar}>
+                                <Ionicons name="person" size={20} color={colors.gray600} />
+                              </View>
+                            )}
+                            <Text style={styles.commentAuthorName}>{comment.author.name}</Text>
+                            <Text style={styles.commentTime}>
+                              {formatTimeAgo(comment.created_at)}
+                            </Text>
+                          </TouchableOpacity>
+                          {user && comment.author_id === user.id && (
+                            <TouchableOpacity
+                              onPress={() => confirmDeleteComment(comment.id, comment.author_id)}
+                              style={styles.commentDeleteButton}
+                            >
+                              <Ionicons name="trash-outline" size={18} color={colors.error} />
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                        <Text style={styles.commentContent}>{comment.content}</Text>
+                      </View>
+                    ))
+                  )}
+                </View>
+              </ScrollView>
+            )}
+
+            {/* Comment Input */}
+            <View style={styles.commentInputContainer}>
+              <TextInput
+                style={styles.commentInput}
+                placeholder="Write a comment..."
+                placeholderTextColor={colors.gray500}
+                value={newComment}
+                onChangeText={setNewComment}
+                multiline
+                maxLength={500}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.commentSubmitButton,
+                  !newComment.trim() && styles.commentSubmitButtonDisabled
+                ]}
+                onPress={handleSubmitComment}
+                disabled={!newComment.trim()}
+              >
+                <Ionicons name="send" size={20} color={colors.white} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
