@@ -506,38 +506,40 @@ export default function GroupsScreen() {
       backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
     modalContent: {
-      backgroundColor: colors.background,
-      borderTopLeftRadius: borderRadius.xl,
-      borderTopRightRadius: borderRadius.xl,
-      padding: spacing.lg,
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: borderRadius.lg,
+      borderTopRightRadius: borderRadius.lg,
       maxHeight: '80%',
+      ...shadows.large,
     },
     modalHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: spacing.lg,
+      padding: spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.gray200,
     },
     modalTitle: {
-      fontSize: typography.fontSize20,
-      fontWeight: typography.fontWeightBold,
-      color: colors.textPrimary,
+      ...textStyles.h2,
+    },
+    modalForm: {
+      padding: spacing.lg,
     },
     inputLabel: {
-      fontSize: typography.fontSize14,
+      ...textStyles.body1,
       fontWeight: typography.fontWeightSemiBold,
-      color: colors.textPrimary,
-      marginBottom: spacing.xs,
+      marginBottom: spacing.sm,
       marginTop: spacing.md,
     },
     input: {
-      backgroundColor: colors.surface,
-      borderRadius: borderRadius.md,
+      backgroundColor: colors.background,
+      borderRadius: borderRadius.sm,
       padding: spacing.md,
       fontSize: typography.fontSize16,
-      color: colors.textPrimary,
+      color: colors.text,
       borderWidth: 1,
-      borderColor: colors.gray200,
+      borderColor: colors.gray300,
     },
     textArea: {
       minHeight: 100,
@@ -545,10 +547,16 @@ export default function GroupsScreen() {
     },
     submitButton: {
       backgroundColor: colors.primary,
-      paddingVertical: spacing.md,
-      borderRadius: borderRadius.lg,
+      padding: spacing.md,
+      borderRadius: borderRadius.sm,
       alignItems: 'center',
-      marginTop: spacing.lg,
+      marginTop: spacing.xl,
+      marginBottom: spacing.lg,
+    },
+    modalFooter: {
+      padding: spacing.lg,
+      borderTopWidth: 1,
+      borderTopColor: colors.gray200,
     },
     submitButtonDisabled: {
       backgroundColor: colors.gray400,
@@ -757,11 +765,11 @@ export default function GroupsScreen() {
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Create Study Group</Text>
             <TouchableOpacity onPress={() => setShowCreateGroupModal(false)}>
-              <Ionicons name="close" size={24} color={colors.textPrimary} />
+              <Ionicons name="close" size={28} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.modalForm} showsVerticalScrollIndicator={false}>
             <Text style={styles.inputLabel}>Group Name *</Text>
             <TextInput
               style={styles.input}
@@ -801,17 +809,19 @@ export default function GroupsScreen() {
             />
           </ScrollView>
 
-          <TouchableOpacity
-            style={[styles.submitButton, (!newGroup.name.trim() || submitting) && styles.submitButtonDisabled]}
-            onPress={handleCreateGroup}
-            disabled={!newGroup.name.trim() || submitting}
-          >
-            {submitting ? (
-              <ActivityIndicator size="small" color={colors.white} />
-            ) : (
-              <Text style={styles.submitButtonText}>Create Group</Text>
-            )}
-          </TouchableOpacity>
+          <View style={styles.modalFooter}>
+            <TouchableOpacity
+              style={[styles.submitButton, (!newGroup.name.trim() || submitting) && styles.submitButtonDisabled]}
+              onPress={handleCreateGroup}
+              disabled={!newGroup.name.trim() || submitting}
+            >
+              {submitting ? (
+                <ActivityIndicator size="small" color={colors.white} />
+              ) : (
+                <Text style={styles.submitButtonText}>Create Group</Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </Modal>
