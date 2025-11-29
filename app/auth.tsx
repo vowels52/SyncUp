@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { useAuth, useAlert } from '@/template';
 import { useRouter } from 'expo-router';
 import { typography, spacing, borderRadius, shadows } from '@/constants/theme';
@@ -100,13 +100,9 @@ export default function AuthScreen() {
       marginBottom: spacing.md,
     },
     logo: {
-      width: 80,
-      height: 80,
-      borderRadius: borderRadius.xl,
-      backgroundColor: colors.primary,
-      justifyContent: 'center',
-      alignItems: 'center',
-      ...shadows.medium,
+      width: 120,
+      height: 120,
+      resizeMode: 'contain',
     },
     title: {
       ...textStyles.h1,
@@ -197,11 +193,11 @@ export default function AuthScreen() {
       >
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <View style={styles.logo}>
-              <Ionicons name="people" size={48} color={colors.white} />
-            </View>
+            <Image
+              source={require('@/assets/images/SyncUp_Logo3.png')}
+              style={styles.logo}
+            />
           </View>
-          <Text style={styles.title}>SyncUp</Text>
           <Text style={styles.subtitle}>Connect. Collaborate. Succeed.</Text>
         </View>
 
