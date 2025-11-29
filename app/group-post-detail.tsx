@@ -519,16 +519,22 @@ export default function GroupPostDetailScreen() {
       flex: 1,
     },
     postSection: {
-      backgroundColor: colors.surface,
-      padding: spacing.lg,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.gray200,
+      backgroundColor: colors.background,
     },
     postHeader: {
+      padding: spacing.lg,
+      backgroundColor: colors.background,
+    },
+    postHeaderInfo: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.sm,
-      marginBottom: spacing.md,
+    },
+    postBody: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.sm,
+      backgroundColor: colors.surface,
     },
     avatar: {
       width: 40,
@@ -556,32 +562,52 @@ export default function GroupPostDetailScreen() {
       fontSize: typography.fontSize14,
       color: colors.textSecondary,
       lineHeight: typography.lineHeight24,
-      marginBottom: spacing.md,
     },
     postActions: {
       flexDirection: 'row',
       gap: spacing.lg,
-      paddingTop: spacing.sm,
-      borderTopWidth: 1,
-      borderTopColor: colors.gray200,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      backgroundColor: colors.surface,
+      alignItems: 'center',
     },
-    actionButton: {
+    likeButton: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.xs,
       paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.background,
     },
-    actionText: {
-      fontSize: typography.fontSize14,
+    likeButtonText: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+      fontWeight: typography.fontWeightSemiBold,
+    },
+    likeButtonTextActive: {
+      color: colors.error,
+    },
+    statItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    statText: {
+      ...textStyles.body2,
       color: colors.textSecondary,
     },
+    divider: {
+      height: 8,
+      backgroundColor: colors.background,
+    },
     commentsSection: {
+      flex: 1,
       padding: spacing.lg,
+      backgroundColor: colors.surface,
     },
     sectionTitle: {
-      fontSize: typography.fontSize18,
-      fontWeight: typography.fontWeightBold,
-      color: colors.textPrimary,
+      ...textStyles.h4,
       marginBottom: spacing.md,
     },
     emptyComments: {
@@ -589,44 +615,49 @@ export default function GroupPostDetailScreen() {
       paddingVertical: spacing.xl,
     },
     emptyCommentsText: {
-      fontSize: typography.fontSize14,
+      ...textStyles.body1,
       color: colors.textSecondary,
+      fontWeight: typography.fontWeightSemiBold,
       marginTop: spacing.sm,
     },
     commentCard: {
       marginBottom: spacing.md,
       padding: spacing.md,
       backgroundColor: colors.background,
-      borderRadius: borderRadius.md,
-      borderWidth: 1,
-      borderColor: colors.gray200,
+      borderRadius: borderRadius.sm,
     },
     commentHeader: {
       flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
+    commentAuthorInfo: {
+      flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.sm,
-      marginBottom: spacing.sm,
+      flex: 1,
     },
     commentAvatar: {
       width: 32,
       height: 32,
       borderRadius: 16,
+      backgroundColor: colors.gray200,
       justifyContent: 'center',
       alignItems: 'center',
     },
     commentAuthorName: {
-      fontSize: typography.fontSize14,
+      ...textStyles.body2,
       fontWeight: typography.fontWeightSemiBold,
-      color: colors.textPrimary,
     },
     commentTime: {
-      fontSize: typography.fontSize12,
-      color: colors.textSecondary,
+      ...textStyles.caption,
+      color: colors.gray500,
     },
     commentContent: {
-      fontSize: typography.fontSize14,
-      color: colors.textPrimary,
-      lineHeight: typography.lineHeight20,
+      ...textStyles.body2,
+      color: colors.text,
+      lineHeight: 20,
     },
     deleteCommentButton: {
       padding: spacing.xs,
@@ -638,8 +669,8 @@ export default function GroupPostDetailScreen() {
       gap: spacing.sm,
       padding: spacing.md,
       backgroundColor: colors.surface,
-      borderTopWidth: 1,
-      borderTopColor: colors.gray200,
+      borderTopWidth: 8,
+      borderTopColor: colors.background,
     },
     input: {
       flex: 1,
@@ -710,47 +741,54 @@ export default function GroupPostDetailScreen() {
           {/* Post Section */}
           <View style={styles.postSection}>
             <View style={styles.postHeader}>
-              {post.author.avatar ? (
-                <Image source={{ uri: post.author.avatar }} style={styles.avatar} />
-              ) : (
-                <View style={[styles.avatar, { backgroundColor: colors.gray200 }]}>
-                  <Ionicons name="person" size={20} color={colors.gray400} />
+              <View style={styles.postHeaderInfo}>
+                {post.author.avatar ? (
+                  <Image source={{ uri: post.author.avatar }} style={styles.avatar} />
+                ) : (
+                  <View style={[styles.avatar, { backgroundColor: colors.gray200 }]}>
+                    <Ionicons name="person" size={20} color={colors.gray400} />
+                  </View>
+                )}
+                <View>
+                  <Text style={styles.authorName}>{post.author.name}</Text>
+                  <Text style={styles.postTime}>
+                    {new Date(post.created_at).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}
+                  </Text>
                 </View>
-              )}
-              <View>
-                <Text style={styles.authorName}>{post.author.name}</Text>
-                <Text style={styles.postTime}>
-                  {new Date(post.created_at).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  })}
-                </Text>
               </View>
             </View>
 
-            <Text style={styles.postTitle}>{post.title}</Text>
-            {post.content && <Text style={styles.postContent}>{post.content}</Text>}
+            <View style={styles.postBody}>
+              <Text style={styles.postTitle}>{post.title}</Text>
+              {post.content && <Text style={styles.postContent}>{post.content}</Text>}
+            </View>
 
             <View style={styles.postActions}>
-              <TouchableOpacity style={styles.actionButton} onPress={handleToggleLike}>
+              <TouchableOpacity style={styles.likeButton} onPress={handleToggleLike}>
                 <Ionicons
                   name={post.isLiked ? 'heart' : 'heart-outline'}
-                  size={24}
+                  size={20}
                   color={post.isLiked ? colors.error : colors.textSecondary}
                 />
-                <Text style={[styles.actionText, post.isLiked && { color: colors.error }]}>
-                  {post.likes}
+                <Text style={[styles.likeButtonText, post.isLiked && styles.likeButtonTextActive]}>
+                  {post.likes} likes
                 </Text>
               </TouchableOpacity>
 
-              <View style={styles.actionButton}>
-                <Ionicons name="chatbubble-outline" size={24} color={colors.textSecondary} />
-                <Text style={styles.actionText}>{post.comments}</Text>
+              <View style={styles.statItem}>
+                <Ionicons name="chatbubble-outline" size={20} color={colors.textSecondary} />
+                <Text style={styles.statText}>{post.comments} comments</Text>
               </View>
             </View>
           </View>
+
+          {/* Divider */}
+          <View style={styles.divider} />
 
           {/* Comments Section */}
           <View style={styles.commentsSection}>
@@ -767,23 +805,25 @@ export default function GroupPostDetailScreen() {
               comments.map((comment) => (
                 <View key={comment.id} style={styles.commentCard}>
                   <View style={styles.commentHeader}>
-                    {comment.author.avatar ? (
-                      <Image source={{ uri: comment.author.avatar }} style={styles.commentAvatar} />
-                    ) : (
-                      <View style={[styles.commentAvatar, { backgroundColor: colors.gray200 }]}>
-                        <Ionicons name="person" size={16} color={colors.gray400} />
+                    <View style={styles.commentAuthorInfo}>
+                      {comment.author.avatar ? (
+                        <Image source={{ uri: comment.author.avatar }} style={styles.commentAvatar} />
+                      ) : (
+                        <View style={styles.commentAvatar}>
+                          <Ionicons name="person" size={20} color={colors.gray400} />
+                        </View>
+                      )}
+                      <View>
+                        <Text style={styles.commentAuthorName}>{comment.author.name}</Text>
+                        <Text style={styles.commentTime}>
+                          {new Date(comment.created_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                          })}
+                        </Text>
                       </View>
-                    )}
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.commentAuthorName}>{comment.author.name}</Text>
-                      <Text style={styles.commentTime}>
-                        {new Date(comment.created_at).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: 'numeric',
-                          minute: '2-digit',
-                        })}
-                      </Text>
                     </View>
                     {(comment.author_id === user?.id || isGroupCreator) && (
                       <TouchableOpacity
@@ -806,7 +846,7 @@ export default function GroupPostDetailScreen() {
           <TextInput
             style={styles.input}
             placeholder="Write a comment..."
-            placeholderTextColor={colors.textSecondary}
+            placeholderTextColor={colors.gray500}
             value={newComment}
             onChangeText={setNewComment}
             multiline

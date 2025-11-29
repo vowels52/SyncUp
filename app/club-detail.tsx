@@ -33,6 +33,14 @@ export default function ClubDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [isMember, setIsMember] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [imageLoadFailed, setImageLoadFailed] = useState(false);
+
+  // Helper function to check if image URL is valid
+  const isValidImageUrl = (url: string | null | undefined): boolean => {
+    if (!url) return false;
+    // Check if URL starts with http/https and doesn't contain suspicious patterns
+    return url.startsWith('http') && url.length > 10;
+  };
 
   useEffect(() => {
     fetchClubDetails();
@@ -51,6 +59,7 @@ export default function ClubDetailScreen() {
 
       if (error) throw error;
       setClub(data);
+      setImageLoadFailed(false); // Reset on new club load
     } catch (error) {
       console.error('Error fetching club details:', error);
     } finally {
@@ -67,11 +76,18 @@ export default function ClubDetailScreen() {
         .select('id')
         .eq('group_id', id)
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error checking membership:', error);
+        setIsMember(false);
+        return;
+      }
 
       setIsMember(!!data);
     } catch (error) {
       // Not a member or error
+      console.error('Unexpected error checking membership:', error);
       setIsMember(false);
     }
   };
@@ -160,6 +176,13 @@ export default function ClubDetailScreen() {
     clubImage: {
       width: '100%',
       height: '100%',
+    },
+    defaultClubIcon: {
+      width: '100%',
+      height: '100%',
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.accent,
     },
     infoSection: {
       padding: spacing.lg,
@@ -286,31 +309,48 @@ export default function ClubDetailScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Club Image */}
         <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: club.image_url }}
-            style={styles.clubImage}
-            resizeMode="contain"
-          />
+          {isValidImageUrl(club.image_url) && !imageLoadFailed ? (
+            <Image
+              source={{ uri: club.image_url }}
+              style={styles.clubImage}
+              resizeMode="contain"
+              onError={() => {
+                console.log('Image failed to load for club:', club.name);
+                setImageLoadFailed(true);
+              }}
+            />
+          ) : (
+            <View style={styles.defaultClubIcon}>
+              <Ionicons name="school" size={80} color={colors.white} />
+            </View>
+          )}
         </View>
 
         {/* Club Info */}
         <View style={styles.infoSection}>
           <Text style={styles.clubName}>{club.name}</Text>
 
-          {(club.club_type || club.category) && (
-            <View style={styles.tagContainer}>
-              {club.club_type && (
-                <View style={styles.tag}>
-                  <Text style={styles.tagText}>{club.club_type}</Text>
-                </View>
-              )}
-              {club.category && (
-                <View style={[styles.tag, styles.categoryTag]}>
-                  <Text style={styles.tagText}>{club.category}</Text>
-                </View>
-              )}
-            </View>
-          )}
+          {(() => {
+            const hasValidClubType = club.club_type?.trim() && club.club_type.trim().length > 1 && club.club_type.trim() !== '.';
+            const hasValidCategory = club.category?.trim() && club.category.trim().length > 1 && club.category.trim() !== '.';
+
+            if (!hasValidClubType && !hasValidCategory) return null;
+
+            return (
+              <View style={styles.tagContainer}>
+                {hasValidClubType && (
+                  <View style={styles.tag}>
+                    <Text style={styles.tagText}>{club.club_type.trim()}</Text>
+                  </View>
+                )}
+                {hasValidCategory && (
+                  <View style={[styles.tag, styles.categoryTag]}>
+                    <Text style={styles.tagText}>{club.category.trim()}</Text>
+                  </View>
+                )}
+              </View>
+            );
+          })()}
 
           {club.is_official_club && (
             <View style={styles.officialBadge}>

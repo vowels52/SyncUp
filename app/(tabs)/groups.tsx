@@ -54,11 +54,19 @@ export default function GroupsScreen() {
     category: '',
   });
   const [submitting, setSubmitting] = useState(false);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
   const colors = useThemedColors();
   const { commonStyles, textStyles } = useThemedStyles();
 
   const insets = useSafeAreaInsets();
+
+  // Helper function to check if image URL is valid
+  const isValidImageUrl = (url: string | null | undefined): boolean => {
+    if (!url) return false;
+    // Check if URL starts with http/https and doesn't contain suspicious patterns
+    return url.startsWith('http') && url.length > 10;
+  };
   const router = useRouter();
   const { user } = useAuth();
   const { showAlert } = useAlert();
@@ -75,7 +83,13 @@ export default function GroupsScreen() {
 
       if (error) throw error;
       if (data) {
-        setUwbClubs(data);
+        // Clean up problematic data - filter out single characters and empty values
+        const cleanedData = data.map(club => ({
+          ...club,
+          club_type: club.club_type && club.club_type.trim() && club.club_type.trim().length > 1 ? club.club_type : null,
+          category: club.category && club.category.trim() && club.category.trim().length > 1 ? club.category : null,
+        }));
+        setUwbClubs(cleanedData);
       }
     } catch (error) {
       console.error('Error loading UWB clubs:', error);
@@ -108,6 +122,8 @@ export default function GroupsScreen() {
 
             return {
               ...group,
+              club_type: group.club_type && group.club_type.trim() && group.club_type.trim().length > 1 ? group.club_type : null,
+              category: group.category && group.category.trim() && group.category.trim().length > 1 ? group.category : null,
               member_count: count || 0,
             };
           })
@@ -383,6 +399,13 @@ export default function GroupsScreen() {
       width: '100%',
       height: '100%',
     },
+    defaultClubIcon: {
+      width: '100%',
+      height: '100%',
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.accent,
+    },
     clubInfo: {
       flex: 1,
       gap: spacing.xs,
@@ -483,38 +506,40 @@ export default function GroupsScreen() {
       backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
     modalContent: {
-      backgroundColor: colors.background,
-      borderTopLeftRadius: borderRadius.xl,
-      borderTopRightRadius: borderRadius.xl,
-      padding: spacing.lg,
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: borderRadius.lg,
+      borderTopRightRadius: borderRadius.lg,
       maxHeight: '80%',
+      ...shadows.large,
     },
     modalHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: spacing.lg,
+      padding: spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.gray200,
     },
     modalTitle: {
-      fontSize: typography.fontSize20,
-      fontWeight: typography.fontWeightBold,
-      color: colors.textPrimary,
+      ...textStyles.h2,
+    },
+    modalForm: {
+      padding: spacing.lg,
     },
     inputLabel: {
-      fontSize: typography.fontSize14,
+      ...textStyles.body1,
       fontWeight: typography.fontWeightSemiBold,
-      color: colors.textPrimary,
-      marginBottom: spacing.xs,
+      marginBottom: spacing.sm,
       marginTop: spacing.md,
     },
     input: {
-      backgroundColor: colors.surface,
-      borderRadius: borderRadius.md,
+      backgroundColor: colors.background,
+      borderRadius: borderRadius.sm,
       padding: spacing.md,
       fontSize: typography.fontSize16,
-      color: colors.textPrimary,
+      color: colors.text,
       borderWidth: 1,
-      borderColor: colors.gray200,
+      borderColor: colors.gray300,
     },
     textArea: {
       minHeight: 100,
@@ -522,12 +547,19 @@ export default function GroupsScreen() {
     },
     submitButton: {
       backgroundColor: colors.primary,
-      paddingVertical: spacing.md,
-      borderRadius: borderRadius.lg,
+      padding: spacing.md,
+      borderRadius: borderRadius.sm,
       alignItems: 'center',
-      marginTop: spacing.lg,
+      marginTop: spacing.xl,
+      marginBottom: spacing.lg,
+    },
+    modalFooter: {
+      padding: spacing.lg,
+      borderTopWidth: 1,
+      borderTopColor: colors.gray200,
     },
     submitButtonDisabled: {
+      backgroundColor: colors.gray400,
       opacity: 0.5,
     },
     submitButtonText: {
@@ -613,13 +645,16 @@ export default function GroupsScreen() {
                   <Text style={styles.studyGroupName} numberOfLines={1}>
                     {group.name}
                   </Text>
-                  {(group.club_type || group.category) && (
-                    <Text style={styles.studyGroupType} numberOfLines={1}>
-                      {group.club_type}
-                      {group.club_type && group.category ? ' - ' : ''}
-                      {group.category}
-                    </Text>
-                  )}
+                  {(() => {
+                    const validTypes = [group.club_type, group.category]
+                      .filter(val => val && typeof val === 'string' && val.trim() && val.trim().length > 1 && val.trim() !== '.');
+                    const joinedText = validTypes.join(' - ').trim();
+                    return joinedText.length > 0 ? (
+                      <Text style={styles.studyGroupType} numberOfLines={1}>
+                        {joinedText}
+                      </Text>
+                    ) : null;
+                  })()}
                   <Text style={styles.studyGroupMembers}>
                     {group.member_count} {group.member_count === 1 ? 'member' : 'members'}
                   </Text>
@@ -654,23 +689,39 @@ export default function GroupsScreen() {
                 onPress={() => openClubDetail(club.id)}
               >
                 <View style={styles.clubImageContainer}>
-                  <Image
-                    source={{ uri: club.image_url }}
-                    style={styles.clubImage}
-                    resizeMode="cover"
-                  />
+                  {isValidImageUrl(club.image_url) && !failedImages.has(club.id) ? (
+                    <Image
+                      source={{ uri: club.image_url }}
+                      style={styles.clubImage}
+                      resizeMode="cover"
+                      onError={() => {
+                        console.log('Image failed to load for club:', club.name);
+                        setFailedImages(prev => new Set(prev).add(club.id));
+                      }}
+                    />
+                  ) : (
+                    <View style={styles.defaultClubIcon}>
+                      <Ionicons name="school" size={32} color={colors.white} />
+                    </View>
+                  )}
                 </View>
                 <View style={styles.clubInfo}>
                   <Text style={styles.clubName} numberOfLines={1}>
                     {club.name}
                   </Text>
-                  <Text style={styles.clubType} numberOfLines={1}>
-                    {club.club_type}
-                    {club.category ? ` - ${club.category}` : ''}
-                  </Text>
-                  {club.description && (
+                  {(() => {
+                    const validTypes = [club.club_type, club.category]
+                      .filter(val => val && typeof val === 'string' && val.trim() && val.trim().length > 1 && val.trim() !== '.');
+                    const joinedText = validTypes.join(' - ').trim();
+                    return joinedText.length > 0 ? (
+                      <Text style={styles.clubType} numberOfLines={1}>
+                        {joinedText}
+                      </Text>
+                    ) : null;
+                  })()}
+                  {club.description && club.description.trim() && club.description.trim().length > 1 && (
                     <Text style={styles.clubDescription} numberOfLines={2}>
-                      {club.description}
+                      {club.description.trim()}
                     </Text>
                   )}
                 </View>
@@ -714,11 +765,11 @@ export default function GroupsScreen() {
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Create Study Group</Text>
             <TouchableOpacity onPress={() => setShowCreateGroupModal(false)}>
-              <Ionicons name="close" size={24} color={colors.textPrimary} />
+              <Ionicons name="close" size={28} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.modalForm} showsVerticalScrollIndicator={false}>
             <Text style={styles.inputLabel}>Group Name *</Text>
             <TextInput
               style={styles.input}
@@ -758,17 +809,19 @@ export default function GroupsScreen() {
             />
           </ScrollView>
 
-          <TouchableOpacity
-            style={[styles.submitButton, (!newGroup.name.trim() || submitting) && styles.submitButtonDisabled]}
-            onPress={handleCreateGroup}
-            disabled={!newGroup.name.trim() || submitting}
-          >
-            {submitting ? (
-              <ActivityIndicator size="small" color={colors.white} />
-            ) : (
-              <Text style={styles.submitButtonText}>Create Group</Text>
-            )}
-          </TouchableOpacity>
+          <View style={styles.modalFooter}>
+            <TouchableOpacity
+              style={[styles.submitButton, (!newGroup.name.trim() || submitting) && styles.submitButtonDisabled]}
+              onPress={handleCreateGroup}
+              disabled={!newGroup.name.trim() || submitting}
+            >
+              {submitting ? (
+                <ActivityIndicator size="small" color={colors.white} />
+              ) : (
+                <Text style={styles.submitButtonText}>Create Group</Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </Modal>
