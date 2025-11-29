@@ -93,15 +93,15 @@ export default function AuthScreen() {
     },
     header: {
       alignItems: 'center',
-      marginTop: spacing.xxl,
-      marginBottom: spacing.xl,
-    },
-    logoContainer: {
+      marginTop: spacing.xl,
       marginBottom: spacing.md,
     },
+    logoContainer: {
+      marginBottom: spacing.sm,
+    },
     logo: {
-      width: 120,
-      height: 120,
+      width: 280,
+      height: 280,
       resizeMode: 'contain',
     },
     title: {
@@ -198,7 +198,6 @@ export default function AuthScreen() {
               style={styles.logo}
             />
           </View>
-          <Text style={styles.subtitle}>Connect. Collaborate. Succeed.</Text>
         </View>
 
         {!showOtpInput ? (
