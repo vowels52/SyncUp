@@ -294,6 +294,15 @@ export default function GroupsScreen() {
       backgroundColor: colors.surface,
       ...shadows.small,
     },
+    headerContent: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    penguinMascot: {
+      width: 50,
+      height: 50,
+    },
     headerTitle: {
       ...textStyles.h3,
     },
@@ -581,8 +590,17 @@ export default function GroupsScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Groups</Text>
-        <Text style={styles.headerSubtitle}>Join clubs and study groups</Text>
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={styles.headerTitle}>Groups</Text>
+            <Text style={styles.headerSubtitle}>Join clubs and study groups</Text>
+          </View>
+          <Image
+            source={require('@/assets/images/Penguin2.png')}
+            style={styles.penguinMascot}
+            resizeMode="contain"
+          />
+        </View>
       </View>
 
       <ScrollView

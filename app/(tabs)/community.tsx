@@ -98,6 +98,15 @@ export default function CommunityScreen() {
       borderBottomWidth: 1,
       borderBottomColor: colors.gray200,
     },
+    headerContent: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    penguinMascot: {
+      width: 50,
+      height: 50,
+    },
     headerTitle: {
       ...textStyles.h3,
     },
@@ -556,6 +565,15 @@ export default function CommunityScreen() {
     commentSubmitButtonDisabled: {
       backgroundColor: colors.gray400,
       opacity: 0.5,
+    },
+    logoContainer: {
+      alignItems: 'center',
+      paddingVertical: spacing.xl,
+      marginTop: spacing.lg,
+    },
+    logo: {
+      width: 350,
+      height: 175,
     },
   });
 
@@ -1421,8 +1439,17 @@ export default function CommunityScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Community</Text>
-        <Text style={styles.headerSubtitle}>Share knowledge and connect with peers</Text>
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={styles.headerTitle}>Community</Text>
+            <Text style={styles.headerSubtitle}>Share knowledge and connect with peers</Text>
+          </View>
+          <Image
+            source={require('@/assets/images/Penguin2.png')}
+            style={styles.penguinMascot}
+            resizeMode="contain"
+          />
+        </View>
       </View>
 
       {/* Search Bar */}
@@ -1474,6 +1501,15 @@ export default function CommunityScreen() {
             onRefresh={onRefresh}
             tintColor={colors.primary}
           />
+        }
+        ListFooterComponent={
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('@/assets/images/SyncUp_Logo3.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
