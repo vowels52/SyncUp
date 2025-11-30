@@ -148,12 +148,13 @@ export default function CommunityScreen() {
     },
     filterContainer: {
       backgroundColor: colors.surface,
-      paddingVertical: spacing.md,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.gray200,
+      margin: spacing.md,
+      marginTop: 0,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      ...shadows.small,
     },
     filterContent: {
-      paddingHorizontal: spacing.md,
       gap: spacing.sm,
       alignItems: 'center',
     },
