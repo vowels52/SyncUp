@@ -915,6 +915,15 @@ export default function ConnectionsScreen() {
       backgroundColor: colors.surface,
       ...shadows.small,
     },
+    headerContent: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    penguinMascot: {
+      width: 50,
+      height: 50,
+    },
     title: {
       ...textStyles.h3,
     },
@@ -1230,6 +1239,15 @@ export default function ConnectionsScreen() {
       textTransform: 'uppercase',
       letterSpacing: 0.5,
     },
+    logoContainer: {
+      alignItems: 'center',
+      paddingVertical: spacing.xl,
+      marginTop: spacing.lg,
+    },
+    logo: {
+      width: 350,
+      height: 175,
+    },
   });
 
   if (loading) {
@@ -1245,14 +1263,23 @@ export default function ConnectionsScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Find Your Match</Text>
-        <Text style={styles.subtitle}>
-          {viewMode === 'matches'
-            ? 'Swipe to connect with peers'
-            : viewMode === 'requests'
-            ? 'Manage connection requests'
-            : 'Message your connections'}
-        </Text>
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={styles.title}>Find Your Match</Text>
+            <Text style={styles.subtitle}>
+              {viewMode === 'matches'
+                ? 'Swipe to connect with peers'
+                : viewMode === 'requests'
+                ? 'Manage connection requests'
+                : 'Message your connections'}
+            </Text>
+          </View>
+          <Image
+            source={require('@/assets/images/Penguin2.png')}
+            style={styles.penguinMascot}
+            resizeMode="contain"
+          />
+        </View>
 
         {/* Toggle Buttons */}
         <View style={styles.toggleContainer}>
@@ -1371,6 +1398,15 @@ export default function ConnectionsScreen() {
             <Text style={styles.progressText}>
               {currentIndex + 1} / {matches.length}
             </Text>
+          </View>
+
+          {/* Logo at the bottom */}
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('@/assets/images/SyncUp_Logo3.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
           </View>
         </ScrollView>
       )
@@ -1497,6 +1533,15 @@ export default function ConnectionsScreen() {
               )}
             </View>
           )}
+
+          {/* Logo at the bottom */}
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('@/assets/images/SyncUp_Logo3.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
         </ScrollView>
       ) : (
         /* My Connections View */
@@ -1632,6 +1677,15 @@ export default function ConnectionsScreen() {
               )}
             </View>
           )}
+
+          {/* Logo at the bottom */}
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('@/assets/images/SyncUp_Logo3.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
         </ScrollView>
       )}
     </View>
