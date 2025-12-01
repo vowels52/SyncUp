@@ -1318,7 +1318,7 @@ export default function ConnectionsScreen() {
             onPress={() => setViewMode('requests')}
           >
             <Text style={[styles.toggleText, viewMode === 'requests' && styles.toggleTextActive]}>
-              Requests{pendingRequests.length > 0 ? ` (${pendingRequests.length})` : ''}
+              Requests{(pendingRequests.length + outgoingRequests.length) > 0 ? ` (${pendingRequests.length + outgoingRequests.length})` : ''}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
