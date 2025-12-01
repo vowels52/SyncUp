@@ -69,6 +69,8 @@ export default function ConnectionsScreen() {
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [viewMode, setViewMode] = useState<'matches' | 'requests' | 'connections'>('matches');
+  const [showAllIncoming, setShowAllIncoming] = useState(false);
+  const [showAllOutgoing, setShowAllOutgoing] = useState(false);
 
   const colors = useThemedColors();
   const { commonStyles, textStyles } = useThemedStyles();
@@ -1239,6 +1241,26 @@ export default function ConnectionsScreen() {
       textTransform: 'uppercase',
       letterSpacing: 0.5,
     },
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: spacing.md,
+      marginBottom: spacing.sm,
+    },
+    viewAllButton: {
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.md,
+      backgroundColor: 'transparent',
+      borderRadius: borderRadius.sm,
+      borderWidth: 1.5,
+      borderColor: colors.primary,
+    },
+    viewAllText: {
+      ...textStyles.caption,
+      color: colors.primary,
+      fontWeight: typography.fontWeightBold,
+    },
     logoContainer: {
       alignItems: 'center',
       paddingVertical: spacing.xl,
@@ -1426,8 +1448,20 @@ export default function ConnectionsScreen() {
               {/* Incoming Requests Section */}
               {pendingRequests.length > 0 && (
                 <>
-                  <Text style={styles.sectionHeader}>Incoming Requests</Text>
-                  {pendingRequests.map((request) => (
+                  <View style={styles.sectionHeaderRow}>
+                    <Text style={styles.sectionHeader}>Incoming Requests ({pendingRequests.length})</Text>
+                    {pendingRequests.length > 1 && (
+                      <TouchableOpacity
+                        style={styles.viewAllButton}
+                        onPress={() => setShowAllIncoming(!showAllIncoming)}
+                      >
+                        <Text style={styles.viewAllText}>
+                          {showAllIncoming ? 'Show Less' : 'View All'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  {(showAllIncoming ? pendingRequests : pendingRequests.slice(0, 1)).map((request) => (
                 <View key={request.id} style={styles.requestCard}>
                   <TouchableOpacity
                     style={styles.requestHeader}
@@ -1485,8 +1519,20 @@ export default function ConnectionsScreen() {
               {/* Outgoing Requests Section */}
               {outgoingRequests.length > 0 && (
                 <>
-                  <Text style={styles.sectionHeader}>Outgoing Requests</Text>
-                  {outgoingRequests.map((request) => (
+                  <View style={styles.sectionHeaderRow}>
+                    <Text style={styles.sectionHeader}>Outgoing Requests ({outgoingRequests.length})</Text>
+                    {outgoingRequests.length > 1 && (
+                      <TouchableOpacity
+                        style={styles.viewAllButton}
+                        onPress={() => setShowAllOutgoing(!showAllOutgoing)}
+                      >
+                        <Text style={styles.viewAllText}>
+                          {showAllOutgoing ? 'Show Less' : 'View All'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  {(showAllOutgoing ? outgoingRequests : outgoingRequests.slice(0, 1)).map((request) => (
                     <View key={request.id} style={styles.requestCard}>
                       <TouchableOpacity
                         style={styles.requestHeader}
