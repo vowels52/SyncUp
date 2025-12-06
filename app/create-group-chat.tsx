@@ -194,6 +194,12 @@ export default function CreateGroupChatScreen() {
     inputContainer: {
       marginBottom: spacing.lg,
     },
+    inputLabel: {
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
+      marginBottom: spacing.sm,
+      color: colors.text,
+    },
     input: {
       backgroundColor: colors.surface,
       borderRadius: borderRadius.md,
@@ -205,12 +211,10 @@ export default function CreateGroupChatScreen() {
       ...shadows.small,
     },
     sectionTitle: {
-      ...textStyles.body2,
-      fontWeight: typography.fontWeightSemiBold,
-      color: colors.textSecondary,
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightBold,
+      color: colors.text,
       marginBottom: spacing.sm,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
     },
     listContainer: {
       paddingBottom: 100,
@@ -336,9 +340,10 @@ export default function CreateGroupChatScreen() {
 
       <View style={styles.content}>
         <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Group Chat Name *</Text>
           <TextInput
             style={styles.input}
-            placeholder="Group Name"
+            placeholder="Enter group chat name"
             placeholderTextColor={colors.textSecondary}
             value={groupName}
             onChangeText={setGroupName}
@@ -347,7 +352,7 @@ export default function CreateGroupChatScreen() {
         </View>
 
         <Text style={styles.sectionTitle}>
-          Select Members ({selectedUsers.size} selected)
+          Select Members * ({selectedUsers.size} selected)
         </Text>
 
         <FlatList
