@@ -989,17 +989,21 @@ export default function EventsScreen() {
       fontWeight: typography.fontWeightSemiBold,
     },
     createButton: {
+      position: 'absolute',
+      bottom: 32,
+      left: spacing.md,
+      right: spacing.md,
       backgroundColor: colors.primary,
-      padding: spacing.md,
-      borderRadius: borderRadius.sm,
+      borderRadius: borderRadius.md,
+      paddingVertical: spacing.md,
+      justifyContent: 'center',
       alignItems: 'center',
-      marginTop: spacing.xl,
-      marginBottom: spacing.lg,
+      ...shadows.medium,
     },
     createButtonText: {
       ...textStyles.body1,
       color: colors.white,
-      fontWeight: typography.fontWeightBold,
+      fontWeight: typography.fontWeightSemiBold,
     },
     createButtonDisabled: {
       backgroundColor: colors.gray400,
@@ -1464,7 +1468,11 @@ export default function EventsScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalForm} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.modalForm}
+              contentContainerStyle={{ paddingBottom: 120 }}
+              showsVerticalScrollIndicator={false}
+            >
               <Text style={styles.inputLabel}>Event Title *</Text>
               <TextInput
                 style={styles.input}
@@ -1729,15 +1737,15 @@ export default function EventsScreen() {
                   )}
                 </>
               )}
-
-              <TouchableOpacity
-                style={[styles.createButton, !newEvent.title.trim() && styles.createButtonDisabled]}
-                onPress={handleCreateEvent}
-                disabled={!newEvent.title.trim()}
-              >
-                <Text style={styles.createButtonText}>Create Event</Text>
-              </TouchableOpacity>
             </ScrollView>
+
+            <TouchableOpacity
+              style={[styles.createButton, !newEvent.title.trim() && styles.createButtonDisabled]}
+              onPress={handleCreateEvent}
+              disabled={!newEvent.title.trim()}
+            >
+              <Text style={styles.createButtonText}>Create Event</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

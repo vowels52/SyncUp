@@ -1287,13 +1287,13 @@ export default function ConnectionsScreen() {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <View>
-            <Text style={styles.title}>Find Your Match</Text>
+            <Text style={styles.title}>Connect with Peers</Text>
             <Text style={styles.subtitle}>
               {viewMode === 'matches'
-                ? 'Swipe to connect with peers'
+                ? 'Swipe to discover new connections'
                 : viewMode === 'requests'
                 ? 'Manage connection requests'
-                : 'Message your connections'}
+                : 'View your messages'}
             </Text>
           </View>
           <Image
@@ -1326,7 +1326,7 @@ export default function ConnectionsScreen() {
             onPress={() => setViewMode('connections')}
           >
             <Text style={[styles.toggleText, viewMode === 'connections' && styles.toggleTextActive]}>
-              Connections
+              Messages
             </Text>
           </TouchableOpacity>
         </View>

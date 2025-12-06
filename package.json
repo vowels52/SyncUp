@@ -13,7 +13,9 @@
     "update-clubs": "node ./scripts/club-scraper/scrape-clubs.js",
     "generate-clubs-sql": "node ./scripts/club-scraper/generate-sql.js",
     "parse-ical": "node ./scripts/club-scraper/parse-ical.js",
-    "generate-events-sql": "node ./scripts/club-scraper/generate-events-sql.js"
+    "generate-events-sql": "node ./scripts/club-scraper/generate-events-sql.js",
+    "check-images": "node ./scripts/check-invalid-images.js",
+    "clean-text": "node ./scripts/clean-invalid-text.js"
   },
   "dependencies": {
     "@apollo/client": "^3.4.10",

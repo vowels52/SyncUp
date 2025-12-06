@@ -1159,6 +1159,7 @@ export default function StudyGroupDetailScreen() {
     },
     fab: {
       position: 'absolute',
+      bottom: spacing.xl,
       right: spacing.lg,
       width: 56,
       height: 56,
@@ -1229,12 +1230,16 @@ export default function StudyGroupDetailScreen() {
       textAlignVertical: 'top',
     },
     submitButton: {
+      position: 'absolute',
+      bottom: 32,
+      left: spacing.md,
+      right: spacing.md,
       backgroundColor: colors.primary,
-      padding: spacing.md,
-      borderRadius: borderRadius.sm,
+      borderRadius: borderRadius.md,
+      paddingVertical: spacing.md,
+      justifyContent: 'center',
       alignItems: 'center',
-      marginTop: spacing.xl,
-      marginBottom: spacing.lg,
+      ...shadows.medium,
     },
     submitButtonDisabled: {
       backgroundColor: colors.gray400,
@@ -1242,7 +1247,7 @@ export default function StudyGroupDetailScreen() {
     },
     submitButtonText: {
       fontSize: typography.fontSize16,
-      fontWeight: typography.fontWeightBold,
+      fontWeight: typography.fontWeightSemiBold,
       color: colors.white,
     },
     modalOverlay: {
@@ -1667,7 +1672,11 @@ export default function StudyGroupDetailScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.modalForm}>
+            <ScrollView
+              style={styles.modalForm}
+              contentContainerStyle={{ paddingBottom: 120 }}
+              showsVerticalScrollIndicator={false}
+            >
               <Text style={styles.inputLabel}>Title *</Text>
               <TextInput
                 style={styles.titleInput}
@@ -1689,19 +1698,19 @@ export default function StudyGroupDetailScreen() {
                 numberOfLines={6}
                 textAlignVertical="top"
               />
+            </ScrollView>
 
-              <TouchableOpacity
-                style={[styles.submitButton, (!newPost.title.trim() || submitting) && styles.submitButtonDisabled]}
-                onPress={handleCreatePost}
-                disabled={!newPost.title.trim() || submitting}
-              >
+            <TouchableOpacity
+              style={[styles.submitButton, (!newPost.title.trim() || submitting) && styles.submitButtonDisabled]}
+              onPress={handleCreatePost}
+              disabled={!newPost.title.trim() || submitting}
+            >
               {submitting ? (
                 <ActivityIndicator size="small" color={colors.white} />
               ) : (
                 <Text style={styles.submitButtonText}>Post</Text>
               )}
-              </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
       </Modal>
