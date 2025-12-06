@@ -983,6 +983,15 @@ export default function HomeScreen() {
       borderTopWidth: 1,
       borderTopColor: colors.gray200,
     },
+    logoContainer: {
+      alignItems: 'center',
+      paddingVertical: spacing.xl,
+      marginTop: spacing.lg,
+    },
+    logo: {
+      width: 350,
+      height: 175,
+    },
   });
 
   if (loading) {
@@ -1191,6 +1200,15 @@ export default function HomeScreen() {
               </TouchableOpacity>
             ))
           )}
+        </View>
+
+        {/* Logo at the bottom */}
+        <View style={styles.logoContainer}>
+          <Image
+            source={require('@/assets/images/SyncUp_Logo3.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </View>
       </ScrollView>
 

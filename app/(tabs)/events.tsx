@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Modal, TextInput, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Modal, TextInput, ScrollView, Platform, Image } from 'react-native';
 import { spacing, borderRadius, shadows, typography } from '@/constants/theme';
 import { useThemedColors } from '@/hooks/useThemedColors';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
@@ -35,6 +35,7 @@ export default function EventsScreen() {
   const [showDayEventsModal, setShowDayEventsModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [calendarExpanded, setCalendarExpanded] = useState(false);
 
   // Form state
   const [newEvent, setNewEvent] = useState({
@@ -582,6 +583,15 @@ export default function EventsScreen() {
       backgroundColor: colors.surface,
       ...shadows.small,
     },
+    headerContent: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    penguinMascot: {
+      width: 50,
+      height: 50,
+    },
     title: {
       ...textStyles.h3,
     },
@@ -754,6 +764,16 @@ export default function EventsScreen() {
     },
     monthTitle: {
       ...textStyles.h3,
+    },
+    calendarHeaderRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    expandButton: {
+      padding: spacing.sm,
+      backgroundColor: colors.primaryLight,
+      borderRadius: borderRadius.sm,
     },
     weekDaysRow: {
       flexDirection: 'row',
@@ -1105,7 +1125,6 @@ export default function EventsScreen() {
       borderRadius: borderRadius.xl,
       padding: spacing.lg,
       margin: spacing.md,
-      marginTop: 0,
       ...shadows.small,
     },
     searchInputContainer: {
@@ -1129,6 +1148,15 @@ export default function EventsScreen() {
     },
     clearButton: {
       padding: spacing.xs,
+    },
+    logoContainer: {
+      alignItems: 'center',
+      paddingVertical: spacing.xl,
+      marginTop: spacing.lg,
+    },
+    logo: {
+      width: 350,
+      height: 175,
     },
   });
 
@@ -1167,8 +1195,17 @@ export default function EventsScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Campus Events</Text>
-        <Text style={styles.subtitle}>Discover and attend upcoming events</Text>
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={styles.title}>Campus Events</Text>
+            <Text style={styles.subtitle}>Discover and attend upcoming events</Text>
+          </View>
+          <Image
+            source={require('@/assets/images/Penguin2.png')}
+            style={styles.penguinMascot}
+            resizeMode="contain"
+          />
+        </View>
       </View>
 
       <ScrollView
@@ -1177,8 +1214,32 @@ export default function EventsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       >
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputContainer}>
+            <Ionicons name="search" size={20} color={colors.textSecondary} style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search events..."
+              placeholderTextColor={colors.textSecondary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+                <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
         {/* Calendar Section */}
-        <View style={styles.calendarContainer}>
+        <View style={[
+          styles.calendarContainer,
+          Platform.OS === 'web' && !calendarExpanded && { maxHeight: 400, overflow: 'hidden' }
+        ]}>
           <View style={styles.calendarHeader}>
             <TouchableOpacity onPress={() => changeMonth(-1)} style={styles.monthButton}>
               <Ionicons name="chevron-back" size={24} color={colors.primary} />
@@ -1186,9 +1247,23 @@ export default function EventsScreen() {
             <Text style={styles.monthTitle}>
               {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </Text>
-            <TouchableOpacity onPress={() => changeMonth(1)} style={styles.monthButton}>
-              <Ionicons name="chevron-forward" size={24} color={colors.primary} />
-            </TouchableOpacity>
+            <View style={styles.calendarHeaderRight}>
+              <TouchableOpacity onPress={() => changeMonth(1)} style={styles.monthButton}>
+                <Ionicons name="chevron-forward" size={24} color={colors.primary} />
+              </TouchableOpacity>
+              {Platform.OS === 'web' && (
+                <TouchableOpacity
+                  onPress={() => setCalendarExpanded(!calendarExpanded)}
+                  style={styles.expandButton}
+                >
+                  <Ionicons
+                    name={calendarExpanded ? "contract-outline" : "expand-outline"}
+                    size={20}
+                    color={colors.primary}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           <View style={styles.weekDaysRow}>
@@ -1232,27 +1307,6 @@ export default function EventsScreen() {
           </View>
         </View>
 
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <View style={styles.searchInputContainer}>
-            <Ionicons name="search" size={20} color={colors.textSecondary} style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search events..."
-              placeholderTextColor={colors.textSecondary}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
-                <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-
         {/* Events List Section */}
         <View style={styles.eventsListSection}>
           <View style={styles.eventsListHeader}>
@@ -1284,6 +1338,15 @@ export default function EventsScreen() {
               </View>
             ))
           )}
+        </View>
+
+        {/* Logo at the bottom */}
+        <View style={styles.logoContainer}>
+          <Image
+            source={require('@/assets/images/SyncUp_Logo3.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </View>
       </ScrollView>
 

@@ -69,6 +69,8 @@ export default function ConnectionsScreen() {
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [viewMode, setViewMode] = useState<'matches' | 'requests' | 'connections'>('matches');
+  const [showAllIncoming, setShowAllIncoming] = useState(false);
+  const [showAllOutgoing, setShowAllOutgoing] = useState(false);
 
   const colors = useThemedColors();
   const { commonStyles, textStyles } = useThemedStyles();
@@ -915,6 +917,15 @@ export default function ConnectionsScreen() {
       backgroundColor: colors.surface,
       ...shadows.small,
     },
+    headerContent: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    penguinMascot: {
+      width: 50,
+      height: 50,
+    },
     title: {
       ...textStyles.h3,
     },
@@ -1230,6 +1241,35 @@ export default function ConnectionsScreen() {
       textTransform: 'uppercase',
       letterSpacing: 0.5,
     },
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: spacing.md,
+      marginBottom: spacing.sm,
+    },
+    viewAllButton: {
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.md,
+      backgroundColor: 'transparent',
+      borderRadius: borderRadius.sm,
+      borderWidth: 1.5,
+      borderColor: colors.primary,
+    },
+    viewAllText: {
+      ...textStyles.caption,
+      color: colors.primary,
+      fontWeight: typography.fontWeightBold,
+    },
+    logoContainer: {
+      alignItems: 'center',
+      paddingVertical: spacing.xl,
+      marginTop: spacing.lg,
+    },
+    logo: {
+      width: 350,
+      height: 175,
+    },
   });
 
   if (loading) {
@@ -1245,14 +1285,23 @@ export default function ConnectionsScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Find Your Match</Text>
-        <Text style={styles.subtitle}>
-          {viewMode === 'matches'
-            ? 'Swipe to connect with peers'
-            : viewMode === 'requests'
-            ? 'Manage connection requests'
-            : 'Message your connections'}
-        </Text>
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={styles.title}>Find Your Match</Text>
+            <Text style={styles.subtitle}>
+              {viewMode === 'matches'
+                ? 'Swipe to connect with peers'
+                : viewMode === 'requests'
+                ? 'Manage connection requests'
+                : 'Message your connections'}
+            </Text>
+          </View>
+          <Image
+            source={require('@/assets/images/Penguin2.png')}
+            style={styles.penguinMascot}
+            resizeMode="contain"
+          />
+        </View>
 
         {/* Toggle Buttons */}
         <View style={styles.toggleContainer}>
@@ -1269,7 +1318,7 @@ export default function ConnectionsScreen() {
             onPress={() => setViewMode('requests')}
           >
             <Text style={[styles.toggleText, viewMode === 'requests' && styles.toggleTextActive]}>
-              Requests{pendingRequests.length > 0 ? ` (${pendingRequests.length})` : ''}
+              Requests{(pendingRequests.length + outgoingRequests.length) > 0 ? ` (${pendingRequests.length + outgoingRequests.length})` : ''}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -1372,6 +1421,15 @@ export default function ConnectionsScreen() {
               {currentIndex + 1} / {matches.length}
             </Text>
           </View>
+
+          {/* Logo at the bottom */}
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('@/assets/images/SyncUp_Logo3.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
         </ScrollView>
       )
       ) : viewMode === 'requests' ? (
@@ -1390,8 +1448,20 @@ export default function ConnectionsScreen() {
               {/* Incoming Requests Section */}
               {pendingRequests.length > 0 && (
                 <>
-                  <Text style={styles.sectionHeader}>Incoming Requests</Text>
-                  {pendingRequests.map((request) => (
+                  <View style={styles.sectionHeaderRow}>
+                    <Text style={styles.sectionHeader}>Incoming Requests ({pendingRequests.length})</Text>
+                    {pendingRequests.length > 1 && (
+                      <TouchableOpacity
+                        style={styles.viewAllButton}
+                        onPress={() => setShowAllIncoming(!showAllIncoming)}
+                      >
+                        <Text style={styles.viewAllText}>
+                          {showAllIncoming ? 'Show Less' : 'View All'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  {(showAllIncoming ? pendingRequests : pendingRequests.slice(0, 1)).map((request) => (
                 <View key={request.id} style={styles.requestCard}>
                   <TouchableOpacity
                     style={styles.requestHeader}
@@ -1449,8 +1519,20 @@ export default function ConnectionsScreen() {
               {/* Outgoing Requests Section */}
               {outgoingRequests.length > 0 && (
                 <>
-                  <Text style={styles.sectionHeader}>Outgoing Requests</Text>
-                  {outgoingRequests.map((request) => (
+                  <View style={styles.sectionHeaderRow}>
+                    <Text style={styles.sectionHeader}>Outgoing Requests ({outgoingRequests.length})</Text>
+                    {outgoingRequests.length > 1 && (
+                      <TouchableOpacity
+                        style={styles.viewAllButton}
+                        onPress={() => setShowAllOutgoing(!showAllOutgoing)}
+                      >
+                        <Text style={styles.viewAllText}>
+                          {showAllOutgoing ? 'Show Less' : 'View All'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  {(showAllOutgoing ? outgoingRequests : outgoingRequests.slice(0, 1)).map((request) => (
                     <View key={request.id} style={styles.requestCard}>
                       <TouchableOpacity
                         style={styles.requestHeader}
@@ -1497,6 +1579,15 @@ export default function ConnectionsScreen() {
               )}
             </View>
           )}
+
+          {/* Logo at the bottom */}
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('@/assets/images/SyncUp_Logo3.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
         </ScrollView>
       ) : (
         /* My Connections View */
@@ -1632,6 +1723,15 @@ export default function ConnectionsScreen() {
               )}
             </View>
           )}
+
+          {/* Logo at the bottom */}
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('@/assets/images/SyncUp_Logo3.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
         </ScrollView>
       )}
     </View>
