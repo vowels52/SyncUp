@@ -98,6 +98,15 @@ export default function CommunityScreen() {
       borderBottomWidth: 1,
       borderBottomColor: colors.gray200,
     },
+    headerContent: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    penguinMascot: {
+      width: 50,
+      height: 50,
+    },
     headerTitle: {
       ...textStyles.h3,
     },
@@ -139,12 +148,13 @@ export default function CommunityScreen() {
     },
     filterContainer: {
       backgroundColor: colors.surface,
-      paddingVertical: spacing.md,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.gray200,
+      margin: spacing.md,
+      marginTop: 0,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      ...shadows.small,
     },
     filterContent: {
-      paddingHorizontal: spacing.md,
       gap: spacing.sm,
       alignItems: 'center',
     },
@@ -367,17 +377,21 @@ export default function CommunityScreen() {
       color: colors.white,
     },
     createButton: {
+      position: 'absolute',
+      bottom: 32,
+      left: spacing.md,
+      right: spacing.md,
       backgroundColor: colors.primary,
-      padding: spacing.md,
-      borderRadius: borderRadius.sm,
+      borderRadius: borderRadius.md,
+      paddingVertical: spacing.md,
+      justifyContent: 'center',
       alignItems: 'center',
-      marginTop: spacing.xl,
-      marginBottom: spacing.lg,
+      ...shadows.medium,
     },
     createButtonText: {
       ...textStyles.body1,
       color: colors.white,
-      fontWeight: typography.fontWeightBold,
+      fontWeight: typography.fontWeightSemiBold,
     },
     createButtonDisabled: {
       backgroundColor: colors.gray400,
@@ -556,6 +570,15 @@ export default function CommunityScreen() {
     commentSubmitButtonDisabled: {
       backgroundColor: colors.gray400,
       opacity: 0.5,
+    },
+    logoContainer: {
+      alignItems: 'center',
+      paddingVertical: spacing.xl,
+      marginTop: spacing.lg,
+    },
+    logo: {
+      width: 350,
+      height: 175,
     },
   });
 
@@ -1421,8 +1444,17 @@ export default function CommunityScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Community</Text>
-        <Text style={styles.headerSubtitle}>Share knowledge and connect with peers</Text>
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={styles.headerTitle}>Community</Text>
+            <Text style={styles.headerSubtitle}>Share knowledge and connect with peers</Text>
+          </View>
+          <Image
+            source={require('@/assets/images/Penguin2.png')}
+            style={styles.penguinMascot}
+            resizeMode="contain"
+          />
+        </View>
       </View>
 
       {/* Search Bar */}
@@ -1474,6 +1506,15 @@ export default function CommunityScreen() {
             onRefresh={onRefresh}
             tintColor={colors.primary}
           />
+        }
+        ListFooterComponent={
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('@/assets/images/SyncUp_Logo3.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
@@ -1532,7 +1573,11 @@ export default function CommunityScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalForm} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.modalForm}
+              contentContainerStyle={{ paddingBottom: 120 }}
+              showsVerticalScrollIndicator={false}
+            >
               <Text style={styles.inputLabel}>Title *</Text>
               <TextInput
                 style={styles.input}
@@ -1617,15 +1662,15 @@ export default function CommunityScreen() {
                   </Text>
                 </TouchableOpacity>
               </View>
-
-              <TouchableOpacity
-                style={[styles.createButton, !newPost.title.trim() && styles.createButtonDisabled]}
-                onPress={handleCreatePost}
-                disabled={!newPost.title.trim()}
-              >
-                <Text style={styles.createButtonText}>Create Post</Text>
-              </TouchableOpacity>
             </ScrollView>
+
+            <TouchableOpacity
+              style={[styles.createButton, !newPost.title.trim() && styles.createButtonDisabled]}
+              onPress={handleCreatePost}
+              disabled={!newPost.title.trim()}
+            >
+              <Text style={styles.createButtonText}>Create Post</Text>
+            </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
       </Modal>

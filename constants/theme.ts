@@ -3,7 +3,7 @@ const lightColors = {
   // Primary Brand Colors
   primary: '#24284b',      // Dark blue from logo
   primaryDark: '#1a1d35',  // Darker version
-  primaryLight: '#3d4268', // Lighter version
+  primaryLight: '#e8e9f0', // Very light blue-gray for light mode
 
   // Accent Colors
   accent: '#e19e5f',       // Gray orange from logo
