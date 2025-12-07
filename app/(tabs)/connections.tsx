@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, ScrollView, Image, Modal } from 'react-native';
 import { spacing, borderRadius, shadows, typography } from '@/constants/theme';
 import { useThemedColors } from '@/hooks/useThemedColors';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
@@ -68,9 +68,10 @@ export default function ConnectionsScreen() {
   const [groupChats, setGroupChats] = useState<GroupChat[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [viewMode, setViewMode] = useState<'matches' | 'requests' | 'connections'>('matches');
+  const [viewMode, setViewMode] = useState<'matches' | 'requests' | 'connections' | 'tutoring'>('matches');
   const [showAllIncoming, setShowAllIncoming] = useState(false);
   const [showAllOutgoing, setShowAllOutgoing] = useState(false);
+  const [showComingSoonModal, setShowComingSoonModal] = useState(false);
 
   const colors = useThemedColors();
   const { commonStyles, textStyles } = useThemedStyles();
@@ -1270,6 +1271,101 @@ export default function ConnectionsScreen() {
       width: 350,
       height: 175,
     },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: spacing.lg,
+    },
+    modalContent: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.lg,
+      padding: spacing.xl,
+      alignItems: 'center',
+      width: '100%',
+      maxWidth: 320,
+      ...shadows.large,
+    },
+    modalIconContainer: {
+      width: 80,
+      height: 80,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.gray100,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+    },
+    modalTitle: {
+      ...textStyles.h2,
+      marginBottom: spacing.sm,
+      textAlign: 'center',
+    },
+    modalDescription: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: spacing.lg,
+      lineHeight: 22,
+    },
+    modalButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.xl,
+      borderRadius: borderRadius.md,
+      width: '100%',
+      alignItems: 'center',
+    },
+    modalButtonText: {
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightBold,
+      color: colors.white,
+    },
+    tutoringHeader: {
+      alignItems: 'center',
+      marginBottom: spacing.xl,
+    },
+    tutoringTitle: {
+      ...textStyles.h2,
+      marginBottom: spacing.sm,
+      textAlign: 'center',
+    },
+    tutoringSubtitle: {
+      ...textStyles.body2,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      paddingHorizontal: spacing.md,
+      lineHeight: 22,
+    },
+    featurePreview: {
+      gap: spacing.md,
+    },
+    featureItem: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.lg,
+      alignItems: 'center',
+      ...shadows.small,
+    },
+    featureIcon: {
+      width: 56,
+      height: 56,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.gray100,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
+    featureTitle: {
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
+      marginBottom: spacing.xs,
+    },
+    featureDescription: {
+      ...textStyles.caption,
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
   });
 
   if (loading) {
@@ -1293,7 +1389,9 @@ export default function ConnectionsScreen() {
                 ? 'Swipe to discover new connections'
                 : viewMode === 'requests'
                 ? 'Manage connection requests'
-                : 'View your messages'}
+                : viewMode === 'connections'
+                ? 'View your messages'
+                : 'Give and receive academic help'}
             </Text>
           </View>
           <Image
@@ -1327,6 +1425,17 @@ export default function ConnectionsScreen() {
           >
             <Text style={[styles.toggleText, viewMode === 'connections' && styles.toggleTextActive]}>
               Messages
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.toggleButton, viewMode === 'tutoring' && styles.toggleButtonActive]}
+            onPress={() => {
+              setViewMode('tutoring');
+              setShowComingSoonModal(true);
+            }}
+          >
+            <Text style={[styles.toggleText, viewMode === 'tutoring' && styles.toggleTextActive]}>
+              Tutoring
             </Text>
           </TouchableOpacity>
         </View>
@@ -1589,7 +1698,7 @@ export default function ConnectionsScreen() {
             />
           </View>
         </ScrollView>
-      ) : (
+      ) : viewMode === 'connections' ? (
         /* My Connections View */
         <ScrollView style={styles.requestsContainer} showsVerticalScrollIndicator={false}>
           {acceptedConnections.length === 0 && groupChats.length === 0 ? (
@@ -1723,6 +1832,85 @@ export default function ConnectionsScreen() {
               )}
             </View>
           )}
+
+          {/* Logo at the bottom */}
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('@/assets/images/SyncUp_Logo3.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
+        </ScrollView>
+      ) : (
+        /* Tutoring View */
+        <ScrollView style={styles.requestsContainer} showsVerticalScrollIndicator={false}>
+          {/* Coming Soon Modal */}
+          <Modal
+            visible={showComingSoonModal}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setShowComingSoonModal(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalIconContainer}>
+                  <Ionicons name="construct-outline" size={48} color={colors.primary} />
+                </View>
+                <Text style={styles.modalTitle}>Coming Soon</Text>
+                <Text style={styles.modalDescription}>
+                  We're working hard to bring you the Peer Tutoring Exchange. Stay tuned for updates!
+                </Text>
+                <TouchableOpacity
+                  style={styles.modalButton}
+                  onPress={() => setShowComingSoonModal(false)}
+                >
+                  <Text style={styles.modalButtonText}>Got It</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+
+          {/* Header Section */}
+          <View style={styles.tutoringHeader}>
+            <Text style={styles.tutoringTitle}>Peer Tutoring Exchange</Text>
+            <Text style={styles.tutoringSubtitle}>
+              Connect with fellow students to give and receive academic help. Earn credits by tutoring others and use them to get help in subjects you need.
+            </Text>
+          </View>
+
+          {/* Feature Preview */}
+          <View style={styles.featurePreview}>
+            <View style={styles.featureItem}>
+              <View style={styles.featureIcon}>
+                <Ionicons name="school-outline" size={28} color={colors.primary} />
+              </View>
+              <Text style={styles.featureTitle}>Offer Your Expertise</Text>
+              <Text style={styles.featureDescription}>
+                Help others in subjects you excel at
+              </Text>
+            </View>
+
+            <View style={styles.featureItem}>
+              <View style={styles.featureIcon}>
+                <Ionicons name="hand-left-outline" size={28} color={colors.primary} />
+              </View>
+              <Text style={styles.featureTitle}>Get Help</Text>
+              <Text style={styles.featureDescription}>
+                Request tutoring in subjects you need
+              </Text>
+            </View>
+
+            <View style={styles.featureItem}>
+              <View style={styles.featureIcon}>
+                <Ionicons name="star-outline" size={28} color={colors.primary} />
+              </View>
+              <Text style={styles.featureTitle}>Build Reputation</Text>
+              <Text style={styles.featureDescription}>
+                Earn credits and reviews from peers
+              </Text>
+            </View>
+          </View>
 
           {/* Logo at the bottom */}
           <View style={styles.logoContainer}>
