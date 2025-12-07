@@ -555,25 +555,28 @@ export default function GroupsScreen() {
       textAlignVertical: 'top',
     },
     submitButton: {
+      position: 'absolute',
+      bottom: 32,
+      left: spacing.md,
+      right: spacing.md,
       backgroundColor: colors.primary,
-      padding: spacing.md,
-      borderRadius: borderRadius.sm,
+      borderRadius: borderRadius.md,
+      paddingVertical: spacing.md,
+      justifyContent: 'center',
       alignItems: 'center',
-      marginTop: spacing.xl,
-      marginBottom: spacing.lg,
+      ...shadows.medium,
     },
     modalFooter: {
       padding: spacing.lg,
-      borderTopWidth: 1,
-      borderTopColor: colors.gray200,
+      borderTopWidth: 0,
     },
     submitButtonDisabled: {
       backgroundColor: colors.gray400,
       opacity: 0.5,
     },
     submitButtonText: {
-      fontSize: typography.fontSize16,
-      fontWeight: typography.fontWeightBold,
+      ...textStyles.body1,
+      fontWeight: typography.fontWeightSemiBold,
       color: colors.white,
     },
   });
@@ -787,7 +790,11 @@ export default function GroupsScreen() {
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalForm} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            style={styles.modalForm}
+            contentContainerStyle={{ paddingBottom: 120 }}
+            showsVerticalScrollIndicator={false}
+          >
             <Text style={styles.inputLabel}>Group Name *</Text>
             <TextInput
               style={styles.input}
@@ -827,19 +834,17 @@ export default function GroupsScreen() {
             />
           </ScrollView>
 
-          <View style={styles.modalFooter}>
-            <TouchableOpacity
-              style={[styles.submitButton, (!newGroup.name.trim() || submitting) && styles.submitButtonDisabled]}
-              onPress={handleCreateGroup}
-              disabled={!newGroup.name.trim() || submitting}
-            >
-              {submitting ? (
-                <ActivityIndicator size="small" color={colors.white} />
-              ) : (
-                <Text style={styles.submitButtonText}>Create Group</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={[styles.submitButton, (!newGroup.name.trim() || submitting) && styles.submitButtonDisabled]}
+            onPress={handleCreateGroup}
+            disabled={!newGroup.name.trim() || submitting}
+          >
+            {submitting ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Text style={styles.submitButtonText}>Create Group</Text>
+            )}
+          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </Modal>

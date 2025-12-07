@@ -846,17 +846,21 @@ export default function HomeScreen() {
       fontWeight: typography.fontWeightSemiBold,
     },
     createButton: {
+      position: 'absolute',
+      bottom: 32,
+      left: spacing.md,
+      right: spacing.md,
       backgroundColor: colors.primary,
-      padding: spacing.md,
-      borderRadius: borderRadius.sm,
+      borderRadius: borderRadius.md,
+      paddingVertical: spacing.md,
+      justifyContent: 'center',
       alignItems: 'center',
-      marginTop: spacing.xl,
-      marginBottom: spacing.lg,
+      ...shadows.medium,
     },
     createButtonText: {
       ...textStyles.body1,
       color: colors.white,
-      fontWeight: typography.fontWeightBold,
+      fontWeight: typography.fontWeightSemiBold,
     },
     createButtonDisabled: {
       backgroundColor: colors.gray400,
@@ -1043,7 +1047,7 @@ export default function HomeScreen() {
             <View style={[styles.actionIcon, { backgroundColor: colors.primary }]}>
               <Ionicons name="search" size={24} color={colors.white} />
             </View>
-            <Text style={styles.actionText}>Find Matches</Text>
+            <Text style={styles.actionText}>Discover Peers</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionCard} onPress={() => setShowGroupModal(true)}>
@@ -1228,7 +1232,11 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalForm} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.modalForm}
+              contentContainerStyle={{ paddingBottom: 120 }}
+              showsVerticalScrollIndicator={false}
+            >
               <Text style={styles.inputLabel}>Event Title *</Text>
               <TextInput
                 style={styles.input}
@@ -1493,15 +1501,15 @@ export default function HomeScreen() {
                   )}
                 </>
               )}
-
-              <TouchableOpacity
-                style={[styles.createButton, !newEvent.title.trim() && styles.createButtonDisabled]}
-                onPress={handleCreateEvent}
-                disabled={!newEvent.title.trim()}
-              >
-                <Text style={styles.createButtonText}>Create Event</Text>
-              </TouchableOpacity>
             </ScrollView>
+
+            <TouchableOpacity
+              style={[styles.createButton, !newEvent.title.trim() && styles.createButtonDisabled]}
+              onPress={handleCreateEvent}
+              disabled={!newEvent.title.trim()}
+            >
+              <Text style={styles.createButtonText}>Create Event</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -1644,7 +1652,11 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalForm} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.modalForm}
+              contentContainerStyle={{ paddingBottom: 120 }}
+              showsVerticalScrollIndicator={false}
+            >
               <Text style={styles.inputLabel}>Group Name *</Text>
               <TextInput
                 style={styles.input}
@@ -1684,15 +1696,13 @@ export default function HomeScreen() {
               />
             </ScrollView>
 
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={[styles.createButton, !newGroup.name.trim() && styles.createButtonDisabled]}
-                onPress={handleCreateGroup}
-                disabled={!newGroup.name.trim()}
-              >
-                <Text style={styles.createButtonText}>Create Group</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={[styles.createButton, !newGroup.name.trim() && styles.createButtonDisabled]}
+              onPress={handleCreateGroup}
+              disabled={!newGroup.name.trim()}
+            >
+              <Text style={styles.createButtonText}>Create Group</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
