@@ -1,4 +1,4 @@
-# Welcome to SyncUp
+# Welcome to [SyncUp](https://sync-up-uwb.netlify.app/)
 
 SyncUp is a student made networking app focused on connecting students and community building.
 
@@ -47,3 +47,4 @@ This project is private ("private": true). For collaboration inquiries, please c
 ---
 
 Feel free to add project screenshots, API documentation, feature descriptions, or any other information as needed.
+
